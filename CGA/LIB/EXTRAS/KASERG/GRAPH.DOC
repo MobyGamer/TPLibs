@@ -1,0 +1,104 @@
+
+I've received many useful things from the net over the years, so here's 
+something to help balance my debt.  This is (very slight) documentation and
+(very voluminous) assembly code that does graphics in CGA 320x200 mode with
+4 colors, and in EGA 640x350 mode with 16 colors.  The routines are intended
+to be called from C (Microsoft 4.0 flavor), but with fairly minor modifica-
+tion could be callable from assembly, Pascal, Fortran, BASIC, or whatever
+your favorite language is.  The only things that are language specific are:
+
+   1) the structure of the GROUPs and SEGMENTS
+   2) the underscore as the first char of all public/extern labels
+   3) the way function arguments and return values are passed on the stack
+
+All of the functions operate the same on both CGA and EGA (given the
+differences in number of pixels and colors available) except for the
+SETCOLOR and BPLOTXY functions.  With those functions, the arguments mean
+slightly different things, as is mentioned in the (brief) reference card.
+
+The code should assemble OK with almost any version of the Microsoft assembler.
+There's not a lot of documentation included other than the comments in the
+code.  sorry about that (he hangs his head with sheepish look)     _____
+                                                               _--/ @ @ \
+                                                              /   | =_= |
+                                                              |    \----/
+If you run into any major stumbling blocks understanding what
+a function is supposed to do, or how it works, send me mail.
+
+Everett Kaser
+Hewlett-Packard Co.
+Corvallis, OR
+!hplabs!hp-pcd!everett
+
+
+
+;     pocket guide:
+
+;=============================================================================;
+;  assembly language routines for CGA/EGA  color graphics (callable from C)   ;
+;=============================================================================;
+; setmode(mode);							      ;
+;	mode =	3	80x25 COLOR ALPHANUMERIC			      ;
+;		4	320x200 COLOR GRAPHICS				      ;
+;		10h	640x350 COLOR GRAPHICS (EGA ONLY)		      ;
+;-----------------------------------------------------------------------------;
+; [CGA] setcolors(colorset, backgnd);					      ;
+;	  backgnd color (0-15)						      ;
+;		0 black   4 red		8  gray		12 light red	      ;
+;		1 blue	  5 magenta	9  light blue	13 light magenta      ;
+;		2 green	  6 brown	10 light green	14 yellow	      ;
+;		3 cyan	  7 white	11 light cyan	15 bright white	      ;
+;	  colorset (1=cyan/magenta/white 0=green/red/brown)		      ;
+;									      ;
+; [EGA] setcolors(palette_register, color_value);			      ;
+;	  palette_register ranges from 0-16	(16 sets the OVERSCAN color)  ;
+;	  color_value ranges from 0-63					      ;
+;-----------------------------------------------------------------------------;
+; plotxy(x,y,color,rule);						      ;
+;	color (CGA: 0-3,  EGA: 0-15)					      ;
+;	replacement rule: 0=force, 1=and, 2=or, 3=xor			      ;
+;-----------------------------------------------------------------------------;
+; bplotxy(x, y, height, width, picture, rule);				      ;
+;	height (# of rows in picture)					      ;
+;	width (# of bytes (cga) or pixels (ega) in width of picture)	      ;
+;		height & width are limited to less than 255 each	      ;
+;	picture = address of data bytes (linear char array)		      ;
+;		  each byte contains (CGA) 4 pixels, or (EGA) 1 pixels color  ;
+;	replacement rule (0=force, 8000h=xor)				      ;
+;-----------------------------------------------------------------------------;
+; line(x1, y1, x2, y2, color, rule);					      ;
+;	replacement rule: 0=force, 1=and, 2=or, 3=xor)			      ;
+;-----------------------------------------------------------------------------;
+; horline(x1, y1, x2, color,rule);					      ;
+;	replacement rule: 0=force, 1=and, 2=or, 3=xor)			      ;
+;-----------------------------------------------------------------------------;
+; verline(x1, y1, y2, color, rule);					      ;
+;	replacement rule: 0=force, 1=and, 2=or, 3=xor)			      ;
+;-----------------------------------------------------------------------------;
+; clrscreen(color);							      ;	      ;
+;-----------------------------------------------------------------------------;
+; flabel(x, y, string, fore_color, back_color, rule);			      ;
+;	replacement rule: 0=force, 1=and, 2=or, 3=xor)			      ;
+;-----------------------------------------------------------------------------;
+; setrand(seed);							      ;
+;	if seed = 0, then seed chosen based upon system timer		      ;
+;-----------------------------------------------------------------------------;
+; rand();								      ;
+;-----------------------------------------------------------------------------;
+; beepoff();								      ;
+;	turn beeper off							      ;
+;-----------------------------------------------------------------------------;
+; beepon(counter);							      ;
+; 	turns beeper on with timer 2 gate to value COUNTER. (NOTE: beeper     ;
+;	will remain on until beepoff() is called!			      ;
+;-----------------------------------------------------------------------------;
+; iskey();								      ;
+;	returns 0 if no key waiting, else returns next key scan/ascii code    ;
+;       but leaves the keycode in the buffer.				      ;
+;-----------------------------------------------------------------------------;
+; key();								      ;
+;	waits for a key and returns it's scan/ascii code.		      ;
+;-----------------------------------------------------------------------------;
+
+;	end of pocket guide
+

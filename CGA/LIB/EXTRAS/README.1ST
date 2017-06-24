@@ -1,0 +1,20 @@
+The "EXTRAS" directory contains additional source code that you can use as a
+reference if you are so inclined, or want to see alternative methods on doing
+things.
+
+KASERG       <DIR>      6-19-105   0:47 Kaser's CGA and EGA routines
+This is general-purpose code that I was going to use as a reference, but
+decided against it since it wasn't as well optimized as I would hope for.
+
+LOWRES       <DIR>      6-03-105  23:55 original 1993 Silverton 160x100x16 code
+Geoffry Silverton's original 160x100x16 Turbo Pascal code, which I originally
+paid him a shareware fee to get :-) but I've talked to him recently and he
+doesn't mind it redistributed.
+
+hresline.asm    20782   5-12-105   1:06 David Dantowitz's 640x200 line code
+mresline.asm    21614   5-12-105   1:00 David Dantowitz's 320x200 line code
+These are the most optimized line-drawing routines for CGA graphics mode I
+have ever seen, although the mask build could be replaced with a table lookup
+via XLAT for a tiny tiny increase.  These routines are not actually used in
+CGALIB because there is a tiny bug in the horizontal special case that flips
+out when the horizontal segment begins and ends in the same byte.

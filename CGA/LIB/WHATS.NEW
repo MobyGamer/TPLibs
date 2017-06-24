@@ -1,0 +1,20 @@
+20060213:
+- Just noticed that the 40x50 and 80x50 modes don't work on my PC/XT.  Which
+is very confusing, considering they have the same damn CGA card.  The PC's
+timing is slightly off, so maybe that's why it worked... until I figure it
+out, don't use 40x50 or 80x50.
+
+20051020:
++ Added some demo effects adapted to CGA.  CGAROT is a rotozoomer that runs
+in full-screen 320x200x4 CGA at 9fps.  TXTROT is the same, but runs in a
+more colorful and faster 40x50 tweakmode at 18fps.  CGACOP is copper bars in
+320x200x4.
++ Also created a batch file so it's easy to package this thing up and
+distribute it.
+
+20050703:
++ Added CGA 160x200x16 composite color mode.
+
+20050626:
++ First distribution outside of the development machine.  Not full-featured yet
+but (almost) everything works.

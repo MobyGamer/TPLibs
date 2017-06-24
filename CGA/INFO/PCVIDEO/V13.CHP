@@ -1,0 +1,1156 @@
+
+
+
+          13  Graphics Subroutines in High-Level Languages
+
+
+                    Linking Graphics Subroutines
+                          Subroutine Calls
+                Interrupts to a Memory-Resident Driver
+                             Inline Code
+
+                          Global Data Areas
+
+                     Layered Graphics Interfaces
+                     Direct Hardware Programming
+                       Extended BIOS Interface
+                        High-Level Interface
+
+
+
+     Most programming examples in this book are written in assembly
+     language, the language of choice for programs that need to control
+     hardware precisely and to run as fast as possible. Nevertheless, most
+     IBM PC programmers prefer not to write large applications entirely in
+     assembly language because they can write, debug, and maintain a
+     program in a high-level language much more effectively.
+
+     As you write the code for a program that produces video output, you
+     must balance the convenience and conceptual clarity a high-level
+     language provides against the speed and exact control provided by
+     assembly language. A good rule of thumb is to use assembly language
+     whenever you directly access the video buffer or the video subsystem's
+     control registers. The rest of the time, you can generally obtain
+     satisfactory performance using any compiled high-level language.
+
+     This chapter focuses on the interface between programs written in
+     high-level languages and the low-level, assembly-language drivers that
+     actually access the video hardware. You can implement the interface in
+     several ways. The method you select should depend on the language you
+     are using, your familiarity with the memory models and parameter-
+     passing techniques that your compiler uses, and (as always) your own
+     good judgment in evaluating the alternatives.
+
+     The last part of the chapter introduces several different high-level
+     video programming interfaces. The focus is on the reasons why high-
+     level programming interfaces are used and the programming approach
+     involved in using them.
+
+
+Linking Graphics Subroutines
+
+
+     You can tie low-level graphics subroutines to high-level applications
+     in several ways. The three techniques discussed here--subroutine
+     calls, calling a set of memory-resident routines, and using inline
+     code in a high-level-language program--have all been proved in various
+     graphics applications. As usual, the "best" method to use in any given
+     application is a matter of judgment.
+
+
+Subroutine Calls
+
+     This book contains numerous subroutines that are designed to be called
+     from within a high-level-language program. Most are to be linked to
+     programs compiled with the Microsoft C compiler. However, you can link
+     these subroutines to any high-level-language program if you know the
+     proper protocol for structuring executable code, and for passing
+     parameters to a subroutine and returning values from it. The routines
+     in Listings 13-1 through 13-4 show how to call the same assembly-
+     language subroutine from Microsoft C, Microsoft FORTRAN, Turbo Pascal,
+     and interpreted BASIC.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-1a.  The SetPixel subroutine (Microsoft C small-model
+     calling conventions).
+
+                TITLE   'Listing 13-1a'
+                NAME    SetPixel
+                PAGE    55,132
+
+;
+; Name:         SetPixel
+;
+; Function:     Set the value of a pixel in native EGA graphics modes.
+;
+; Caller:       Microsoft C (small memory model):
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+; Notes:        This is the same routine as in Chapter 5.
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+RMWbits         EQU     0               ; read-modify-write bits
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr:near
+
+                PUBLIC  _SetPixel
+_SetPixel       PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr       ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+; set Graphics Controller Bit Mask register
+
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     dx,3CEh         ; GC address register port
+                mov     al,8            ; AL := Bit Mask register number
+                out     dx,ax
+
+; set Graphics Controller Mode register
+
+                mov     ax,0005h        ; AL :=  Mode register number
+                                        ; AH :=  Write Mode 0 (bits 0,1)
+                                        ;        Read Mode 0 (bit 3)
+                out     dx,ax
+
+; set Data Rotate/Function Select register
+
+                mov     ah,RMWbits      ; AH := Read-Modify-Write bits
+                mov     al,3            ; AL := Data Rotate/Function Select reg
+                out     dx,ax
+
+; set Set/Reset and Enable Set/Reset registers
+
+                mov     ah,ARGn         ; AH := pixel value
+                mov     al,0            ; AL := Set/Reset reg number
+                out     dx,ax
+
+                mov     ax,0F01h        ; AH := value for Enable Set/Reset (all
+                                        ;  bit planes enabled)
+                                        ; AL := Enable Set/Reset reg number
+                out     dx,ax
+
+; set the pixel value
+
+                or      es:[bx],al      ; load latches during CPU read
+                                        ; update latches and bit planes during
+                                        ;  CPU write
+
+; restore default Graphics Controller registers
+
+                mov     ax,0FF08h       ; default Bit Mask
+                out     dx,ax
+
+                mov     ax,0005         ; default Mode register
+                out     dx,ax
+
+                mov     ax,0003         ; default Function Select
+                out     dx,ax
+
+                mov     ax,0001         ; default Enable Set/Reset
+                out     dx,ax
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel       ENDP
+
+_TEXT           ENDS
+
+                END
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-1b.  Calling SetPixel() from a C program.
+
+/* Listing 13-1b */
+
+/* draws an n-leaved rose of the form  rho = a * cos(n*theta) */
+
+#define Leaves          (double)11      /* n must be an odd number */
+
+#define Xmax            640
+#define Ymax            350
+#define PixelValue      14
+#define ScaleFactor     (double) 1.37
+
+main()
+{
+        int     x,y;                    /* pixel coordinates */
+        double  a;                      /* length of the semi-axis */
+        double  rho,theta;              /* polar coordinates */
+
+        double  pi = 3.14159265358979;
+        double  sin(),cos();
+
+        void SetPixel();
+
+
+        a = (Ymax / 2) - 1;             /* a reasonable choice for a */
+
+        for (theta=0.0; theta < pi; theta+=0.001)
+        {
+          rho = a * cos( Leaves*theta );        /* apply the formula */
+
+          x = rho * cos( theta );       /* convert to rectangular coords */
+          y = rho * sin( theta ) / ScaleFactor;
+
+          SetPixel( x+Xmax/2, y+Ymax/2, PixelValue );   /* plot the point */
+        }
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-2a.  The SETPEL subroutine (Microsoft FORTRAN calling
+     conventions).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-2b.  Calling SETPEL() from a FORTRAN program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-3a.  The SETPEL subroutine (Turbo Pascal calling
+     conventions).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-3b.  Calling SETPEL() from a Turbo Pascal program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-4a.  The SETPEL subroutine (BASICA calling convention).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-4b.  Calling SETPEL from a BASICA program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     One of the ways these assembly-language subroutines differ is that
+     they use different memory models. A memory model describes the segment
+     organization of a program--whether executable code is separated from
+     program data, and whether segments are accessed with 16-bit (near) or
+     32-bit (far) addresses. For example, a small-model program has one
+     near code and one near data segment; a large-model program can have
+     multiple far code and far data segments. The subroutines in Listings
+     13-1 through 13-4 conform to the default memory models used by the
+     different language translators.
+
+     The protocol for passing parameters also varies among compilers and
+     programming languages. In Pascal, for example, parameters are pushed
+     on the stack in the order they appear in the PROCEDURE statement,
+     while in C, parameters are pushed in reverse order. Also, either the
+     actual value of a parameter or its address may be passed; this depends
+     on the programming language you use as well as on the type of data
+     involved. Each compiler's reference manual contains details on its
+     parameter-passing protocol.
+
+
+     Microsoft C
+     Source code examples in previous chapters that can be called from a C
+     program are all designed to be linked with small- or compact-model
+     programs. To call them from a medium- or large-model program, you must
+     make three modifications to the source code to make it conform to
+     these memory models' subroutine-calling conventions.
+
+     ş  Change the name of the executable code segment.
+
+     ş  Use the far keyword in assembler PROC directives.
+
+     ş  Modify the stack frame addressing to accommodate the calling
+        routine's 32-bit return address.
+
+     For example, to call SetPixel10() within a medium-model C program,
+     change the name of the _TEXT segment in SetPixel10()'s source
+     code to a name of the form module_TEXT and use the far keyword
+     in the routine's PROC directive. Also, adjust the stack frame
+     addresses by two bytes to account for the 32-bit return address.
+
+
+     Microsoft FORTRAN
+     Microsoft's FORTRAN compiler does not generate small- or compact-model
+     programs, so the far addressing conventions applicable to medium- and
+     large-model programs apply to FORTRAN-callable assembly-language
+     graphics subroutines. The C-callable version in Listing 13-1a and the
+     FORTRAN equivalent in Listing 13-2a differ in several ways. These
+     differences relate to the way parameters are passed on the stack to
+     the subroutine.
+
+     The C compiler passes the current values of each subroutine argument
+     in reverse order, so the first argument is on top of the stack. The
+     FORTRAN compiler passes the 32-bit address of each argument's value in
+     the order in which the arguments appear in the subroutine's
+     argument list. The C subroutine obtains the argument values directly
+     from the stack; the FORTRAN routine must obtain the arguments'
+     addresses from the stack, then use the addresses to obtain the values.
+     Also, in C, the routine that called the subroutine discards the
+     arguments on the stack. In contrast, in FORTRAN the called subroutine
+     cleans up the stack when it exits.
+
+       ÉÍÍÍ»     The Microsoft C, FORTRAN, and Pascal compilers let you
+       º T º     specify the parameter-passing protocol used to call a
+       º I º     particular subroutine. For  example, you can write a C-
+
+       º P º     callable subroutine and then access it using the
+       ÈÍÍÍ¼     appropriate compiler directive in your FORTRAN or Pascal
+                 program. This interlanguage linking capability became
+                 available in MS C version 3.00, MS Pascal version 3.3, and
+                 MS FORTRAN version 3.3.
+
+                 Including a compiler directive in your high-level source
+                 code can be more convenient than modifying an assembly-
+                 language subroutine. For example, a C subroutine can be
+                 called from a FORTRAN program by declaring the subroutine
+                 in a FORTRAN INTERFACE unit:
+
+                 interface to subroutine SP10[C](x,y,n)
+                 integer*2 x,y,n
+                 end
+
+                 This INTERFACE unit instructs the FORTRAN compiler to
+                 generate code that calls the subroutine _sp10() using C's
+                 parameter-passing protocol. However, this technique does
+                 not affect the memory model used; the C-callable routine
+                 is called with a far call, because it lies in a different
+                 segment from the FORTRAN caller. Thus, _sp10() must still
+                 be declared with the far keyword, and the stack frame must
+                 be addressed with the assumption that a 32-bit far return
+                 address lies on top of the stack when the procedure is
+                 called.
+
+                 If you intend to write graphics routines that can be
+                 called from either Microsoft C, Pascal, or FORTRAN, you
+                 should use a medium or large memory model, so the routine
+                 can be called as a far procedure. You can use any
+                 parameter-passing protocol; the Microsoft language
+                 translators can generate code for all of them.
+
+
+     Turbo Pascal
+     Turbo Pascal links EXTERNAL assembly-language subroutines dynamically.
+     However, Turbo Pascal's dynamic linker does not perform address
+     relocation or resolve symbolic references between the main program and
+     the subroutine. Thus, the assembly-language subroutine has a very
+     simple structure. Listing 13-3a is an example of this type of
+     subroutine. Note how the subroutine performs "self-relocation" by
+     initializing a register with the starting offset of the subroutine
+     (using a CALL L01 followed by a POP), then adding this value to all
+     references to labels within the subroutine.
+
+
+     BASIC
+     IBM BASICA and Microsoft GWBASIC have their own intrinsic video output
+     routines. However, you can use assembly-language subroutines to
+     customize your BASIC programs for video modes or hardware not
+     supported by these BASIC interpreters. Listings 13-4a and 13-4b
+     show how to do this.
+
+     Like Turbo Pascal, BASICA requires you to link your subroutine
+     dynamically. In Listing 13-4a, the subroutine is assembled in the
+     form of a binary file that can be loaded with the BASIC BLOAD command,
+     as in lines 220-250 of Listing 13-4b. In BASICA, as in Pascal,
+     parameters are passed to the subroutine in the order they are
+     specified in the high-level source code. Unlike the Turbo Pascal
+     subroutine, however, the BASIC subroutine is a far procedure. Also, in
+     BASIC the addresses of parameters are passed instead of the values of
+     the parameters themselves.
+
+
+Interrupts to a Memory-Resident Driver
+
+     Another way to implement the interface between high-level-language
+     programs and machine-language graphics routines is to make the
+     graphics routines resident in memory. When they are, programs can
+     access the graphics routines by executing a software interrupt. This
+     is the design of the interface used by all video BIOS routines in the
+     PC and PS/2 families. The routines reside at a fixed address in ROM.
+     Interrupt vector 10H is initialized at bootup to point to a service
+     routine that calls the BIOS routines.
+
+     Your own video output routines can be accessed in a similar manner if
+     you make them resident in RAM and set an interrupt vector to point to
+     them. (On the PC and PS/2s, interrupt numbers 60H through 67H are
+     reserved for such user-defined interrupts.) Listing 13-5 is an
+     example of a simple RAM-resident routine that stores pixels in the
+     EGA's 640-by-350 16-color mode. The source for this routine assembles
+     to a .EXE file that installs the routine in RAM and sets interrupt
+     vector 60H to point to the code that sets the pixel value. After the
+     interrupt vector is initialized, any program can access the routine by
+     loading the CPU registers with the pixel location and value and then
+     executing interrupt 60H.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-5.  A RAM-resident routine to write pixels in 640-by-350
+     graphics mode.
+
+                TITLE   'Listing 13-5'
+                NAME    SetPixel
+                PAGE    55,132
+
+;
+; Name:         SetPixel
+;
+; Function:     Set the value of a pixel in native EGA graphics modes.
+;
+; Caller:       Memory-resident routine invoked via interrupt 60H:
+;
+;                       mov ax,PixelX      ; pixel x-coordinate
+;                       mov bx,PixelY      ; pixel y-coordinate
+;                       mov cx,PixelValue  ; pixel value
+;
+; Notes:        - Assemble and link to create SETPIXEL.EXE.
+;               - Execute once to make SetPixel resident in memory and to point
+;                  the INT 60H vector to the RAM-resident code.
+;               - Requires MS-DOS version 2.0 or later.
+;
+
+RMWbits         EQU     0
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr:near
+
+                PUBLIC  SetPixel
+SetPixel        PROC    near            ; RAM-resident interrupt 60H handler
+
+                sti                     ; enable interrupts
+                push    ax              ; preserve caller registers on
+                push    bx              ;  caller's stack
+                push    cx
+                push    dx
+
+                push    cx              ; preserve pixel value on stack
+
+                call    PixelAddr       ; compute pixel address
+                shl     ah,cl
+
+                mov     dx,3CEh         ; program the Graphics Controller
+                mov     al,8            ; AL := Bit Mask register number
+                out     dx,ax
+
+                mov     ax,0005h
+                out     dx,ax
+
+                mov     ah,RMWbits      ; AH := Read-Modify-Write bits
+                mov     al,3            ; AL := Data Rotate/Function Select reg
+                out     dx,ax
+
+                pop     ax 
+                mov     ah,al           ; AH := pixel value
+                mov     al,0
+                out     dx,ax
+
+                mov     ax,0F01h
+                out     dx,ax
+
+                or      es:[bx],al      ; set the pixel value
+
+                mov     ax,0FF08h       ; restore default Graphics Controller
+                out     dx,ax           ;  values
+
+                mov     ax,0005
+                out     dx,ax
+
+                mov     ax,0003
+                out     dx,ax
+
+                mov     ax,0001
+                out     dx,ax
+
+                pop     dx              ; restore caller registers and return
+                pop     cx
+                pop     bx
+                pop     ax
+                iret
+
+SetPixel        ENDP
+
+_TEXT           ENDS
+
+
+TRANSIENT_TEXT  SEGMENT para
+                ASSUME  cs:TRANSIENT_TEXT,ss:STACK
+
+Install         PROC    near
+
+                mov     ax,2560h        ; AH := 25H (INT 21H function number)
+                                        ; AL := 60H (interrupt number)
+                mov     dx,seg _TEXT
+                mov     ds,dx
+                mov     dx,offset _TEXT:SetPixel   ; DS:DX -> interrupt handler
+
+                int     21h             ; point INT 60H vector to
+                                        ;  SetPixel routine
+
+                mov     dx,cs           ; DX := segment of start of transient
+                                        ;  (discardable) portion of program
+                mov     ax,es           ; ES := Program Segment Prefix
+                sub     dx,ax           ; DX := size of RAM-resident portion
+                mov     ax,3100h        ; AH := 31H (INT 21H function number)
+                                        ; AL := 0 (return code)
+                int     21h             ; Terminate but Stay Resident
+
+Install         ENDP
+
+TRANSIENT_TEXT  ENDS
+
+STACK           SEGMENT para stack 'STACK'
+
+                DB      80h dup(?)      ; stack space for transient portion
+                                        ;  of program
+STACK           ENDS
+
+                END     Install
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Inline Code
+
+     A technique familiar to many C, Modula-2, and Turbo Pascal programmers
+     is to implement low-level subroutines as inline machine instructions
+     in high-level source code. Doing so can simplify the problem of using
+     consistent memory-model and parameter-passing protocols, because the
+     high-level-language compiler handles these implicitly. However, inline
+     code is rarely portable and can be difficult to adapt for use with
+     other languages.
+
+
+Global Data Areas
+
+
+     When you link video output subroutines to a high-level program, you
+     face the problem of transferring information about the current state
+     of the video hardware between the high-level program and the
+     subroutines. Although you can pass such information to subroutines
+     using argument lists, a better approach is to use a global data
+     structure that both the high-level program and the low-level
+     subroutines can access. Information contained in a global data area
+     can include:
+
+     ş  Hardware identification ("EGA with 350-line color display")
+
+     ş  Hardware coordinate system (orientation of x- and y-axes,
+        maximum x- and y-coordinates)
+
+     ş  Video buffer status, including video mode, buffer dimensions
+        (maximum x- and y-coordinates), and currently displayed
+        portion of the buffer
+
+     ş  Foreground and background pixel values for text and graphics
+        output
+
+     ş  Color values for palette registers
+
+     ş  Current pixel operation (replace, XOR, AND, OR, or NOT)
+
+     ş  Current region fill pattern
+
+     ş  Current line-drawing style (thick or thin line, dashed or broken
+        line)
+
+     In many applications it is better to maintain several global areas
+     instead of just one. Because almost all PC and PS/2 video hardware
+     supports more than one display mode, you can create a separate global
+     data block for each mode and make an entire block "current" when you
+     select a video mode. In a windowing environment, a block of global
+     data can apply to each displayable window. In addition to the above
+     information, such a block can also describe the way graphics images
+     and text are mapped into a window. This can include clipping
+     boundaries, vertical and horizontal scaling, or window visibility
+     (whether a window is on or off the screen, overlapping another window,
+     and so on).
+
+     Using a global data area has several advantages. Because both high-
+     level and low-level routines can determine output hardware status, you
+     can write hardware-independent programs that examine the descriptive
+     information in the global data area to determine how to format their
+     output. This information is relatively static, so maintaining it in a
+     global area helps minimize redundant parameter passing between
+     graphics routines. Moreover, global data areas can be used
+     contextually: the contents of a global data area can be saved,
+     modified transiently, and restored.
+
+       ÉÍÍÍ»     Of course, the information in a global data area can
+       º T º     pertain to output devices other than video adapters and
+       º I º     displays. A graphics interface that accommodates printers
+       º P º     or plotters can also incorporate information about their
+       ÈÍÍÍ¼     status in a global data area.
+
+
+Layered Graphics Interfaces
+
+
+     After implementing an interface between your low-level video output
+     routines and your high-level program, you may still find that a
+     certain amount of high-level source code is concerned with low-level
+     hardware-dependent manipulations such as pixel coordinate scaling and
+     clipping. You can insulate high-level application code from
+     considerations about hardware capabilities by creating one or more
+     intermediate layers of functionality between the high-level
+     application and the hardware drivers.
+
+     A simple layered graphics interface is depicted schematically in
+     Figure 13-1. The bottom layer comprises a set of hardware driver
+     routines like the ones in this book. The top layer provides a set of
+     subroutines that can be called by a high-level application.The
+     routines in the top layer may call the hardware drivers in the bottom
+     layer directly, or there may be one or more intermediate binding
+     layers interposed between the high-level routines and the hardware
+     drivers. In any case, the top-level subroutines present a consistent,
+     hardware-independent software interface to the programmer who uses a
+     high-level language, and thereby insulate high-level programs from the
+     vagaries of video hardware programming.
+
+     The ROM video BIOS provides an example of this sort of layering. The
+     set of routines that you invoke by issuing INT 10H serves as an
+     intermediate layer between assembly-language applications and the low-
+     level routines that actually program the hardware. From the
+     application's point of view, the INT 10H interface is relatively
+     hardware-independent; the video BIOS programs the graphics controller,
+     updates the video buffer, and performs many other hardware-dependent
+     programming tasks. Because the video BIOS routines contain the
+     hardware-dependent code, a program that uses the BIOS is to some
+     extent portable to different types of video hardware.
+
+     You can, of course, build many more functions into a layered interface
+     than the video BIOS provides. For example, commercially available
+     video graphics interfaces can produce sophisticated graphics and
+     perform video control functions, including geometric transformations
+     (scaling, translation, rotation of graphics images), three-dimensional
+     graphics (hidden-line removal, three-dimensional surface represen-
+     tation), or sophisticated color mixing and shading. Such graphics
+     packages can support output to printers or plotters, as well as to
+     video displays. In this case, the layered interface provides a set of
+     routines and data structures that allow a high-level program to
+     determine the status of an output device and  to select appropriate
+     output attributes (line style, drawing color, and so on) on each
+     device.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³High-level-language interface³ "Top layer"
+     ³  (independent of hardware)  ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                    ³
+                    ³
+                    ³Language binding
+                    ³
+                    ³
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³        Device driver        ³ "Bottom layer" 
+     ³    (hardware-dependent)     ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 13-1.  A simple layered graphics interface.
+
+
+     In an operating environment that relies heavily on a graphics-oriented
+     video interface, access to operating system functions can be combined
+     with video output routines in a high-level application program
+     interface (API). This is the approach taken in Apple's Macintosh and
+     in Microsoft Windows. In both these environments, support for system
+     functions like windows, pull-down menus, and icons is integrated into
+     a unified, graphics-oriented API.
+
+     Most layered graphics interfaces comprise more than one intermediate
+     layer. Furthermore, each layer can be broken into several independent
+     modules. The desire to preserve software portability, particularly as
+     existing software is adapted to new video hardware, is the main reason
+     for this. Many PC graphics programs are designed so that the end-user
+     can customize the hardware-dependent layer(s) to a particular hardware
+     configuration. This is a great convenience for the user, since
+     adapting a program with a layered video interface to a newly acquired
+     piece of hardware is no more difficult than installing a new device
+     driver or relinking the program with a new subroutine library.
+
+     The price you pay for this flexibility is a certain amount of extra
+     code needed to support the layered interface, so programs run somewhat
+     slower. You must consider this trade-off whenever you write an
+     application that relies on video display output. Although the benefits
+     of using a layered graphics interface are great, many applications are
+     simpler to develop and run faster when you dispense with the formal
+     graphics interface and use only the necessary low-level drivers.
+
+     To get an idea of the type of programming required when you use a
+     layered graphics interface, consider how you might draw a filled
+     rectangle in a video graphics mode. The following examples show how
+     you could do this using one  of the routines developed earlier in this
+     book and using two different layered graphics interfaces. As you
+     compare the source code and the programming technique in each of the
+     following examples, you will see where the advantages and
+     disadvantages of each graphics interface might lie.
+
+
+Direct Hardware Programming
+
+     The routine in Listing 13-6 draws a filled rectangle directly, by
+     computing the endpoints of the set of adjacent line segments that make
+     up the rectangle and using a horizontal line-drawing routine to update
+     the video buffer. Strictly speaking, this routine could be written
+     entirely in assembly language by adapting one of the line-drawing
+     routines from Chapter 6. The high-level routine in Listing 13-6 runs
+     nearly as fast, however, since most of the time is spent drawing the
+     lines, not computing their endpoints.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-6.  Using C to draw a filled rectangle.
+
+/* Listing 13-6 */
+
+FilledRectangle( x1, y1, x2, y2, n )
+int     x1,y1;                  /* upper left corner */
+int     x2,y2;                  /* lower right corner */
+int     n;                      /* pixel value */
+{
+        int     y;
+
+        for (y=y1; y<=y2; y++)          /* draw rectangle as a set of */
+          Line( x1, y, x2, y, n );      /*  adjacent horizontal lines */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     If raw speed is the major constraint on your program, this is the best
+     way to draw a rectangle. The code, however, is relatively nonportable,
+     because it makes implicit assumptions about such hardware-dependent
+     constraints as the (x,y) coordinate system and color capabilities of
+     the video subsystem. You could not use a routine such as the one in
+     Listing 13-6 in a multitasking or windowing operating environment,
+     because it programs the video hardware directly and could therefore
+     inadvertently corrupt video output from a concurrently executing
+     program.
+
+
+Extended BIOS Interface
+
+     As mentioned previously, the video ROM BIOS provides a certain amount
+     of hardware independence and portability through the interrupt 10H
+     interface. The tradeoff, of course, is speed and a certain amount of
+     flexibility. Apart from inefficient implementations, the INT 10H
+     routines are relatively unstructured and limited in their
+     capabilities. As IBM video subsystems have become more complex,
+     additional functionality has been grafted onto the INT 10H interface,
+     making it more powerful but increasingly difficult to master.
+
+     Direct Graphics Interface Standard (DGIS) is a firmware interface
+     developed by Graphics Software Systems that extends the capabilities
+     of the INT 10H interface in a structured manner. DGIS was designed to
+     provide a uniform low-level interface to video hardware based on
+     graphics coprocessors such as the Intel 82786 or the Texas Instruments
+     TMS34010. Programming with DGIS is reminiscent of programming with
+     IBM's video BIOS, but many elements of a high-level graphics interface
+     have also been incorporated into DGIS.
+
+     DGIS implements a hardware-independent interface by describing actual
+     video subsystems, or devices, in terms of their possible display
+     modes, or configurations. An application can interrogate DGIS to
+     determine what devices are supported in the computer. It then selects
+     a subsequent video output configuration, based on the configuration's
+     resolution, number of colors, graphics and/or alphanumeric text
+     support, and so on.
+
+     For example, Listing 13-7 calls DGIS to draw the same filled
+     rectangle as before. This time, however, instead of programming the
+     hardware, the source code is concerned primarily with programming the
+     interface. The routine first establishes the presence of a suitable
+     graphics output device in the computer by calling the DGIS Inquire
+     Available Devices function. This function returns a list of available
+     DGIS devices; in a system with an EGA, for example, the configurations
+     associated with the "EGA" device correspond to the EGA's video modes.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-7.  Using DGIS to draw a filled rectangle.
+
+                TITLE   'Listing 13-7'
+                NAME    dgisrect
+                PAGE    55,132
+
+;
+; Name:         dgisrect
+;
+; Function:     draw a filled rectangle using DGIS
+;
+; Notes:        assemble and link to create DGISRECT.EXE
+;
+
+CR              EQU     0Dh
+LF              EQU     0Ah
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:_DATA,ss:STACK
+
+EntryPoint      PROC    far
+
+                mov     ax,seg _DATA
+                mov     ds,ax                   ; DS -> _DATA
+                push    ss
+                pop     es                      ; ES -> stack segment
+
+; look for installed DGIS devices
+
+                xor     dx,dx                   ; DX = 0 (buffer length)
+                xor     cx,cx                   ; CX = 0
+                xor     bx,bx                   ; BX = 0
+                mov     ax,6A00h                ; AX = DGIS opcode (Inquire
+                                                ;       Available Devices)
+                int     10h
+                or      cx,cx
+                jnz     L01                     ; jump if device(s) installed
+
+                mov     dx,offset _DATA:Msg0
+                jmp     ErrorExit
+
+; find a graphics output device in the list of installed DGIS devices
+
+L01:            inc     cx                      ; CX = (# of bytes in list) + 1
+                and     cx,0FFFEh               ; CX = even number of bytes
+                mov     bp,sp
+                sub     sp,cx                   ; establish stack frame
+                                                ;  (SS:BP -> end of frame)
+                mov     di,sp                   ; ES:DI -> start of stack frame
+
+                push    di                      ; save for later
+                mov     dx,cx                   ; DX = size of buffer
+                xor     cx,cx
+                xor     bx,bx
+                mov     ax,6A00h                ; AX = DGIS opcode (Inquire
+                                                ;       Available Devices)
+                int     10h                     ; get device list at ES:DI
+                pop     di                      ; ES:DI -> device list
+
+L02:            cmp     word ptr es:[di+2],0    ; is this a graphics device?
+                je      L04                     ; jump if so
+
+                sub     bx,es:[di]              ; BX = bytes remaining in list
+                jnz     L03                     ; jump if more devices in list
+
+                mov     dx,offset _DATA:Msg1
+                jmp     ErrorExit
+
+L03:            add     di,es:[di]              ; ES:DI -> next device in list
+                jmp     L02
+
+; establish a logical connection to the graphics device
+;  using the first available configuration on the device
+
+L04:            les     di,es:[di+6]            ; ES:DI -> device entry point
+                mov     word ptr GrDevEntry,di
+                mov     word ptr GrDevEntry+2,es  ; save entry point
+
+                mov     cx,0                    ; CX = first configuration index
+                mov     ax,0027h                ; AX = DGIS opcode (Connect)
+                call    dword ptr GrDevEntry    ; connect to graphics device
+                cmp     bx,-1                   ; test returned handle
+                jne     L05                     ; jump if connected
+
+                mov     dx,offset _DATA:Msg2
+                jmp     ErrorExit
+
+L05:            mov     ChannelHandle,bx        ; save the handle for later
+                mov     ax,001Bh                ; AX = DGIS opcode (Init DGI)
+                call    dword ptr GrDevEntry    ; initialize the device with
+                                                ;  default attributes
+
+; draw a filled rectangle using default attributes
+
+                mov     di,100                  ; DI = lower right corner y
+                mov     si,100                  ; SI = lower right corner x
+                mov     dx,0                    ; DX = upper left corner y
+                mov     cx,0                    ; CX = upper left corner x
+                mov     bx,ChannelHandle        ; BX = handle
+                mov     ax,003Fh                ; AX = DGIS opcode (Output
+                                                ;       Filled Rectangle)
+                call    dword ptr GrDevEntry
+
+; disconnect and exit
+
+                mov     bx,ChannelHandle        ; BX = handle
+                mov     ax,002Bh                ; AX = DGIS opcode (Disconnect)
+                call    dword ptr GrDevEntry            
+
+Lexit:          mov     ax,4C00h
+                int     21h                     ; return to DOS
+
+ErrorExit:      mov     ah,9
+                int     21h                     ; display error message
+                mov     ax,4C01h
+                int     21h                     ; return to DOS
+
+EntryPoint      ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT para public 'DATA'
+
+GrDevEntry      DD      ?                       ; graphics device entry point 
+ChannelHandle   DW      ?                       ; handle to connected device
+                                                ;  configuration
+
+Msg0            DB      CR,LF,'No DGIS devices installed',CR,LF,'$'
+Msg1            DB      CR,LF,'No graphics devices installed',CR,LF,'$'
+Msg2            DB      CR,LF,'Can''t connect to graphics device',CR,LF,'$'
+
+_DATA           ENDS
+
+
+STACK           SEGMENT stack 'STACK'
+
+                DB      400h dup(?)
+
+STACK           ENDS
+
+                END     EntryPoint
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The application program "connects" to an appropriate configuration,
+     which DGIS identifies with a handle. The application can then
+     associate an attribute context with the handle; the attribute context
+     is a data structure that defines drawing colors, line styles, clipping
+     boundaries, and so on. Subsequent calls to DGIS graphics output
+     functions like OutputFilledRectangle refer to the attribute context
+     associated with a specified handle.
+
+     This general sequence of operations is inherently flexible. One reason
+     is that it lets an application program access hardware features
+     without actually programming the hardware. For example, an application
+     can use DGIS functions to change a color palette or update pixels
+     without writing directly to hardware control registers or to the video
+     buffer.
+
+     However, an application that performs video output through a DGIS
+     interface runs slower than an equivalent application that programs the
+     video hardware directly. As always, when you interpose a layer of
+     functionality between your application and the hardware, you gain
+     increased functionality and portability at the price of a decrease in
+     speed. You must decide whether this trade-off is worthwhile in your
+     own applications.
+
+
+High-Level Interface
+
+     There are several high-level graphics interface implementations
+     available for IBM video subsystems. These high-level interfaces differ
+     from DGIS and the IBM video BIOS in that they are implemented as
+     software libraries or RAM-loadable device drivers instead of firmware
+     routines. All of them relieve you of the need to program the hardware
+     directly, and all provide a structured programming interface that can
+     be used in a program written in a high-level language.
+
+     The differences between the high-level graphics interfaces lie in the
+     amount and type of functionality built into them. For example, the
+     Virtual Device Interface (VDI) is a proposed ANSI standard designed to
+     promote hardware independence in programs written in high-level
+     languages. VDI presents a consistent programming interface to all
+     graphics output hardware, including video subsystems, printers, and
+     plotters. (The Graphics Development Toolkit sold by Graphics Software
+     Systems and IBM support VDI.)
+
+     Another well-known interface is the Graphical Kernel System (GKS), an
+     internationally recognized ANSI standard. GKS offers a highly
+     structured interface with powerful graphics data manipulation
+     features. GKS deals not with individual hardware devices but with
+     workstations that can include several related input and output devices
+     (such as a display, a keyboard, and a mouse). A GKS implementation can
+     be layered above a lower-level interface like VDI; an application can
+     then use either interface without sacrificing functionality or
+     portability.
+
+     Still another type of high-level interface integrates graphics output
+     with the computer's operating environment, as does the Graphics Device
+     Interface (GDI) in Microsoft Windows. In contrast to DGIS, which is
+     designed to be a low-level interface to display hardware, GDI serves
+     as a high-level interface to Windows' graphics-oriented operating
+     environment. In a layered graphics interface, GDI would be closer to
+     the topmost layer while an interface like DGIS would be near the
+     bottom. In fact, you can install Windows to run on top of DGIS; a
+     Windows application can then use GDI functions which in turn call DGIS
+     functions to access the hardware (Figure 13-2).
+
+     The C source code fragment in Listing 13-8 merely scratches the
+     surface of GDI programming in Windows, but it should give you an idea
+     of how the video interface is structured. Most of the code in the
+     example establishes a device context for the Rectangle() function to
+     use. In GDI, a device context is a global data structure that contains
+     information on the colors with which text and graphics are drawn, as
+     well as scaling factors for pixel (x,y) coordinates, clipping
+     boundaries, and other information. Windows maintains a device context
+     for each window on the screen. Each device context is identified by a
+     16-bit handle. When an application calls a GDI output function like
+     Rectangle() or Ellipse(), it passes the handle of a device context to
+     the function; the function then refers to the information in the
+     device context to produce output in a window.
+
+     To produce graphics output in a window, a Windows application starts
+     by calling the Windows function CreateWindow(), which returns a handle
+     (hWnd) that identifies the window. The application then monitors
+     Windows' applicaiton message queue to determine when to update the
+     window.
+
+     To generate output to the window, the application can use another
+     Windows function, BeginPaint(), to associate a device context
+     (identified with the handle hDC) with the window. The application then
+     uses GDI functions to establish drawing attributes and pixel
+     coordinate mapping in the device context. In the example in Listing
+     13-8, the attributes of the rectangle's border (line style and color)
+     are specified by creating a data structure that becomes part of the
+     device context.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³    Application     ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               ³
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³        GDI         ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               ³
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³        DGIS        ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               ³
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³      Hardware      ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 13-2.  Microsoft Windows GDI installed on DGIS.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 13-8.  Using Microsoft Windows GDI (version 1.03) to draw a
+     filled rectangle.
+
+/* Listing 13-8 */
+
+
+    HWND hWnd;                      /* window handle */
+    HDC  hDC;                       /* device context handle */
+
+    struct
+    {
+      HDC hdc;                      /* device context handle */
+      BOOL fErase;
+      RECT rcPaint;
+      BOOL fRestore;
+      BOOL fIncUpdate;
+      BYTE rgbReserved[16];
+    }                         ps;   /* "paint structure" */
+
+
+    /* create a window */
+
+    hWnd = CreateWindow( ... );
+    .
+    .
+    .
+
+    /* initialize device context for window */
+
+    BeginPaint( hWnd, &ps );
+    hDC = ps.hdc;
+    .
+    .
+    .
+
+    /* associate attributes with device context */
+
+    hpen = CreatePen( PS_SOLID, 0, GetSysColor(COLOR_WINDOWTEXT) );
+    SelectObject( hDC, (HANDLE)hpen );
+
+    hbr = CreateSolidBrush( GetNearestColor(hDC,RectFillColor) );
+    SelectObject( hDC, (HANDLE)hbr );
+    .
+    .
+    .
+
+    /* draw a filled rectangle */
+
+    Rectangle( hDC, 0, 0, 100, 100 );
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The function CreatePen() creates the data structure and returns an
+     identifying handle that is assigned to the variable hpen. The
+     function SelectObject() then updates the device context with this
+     information. Similarly, calls to CreateSolidBrush() and SelectObject()
+     establish the color and pattern used to fill the rectangle.
+
+     When Rectangle() executes, it uses the "pen" and "brush" attributes in
+     the device context to draw the rectangle's border and interior. The
+     (x,y) coordinates specified in the call to Rectangle() indicate the
+     rectangle's upper left and lower right corners. The coordinates do not
+     indicate absolute pixel locations in the video buffer; they specify
+     points in the coordinate system that relates to the window in which
+     the rectangle is displayed.
+
+     GDI's general design is similar to that of other high-level graphics
+     interfaces--the hardware-dependent, machine-language routines are
+     isolated in the lowest layer of the interface, and portable, hardware-
+     independent functions are implemented in the interface's upper layers.
+     The differences among GDI, VDI, and other high-level graphics
+     interfaces lie not so much in implementation details as in the types
+     and complexity of the graphics functions they can perform.
+

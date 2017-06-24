@@ -1,0 +1,8 @@
+CGALIB v0.1
+A Turbo Pascal+ASM library for CGA
+graphics programming, including
+low-level control of CGA hardware.
+Written by Trixter@oldskool.org
+
+See DESCRIPT.ION files and cgalib.doc
+for comments and more info.

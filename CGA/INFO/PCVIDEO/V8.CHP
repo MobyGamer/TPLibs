@@ -1,0 +1,1325 @@
+
+
+                           8  Region Fill
+
+
+                          What Is a Region?
+              Interior and Border Pixels ş Connectivity
+
+                 Simple Fills with Horizontal Lines
+
+                    Three Region Fill Algorithms
+                        Simple Recursive Fill
+                         Line-Adjacency Fill
+                             Border Fill
+
+                      Comparing the Algorithms
+
+
+
+     This chapter describes several methods for filling a region of the
+     video buffer with a pattern of pixels. Region fill techniques are used
+     in many areas of computer graphics programming, including color
+     manipulation, shading, and representation of three-dimensional
+     objects, as well as in applications such as image processing, image
+     data transmission, and computer animation.
+
+     This chapter contains working source code for three region fill
+     algorithms, but the discussion is by no means comprehensive. These
+     algorithms and implementations are intended to be working models that
+     you can experiment with, modify, and optimize for your own
+     applications.
+
+
+What Is a Region?
+
+
+     A region is a connected group of pixels in the video buffer that is
+     delineated by some sort of boundary. You can think of a region in the
+     video buffer as comprising an interior and a border. To understand how
+     the algorithms in this chapter are implemented, however, it is worth
+     considering how a region can be clearly defined in terms of pixel
+     values and pixel geometry in the video buffer.
+
+
+Interior and Border Pixels
+
+     In this chapter, a region is assumed to be surrounded by pixels whose
+     values distinguish them from the pixels in the interior. You could
+     assume, for instance, that all interior pixels have the same value, in
+     which case a border pixel is simply any pixel whose value differs from
+     the values of pixels in the interior (see Figure 8-1a). You could
+     also assign a range of allowable pixel values to both interior and
+     border pixels. The algorithms in this chapter adhere to the convention
+     that all pixels in the border have one specified value and pixels in
+     the interior can be of any other value (see Figure 8-1b).
+
+     In many applications, it is practical to use a range of pixel
+     coordinates to define all or part of a region's border. The definition
+     of a "border pixel" can thus be broadened to include pixels outside a
+     predetermined range of (x,y) coordinates. In this way a region can be
+     bounded by the limits of the screen buffer or by a software window, as
+     well as by pixels of a predetermined value or range of values.
+
+
+       ±±    ±±    ±±        ±±
+           ±±  ±±        ±±                      ±±±±±±±±±±±±
+     ±±    ÛÛÛÛÛÛÛÛÛÛÛÛ±±                      ±±ÛÛÛÛÛÛÛÛÛÛÛÛ±±
+       ±±±±ÛÛÛÛÛÛÛÛÛÛÛÛ  ±±                    ±±ÛÛÛÛÛÛÛÛÛÛÛÛ±±
+   ±±      ÛÛÛÛÛÛÛÛÛÛÛÛ                        ±±ÛÛÛÛÛÛÛÛÛÛÛÛ±±
+       ±±  ÛÛÛÛÛÛÛÛÛÛÛÛ    ±±                  ±±ÛÛÛÛÛÛÛÛÛÛÛÛ±±
+           ±±          ±±                        ±±±±±±±±±±±±
+               ±±         ±±
+
+   a.                                          b.
+
+     Figure 8-1.  In Figure 8-1a, a region is defined by interior pixels of
+     a given value. In Figure 8-1b, a region is defined by border pixels of
+     a given value.
+
+
+Connectivity
+
+     To distinguish border pixels from interior pixels, you must also
+     specify the way the pixels are connected. If you allow interior pixels
+     to be connected diagonally as well as orthogonally (horizontally and
+     vertically), you must assume that the border pixels surrounding the
+     region are always connected orthogonally (see Figure 8-2a).
+     Conversely, if you allow border pixels to be diagonally connected, you
+     must constrain interior pixels to orthogonal connections (see Figure
+     8-2b). Consider the reason for this constraint: If both border and
+     interior pixels could be diagonally connected, then interior pixels
+     could be connected to pixels outside the border at places where border
+     pixels are diagonally connected.
+
+
+     ÚÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄ¿
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±± ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÀÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÙ
+
+     a.
+
+     ÚÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄ¿
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³ÛÛ³±±³±±³±±³±±³±±³±±³ÛÛ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³ÛÛ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÃÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄÅÄÄ´
+     ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³  ³
+     ÀÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÙ
+
+     b.
+
+     Figure 8-2.  Connectivity of pixels. In Figure 8-2a, border pixels
+     (black) are orthogonally connected, while interior pixels (gray) are
+     both orthogonally and diagonally connected. In Figure 8-2b, border
+     pixels are both orthogonally and diagonally connected, so interior
+     pixels are only connected orthogonally.
+
+
+Simple Fills with Horizontal Lines
+
+
+     Before you become involved with the intricacies of region fill
+     algorithms, remember that you can fill many regular geometric shapes
+     without using a specialized algorithm. A common application of this
+     technique is shown in Listing 8-1. This routine fills a rectangular
+     region in the video buffer with pixels of a specified value. It is
+     fast, because the subroutine that draws horizontal lines is fast.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 8-1.  Filling a rectangle with horizontal lines.
+
+/* Listing 6-3 */
+
+FilledRectangle( x1, y1, x2, y2, n )
+int     x1,y1;                  /* upper left corner */
+int     x2,y2;                  /* lower right corner */
+int     n;                      /* pixel value */
+{
+        int     y;
+
+        for (y=y1; y<=y2; y++)          /* draw rectangle as a set of */
+          Line( x1, y, x2, y, n );      /*  adjacent horizontal lines */
+}
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Creating similar routines to draw filled triangles, hexagons, and
+     circles is not difficult, because of these objects' regularity and
+     symmetry. Writing a general-purpose routine that can fill convex or
+     irregular polygons is more difficult; in  this case, you must scan-
+     convert each of the polygon's sides (using, for example, Bresenham's
+     algorithm from Chapter 6) to create a list of the pixels that define
+     the border of the polygon. This list contains pairs of pixels that can
+     then be connected with horizontal lines to fill the interior of the
+     polygon.
+
+       ÉÍÍÍ»     Several good textbooks deal with the problem of scan-
+       º T º     converting and filling arbitrary polygons. For example,
+       º I º     see Fundamentals of Interactive Computer Graphics by J. D.
+       º P º     Foley and A. VanDam (Addison-Wesley 1982).
+       ÈÍÍÍ¼
+
+     Though polygon fill techniques have many uses, some applications
+     require filling a region with completely arbitrary borders, such as a
+     map or an irregular shape that was drawn interactively. In this case,
+     your fill routine must define the region using only the pixel values
+     in the video buffer. The remainder of this chapter presents algorithms
+     and working source code for three such routines.
+
+
+Three Region Fill Algorithms
+
+
+     The three algorithms described here are all designed with IBM video
+     subsystems in mind. They use the pixel manipulation and line-drawing
+     subroutines developed in Chapters 4, 5, and 6. Also, all three
+     algorithms assume that border pixels can be diagonally connected
+     and that interior pixels must be orthogonally connected (as in Figure
+     8-2b). You can thus fill regions with boundaries drawn using the
+     line-drawing and ellipse-drawing routines in Chapters 6 and 7, since
+     those line and ellipse routines draw diagonally connected figures.
+
+     Furthermore, all three algorithms can fill a region that contains a
+     hole in its interior (see Figure 8-3). Such holes are collections of
+     border pixels that are  not contiguous with the pixels in the region's
+     outer border. Each algorithm is designed to detect the presence of
+     holes and to properly fill the interior pixels surrounding them.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 8-3 is found on page 247       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 8-3.  A region whose interior (gray pixels) contains two holes.
+
+
+Simple Recursive Fill
+
+     One way to fill a region is to start by filling a given "seed" pixel
+     in its interior, and then to fill each of the seed's immediate
+     neighbors, each of the neighbors' neighbors, and so on until the
+     entire region is filled. The C routine in Listing 8-2, PixelFill(),
+     shows how to do this. In PixelFill(), as in the other algorithms in
+     this chapter, pixels in the interior of the region are assumed to be
+     connected horizontally and vertically, but not diagonally.
+     (PixelFill() can be easily modified to fill diagonally connected
+     regions if so desired.)
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 8-2.  A simple recursive region fill.
+
+/* Listing 8-2 */
+
+int     FillValue;                       /* value of pixels in filled region */
+int     BorderValue;                     /* value of pixels in border */
+
+PixelFill( x, y )
+inô     x,y;
+{
+        int     v;
+
+        v = ReadPixel( x, y );
+
+        if ( (v!=FillValue) && (v!=BorderValue) )
+        {
+          SetPixel( x, y, FillValue );
+
+          PixelFill( x-1, y );
+          PixelFill( x+1, y );
+          PixelFill( x, y-1 );
+          PixelFill( x, y+1 );
+        }
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Before it fills a pixel, PixelFill() examines the pixel's value to
+     determine whether filling is required. If the pixel is neither a
+     border pixel nor a previously filled pixel, the routine updates the
+     pixel value and calls itself recursively. Because PixelFill() does not
+     fill previously filled pixels, the routine works properly even in
+     regions with holes.
+
+     Although simple, PixelFill() is inefficient. One reason is that on
+     average only one of the four recursive calls to PixelFill() ever does
+     anything. (Each pixel can only be filled once, but each time a pixel
+     is filled, four recursive calls are made to the function. The only
+     exception is in the case of the seed pixel.) Thus, PixelFill()
+     accomplishes nothing about 75 percent of the time, which is not very
+     efficient.
+
+       ÉÍÍÍ»     Another problem with PixelFill() is that the depth of
+       º T º     recursion can increase beyond the limits of available
+       º I º     stack memory. For example, the default stack space for
+       º P º     code generated with the Microsoft C compiler is 2 KB. You
+       ÈÍÍÍ¼     can easily exceed this limit by using PixelFill() to fill
+                 even relatively small regions.
+
+
+Line-Adjacency Fill
+
+     A better approach is to regard the interior of the region as a group
+     of adjacent line segments that are connected vertically instead of as
+     a group of pixels connected both vertically and horizontally. An
+     algorithm that fills adjacent line segments tends to be much more
+     efficient than a pixel-by-pixel recursive fill, because it inspects
+     and fills pixels more efficiently. Also, this conception of the region
+     is closer to the physical representation of pixels in the video
+     buffer, in which pixels are arranged in horizontal rows to be
+     displayed during the raster scan.
+
+     The routine in Listing 8-3, LineAdjFill(), implements a line-adjacency
+     algorithm for filling a region. Its general strategy is to locate each
+     group of horizontally connected pixels in the interior of the region.
+     Like the simple recursive fill, this algorithm also starts at a seed
+     pixel known to be in the region's interior. It scans left and right to
+     find the ends of the seed pixel's row, then fills the entire row.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 8-3.  A line-adjacency fill routine.
+
+/* Listing 8-3 */
+
+#define UP              -1
+#define DOWN            1
+
+
+LineAdjFill( SeedX, SeedY, D, PrevXL, PrevXR )
+int     SeedX,SeedY;            /* seed for current row of pixels */
+int     D;                      /* direction searched to find current row */
+int     PrevXL,PrevXR;          /* endpoints of previous row of pixels */
+{
+        int     x,y;
+        int     xl,xr;
+        int     v;
+
+        y = SeedY;              /* initialize to seed coordinates */
+        xl = SeedX;
+        xr = SeedX;
+
+        ScanLeft( &xl, &y );    /* determine endpoints of seed line segment */
+        ScanRight( &xr, &y );
+
+        Line( xl, y, xr, y, FillValue );        /* fill line with FillValue */
+
+
+/* find and fill adjacent line segments in same direction */
+
+        for (x=xl; x<=xr; x++)          /* inspect adjacent rows of pixels */
+        {
+          v = ReadPixel( x, y+D );
+          if ( (v!=BorderValue) && (v!=FillValue) )
+            x = LineAdjFill( x, y+D, D, xl, xr );
+        }
+
+/* find and fill adjacent line segments in opposite direction */
+
+        for (x=xl; x<PrevXL; x++)
+        {
+          v = ReadPixel( x, y-D );
+          if ( (v!=BorderValue) && (v!=FillValue) )
+            x = LineAdjFill( x, y-D, -D, xl, xr );
+        }
+
+        for (x=PrevXR; x<xr; x++)
+        {
+          v = ReadPixel( x, y-D );
+          if ( (v!=BorderValue) && (v!=FillValue) )
+            x = LineAdjFill( x, y-D, -D, xl, xr );
+        }
+
+        return( xr );
+}
+
+
+ScanLeft( x, y )
+int     *x,*y;
+{
+        int     v;
+
+
+        do
+        {
+          --(*x);                       /* move left one pixel */
+          v = ReadPixel( *x, *y );      /* determine its value */
+        }
+        while ( (v!=BorderValue) && (v!=FillValue) );
+
+        ++(*x);         /* x-coordinate of leftmost pixel in row */
+}
+
+
+ScanRight( x, y )
+int     *x,*y;
+{
+        int     v;
+
+
+        do
+        {
+          ++(*x);                       /* move right one pixel */
+          v = ReadPixel( *x, *y );      /* determine its value */
+        }
+        while ( (v!=BorderValue) && (v!=FillValue) );
+
+        --(*x);         /* x-coordinate of rightmost pixel in row */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The algorithm proceeds by locating all groups of horizontally
+     connected pixels that are vertically adjacent to the group it just
+     scanned. Each time it finds an adjacent group of not-yet-filled
+     pixels, LineAdjFill() is called recursively to fill them. The
+     algorithm terminates when all interior pixels have been filled.
+
+     Figure 8-4 illustrates the order in which LineAdjFill() fills a
+     simple region comprising seven line segments. The seed pixel is
+     assumed to lie inside line segment 1, and the routine is initially
+     called with an upward search direction. The routine first searches the
+     row of pixels above the seed (that is, line segment 2) for unfilled
+     pixels. Because the row has not yet been filled, the routine is called
+     recursively to fill it. Similarly, line segments 3 and 4 are filled by
+     subsequent recursive calls to LineAdjFill(). At this point, neither
+     line segment 4 nor line segment 3 has any unfilled pixels adjacent to
+     it, but when the pixels below line segment 2 are scanned, line segment
+     5 is discovered and filled. Finally, line segments 6 and 7 are filled
+     recursively.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 8-4 is found on page 250       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 8-4.  Given a seed pixel in line segment 1, LineAdjFill() fills
+     the adjacent line segments in this region in numerical order.
+
+
+       ÉÍÍÍ»     A line-adjacency graph (LAG) is essentially a diagram of
+       º T º     the connections between the adjacent line segments in the
+       º I º     interior of a region (see Figure 8-5). The problem of
+       º P º     filling a region is equivalent to traversing its LAG in
+       ÈÍÍÍ¼     such a way that all nodes in the graph are visited. In
+                 practice, traversing the LAG is relatively easy (there are
+                 several textbook algorithms for graph traversal) compared
+                 to generating the graph given only the pixels in the video
+                 buffer (which is essentially what LineAdjFill() does). For
+                 more information see "Filling Regions in Binary Raster
+                 Images: A Graph-Theoretic Approach" by U. Shani (SIGGRAPH
+                 Proceedings 1980, pp. 321-327).
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 8-5 is found on page 251       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 8-5.  A simple line-adjacency graph (LAG).
+
+
+     LineAdjFill() is much more efficient than PixelFill(), because it
+     rarely visits a pixel more than once to determine whether it needs to
+     be filled. Each time the routine is called, it fills one line segment
+     and then inspects the adjacent rows of pixels for unfilled pixels. The
+     routine does not examine pixels that were inspected during the
+     previous invocation of the routine (that is, pixels between PrevXL and
+     PrevXR), nor does it inspect pixels to be filled by subsequent
+     invocations (that is, pixels between the current value of x and the
+     value returned from a call to LineAdjFill()). The recursive logic
+     becomes clear when you trace the execution of the routine as it fills
+     a region such as the one diagrammed in Figure 8-4.
+
+       ÉÍÍÍ»     If you implement a line-adjacency fill algorithm in
+       º T º     assembly language, you can improve its efficiency by
+
+       º I º     maintaining a push-down stack of parameters and executing
+       º P º     the function iteratively rather than recursively. The
+       ÈÍÍÍ¼     skeleton of the algorithm then becomes
+
+                 push ( .. initial parameters on stack .. );
+                 while ( .. stack not empty .. )
+                   LineAdjFill();
+
+                 The fill routine pops the topmost parameters off the stack
+                 and pushes new sets of parameters instead of calling
+                 itself recursively.
+
+                 LineAdjFill
+                 {
+                   pop ( .. current parameters off of stack .. )
+                   .
+                   .
+                   .
+                   if ( .. adjacent line needs to be filled .. )
+                     push ( .. new parameters .. )
+                 }
+
+                 In assembly language, a single machine instruction can
+                 perform each push and pop, so the algorithm's performance
+                 is greatly improved.
+
+     A line-adjacency algorithm can be adapted to fill a region with a
+     pattern of pixels as well as with a single pixel value. For this
+     reason, it is used commonly in commercial graphics packages. (IBM
+     BASICA and Microsoft GW-BASIC are examples.) Modifying the algorithm
+     to do patterned fills requires that the horizontal line-drawing
+     routine be replaced with a pattern-drawing routine and that the test
+     that determines whether a pixel has been filled take into account the
+     pixel values in the fill pattern.
+
+     These modifications may seem innocuous, but they can significantly
+     degrade the fill routine's performance. The logic required to detect
+     the presence of previously filled pixels can be complicated,
+     particularly if you allow the fill pattern to contain pixels with the
+     same value as border pixels.
+
+
+Border Fill
+
+     Because the border of a region defines the extent of its interior, it
+     is possible to fill a region by following the connected border pixels
+     at the ends of the adjacent line segments that make up the interior.
+     (See "Contour Filling in Raster Graphics" by T. Pavlidis, Computer
+     Graphics, August 1981, p. 29). As long as you fill the region at the
+     same time that you trace the border, however, this kind of border-
+     tracing fill algorithm offers no clear advantage over a line-adjacency
+     algorithm.
+
+     However, if you separate the problem of tracing the border from that
+     of filling the region's interior, the resulting algorithm becomes more
+     flexible. The process of filling a region then breaks down into three
+     discrete steps:
+
+     1)  Create an ordered list of the border pixels (trace the border).
+
+     2)  Scan the interior of the region for holes.
+
+     3)  "Connect the dots" in the list from left to right with horizontal
+         lines, thereby filling the region.
+
+     The routine BorderFill() in Listing 8-4 performs a region fill using
+     this three-step method. The algorithm executes the three steps
+     iteratively, once for the boundary of the region and once for each
+     hole in the interior of the region.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 8-4.  A region fill routine that traces a region's
+     border.
+
+/* Listing 8-3 */
+
+#define BLOCKED         1
+#define UNBLOCKED       2
+#define TRUE            1
+#define FALSE           0
+
+struct  BPstruct                        /* table of border pixels */
+{
+        int     x,y;
+        int     flag;
+}
+        BP[3000];                       /* (increase if necessary) */
+
+int     BPstart;                        /* start of table */
+int     BPend = 0;                      /* first empty cell in table */
+int     FillValue;                      /* value of pixels in filled region */
+int     BorderValue;                    /* value of pixels in border */
+
+
+BorderFill( x, y )
+int     x,y;
+{
+        do                              /* do until entire table has been scanned */
+        {
+          TraceBorder( x, y );          /* trace border starting at x,y */
+          SortBP( BP );                 /* sort the border pixel table */
+          ScanRegion( &x, &y );         /* look for holes in the interior */
+        }
+        while (BPstart < BPend);
+
+        FillRegion();                   /* use the table to fill the interior */
+}
+
+
+ScanRegion( x, y )
+int     *x,*y;
+{
+        int     i = BPstart;
+        int     xr;
+
+        while (i<BPend)
+        {
+          if (BP[i].flag == BLOCKED)            /* skip pixel if blocked */
+            ++i;
+
+          else
+          if (BP[i].y != BP[i+1].y)             /* skip pixel if last in line */
+            ++i;
+
+          else
+          {                                     /* if at least one pixel to fill .. */
+            if (BP[i].x < BP[i+1].x-1)          /* .. scan the line */
+            {
+              xr = ScanRight( BP[i].x+1, BP[i].y );
+
+              if (xr<BP[i+1].x)                 /* if a border pixel is found .. */
+              {
+                *x = xr;                        /* .. return its x,y coordinates */
+                *y = BP[i].y;
+                break;
+              }
+            }
+
+            i += 2;                             /* advance past this pair of pixels */
+          }
+        }
+
+        BPstart = i;
+}
+
+
+SortBP()                        /* uses Microsoft C library quicksort routine */
+{
+        int     CompareBP();
+
+        qsort( BP+BPstart, BPend-BPstart, sizeof(struct BPstruct), CompareBP );
+}
+
+
+CompareBP( arg1, arg2 )         /* returns -1 if arg1 < arg2 */
+struct  BPstruct  *arg1,*arg2;
+{
+        int     i;
+
+        i = arg1->y - arg2->y;          /* sort by y-coordinate */
+        if (i!=0)
+          return( (i<0) ? -1 : 1 );     /* (return -1 if i<0, 1 if i>0) */
+
+        i = arg1->x - arg2->x;          /* sort by x-coordinate */
+        if (i!=0)
+          return( (i<0) ? -1 : 1 );
+
+        i = arg1->flag - arg2->flag;    /* sort by flag */
+          return( (i<0) ? -1 : 1 );
+}
+
+
+FillRegion()
+{
+        int     i;
+
+
+        for(i=0; i<BPend;)
+        {
+          if (BP[i].flag == BLOCKED)            /* skip pixel if blocked */
+            ++i;
+
+          else
+          if (BP[i].y != BP[i+1].y)             /* skip pixel if last in line */
+            ++i;
+
+          else
+          {                                     /* if at least one pixel to fill .. */
+            if (BP[i].x < BP[i+1].x-1)          /* .. draw a line */
+              Line( BP[i].x+1, BP[i].y, BP[i+1].x-1, BP[i+1].y, FillValue );
+
+            i += 2;
+          }
+        }
+}
+
+
+/* border tracing routine */
+
+struct  BPstruct CurrentPixel;
+int     D;                              /* current search direction */
+int     PrevD;                          /* previous search direction */
+int     PrevV;                          /* previous vertical direction */
+
+
+TraceBorder( StartX, StartY )
+int     StartX,StartY;
+{
+        int     NextFound;              /* flags */
+        int     Done;
+
+/* initialize */
+
+        CurrentPixel.x = StartX;
+        CurrentPixel.y = StartY;
+
+        D = 6;                          /* current search direction */
+        PrevD = 8;                      /* previous search direction */
+        PrevV = 2;                      /* most recent vertical direction */
+
+/* loop around the border until returned to the starting pixel */
+
+        do
+        {
+          NextFound = FindNextPixel();
+          Done =
+           (CurrentPixel.x == StartX) && (CurrentPixel.y == StartY);
+        }
+        while (NextFound && !Done);
+
+/* if only one pixel in border, add it twice to the table */
+
+        if (!NextFound)                         /* pixel has no neighbors */
+        {
+          AppendBPList( StartX, StartY, UNBLOCKED );
+          AppendBPList( StartX, StartY, UNBLOCKED );
+        }
+
+/* if last search direction was upward, add the starting pixel to the table */
+
+        else
+        if ( (PrevD <= 3) && (PrevD >= 1) )
+          AppendBPList( StartX, StartY, UNBLOCKED );
+}       
+
+
+FindNextPixel( )
+{
+        int     i;
+        int     flag;
+
+
+        for (i=-1; i<=5; i++)
+        {
+          flag = FindBP( (D+i) & 7 );           /* search for next border pixel */
+          if (flag)                             /* flag is TRUE if found */
+          {
+            D = (D+i) & 6;                      /* (D+i) MOD 2 */
+            break;                              /* exit from loop */
+          }
+        }
+
+        return(flag);
+}
+
+
+FindBP( d )
+int     d;                      /* direction to search for next border pixel */
+{
+        int     x,y;
+
+        x = CurrentPixel.x;
+        y = CurrentPixel.y;
+
+
+        NextXY( &x, &y, d );            /* get x,y of pixel in direction d */
+
+        if ( BorderValue == ReadPixel( x, y ) )
+        {
+          AddBPList( d );               /* add pixel at x,y to table */
+          CurrentPixel.x = x;           /* pixel at x,y becomes current pixel */
+          CurrentPixel.y = y;
+          return( TRUE );
+        }
+
+        else
+          return( FALSE );
+}
+
+
+NextXY( x, y, Direction )
+int     *x,*y;
+int     Direction;
+{
+        switch( Direction )             /*   3 2 1   */
+        {                               /*   4   0   */
+          case 1:                       /*   5 6 7   */
+          case 2:
+          case 3:
+
+                *y -= 1;                /* up */
+                break;
+          case 5:
+          case 6:
+          case 7:
+                *y += 1;                /* down */
+                break;
+        }
+
+        switch(Direction)
+        {
+          case 3:
+          case 4:
+          case 5:
+                *x -= 1;                /* left */
+                break;
+          case 1:
+          case 0:
+          case 7:
+                *x += 1;                /* right */
+                break;
+        }
+}
+
+
+AddBPList( d )
+int     d;
+{
+        if (d == PrevD)
+          SameDirection();
+
+        else
+        {
+          DifferentDirection( d );
+          PrevV = PrevD;                        /* new previous vertical direction */ 
+        }
+        
+        PrevD = d;                              /* new previous search direction */
+}
+
+SameDirection()
+{
+        if (PrevD == 0)                         /* moving right ... */
+          BP[BPend-1].flag = BLOCKED;           /* .. block previous pixel */
+
+        else
+        if (PrevD != 4)                         /* if not moving horizontally */
+          AppendBPList( CurrentPixel.x, CurrentPixel.y, UNBLOCKED );
+}
+
+
+DifferentDirection( d )
+int     d;
+{
+
+/* previously moving left */
+
+        if (PrevD == 4)
+        {
+          if (PrevV == 5)                       /* if from above .. */
+            BP[BPend-1].flag = BLOCKED;         /* .. block rightmost in line */
+
+          AppendBPList( CurrentPixel.x, CurrentPixel.y, BLOCKED );
+        }
+
+/* previously moving right */
+
+        else
+        if (PrevD == 0)                         /* previously moving right .. */
+        {
+          BP[BPend-1].flag = BLOCKED;           /* .. block rightmost in line */
+
+          if (d == 7)                           /* if line started from above */
+            AppendBPList( CurrentPixel.x, CurrentPixel.y, BLOCKED );
+          else
+            AppendBPList( CurrentPixel.x, CurrentPixel.y, UNBLOCKED );
+        }
+
+/* previously moving in some vertical direction */
+
+        else
+        {
+          AppendBPList( CurrentPixel.x, CurrentPixel.y, UNBLOCKED );
+
+/* add pixel twice if local vertical maximum or minimum */
+
+          if ( ( (d>=1) && (d<=3) ) && ( (PrevD >= 5) && (PrevD <= 7) ) ||
+               ( (d>=5) && (d<=7) ) && ( (PrevD >= 1) && (PrevD <= 3) ) )
+            AppendBPList( CurrentPixel.x, CurrentPixel.y, UNBLOCKED );
+        }
+}
+
+
+AppendBPList( p, q, f )
+int     p,q;                    /* pixel x,y coordinates */
+int     f;                      /* flag */
+{
+        BP[BPend].x = p;
+        BP[BPend].y = q;
+        BP[BPend].flag = f;
+
+        ++BPend;                /* increment past last entry in table */
+}
+
+
+/* routine to scan a line for a border pixel */
+
+int     Xmax;                   /* largest valid pixel x-coordinate */
+
+ScanRight( x, y )
+int     x,y;
+{
+        while ( ReadPixel( x, y ) != BorderValue )
+        {
+          ++x;                          /* increment x */
+          if (x==Xmax)                  /* if end of line in buffer .. */
+            break;                      /* .. exit from the loop */
+        }
+
+        return( x );
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The module TraceBorder() creates a table that contains the pixel
+     address  of every pixel in the region's border. SortBP() then sorts
+     the table of border pixels by increasing y- and x-coordinates. The
+     routine ScanRegion() examines the interior line segment between each
+     pair of border pixels in the table. If it detects a border pixel
+     within the line segment, ScanRegion() assumes it has encountered a
+     hole in the region; it then returns the border pixel's (x,y)
+     coordinates so that TraceBorder() and SortBP() can update the table
+     with the hole's border pixels. This process continues until the entire
+     interior of the region has been scanned. Then FillRegion() uses the
+     sorted list of border pixels to fill the region by drawing a
+     horizontal line between each pair of pixels in the list.
+
+     TraceBorder() starts with a seed pixel on the right-hand border of the
+     region. It steps clockwise from pixel to pixel in the border. Because
+     the search proceeds clockwise, the interior of the region is always to
+     the right of the direction in which the search is moving. If a pixel
+     is not adjacent to the interior, the algorithm does not identify it as
+     a border pixel. The algorithm ensures that the border pixels it
+     detects are indeed adjacent to the interior by always examining pixels
+     to the right of the search direction first.
+
+     The algorithm identifies its search direction with one of the eight
+     numeric codes shown in Figure 8-6. (This technique is taken from
+     "Algorithms for Graphics and Image Processing" by T. Pavlidis
+     [Computer Science Press, 1982].) Thus, in Figure 8-7, the algorithm
+     moves from pixel b to pixel c in direction 6 (downward). To  find the
+     next pixel in the border, the algorithm starts by examining the pixel
+     to the right of direction 6; that is, direction 4. This pixel is not a
+     border pixel, but the pixel in direction 5 (pixel d) is, so d is added
+     to the list. The algorithm continues to trace the border until it
+     returns to the starting pixel. (The search terminates immediately in
+     the case of a degenerate "border" consisting of only one pixel.)
+
+     TraceBorder() performs another task in addition to identifying the
+     pixels in the border. It also indicates whether each border pixel
+     defines the left or right endpoint of a horizontal interior line
+     segment. (Because FillRegion() draws horizontal lines from left to
+     right, TraceBorder() marks each border pixel with a flag indicating
+     whether the pixel can be used as a left border.) Furthermore, if a
+     pixel can serve as both a left and a right border (see Figure 8-8),
+     TraceBorder() adds it to the table twice. The logic in SameDirection()
+     and DifferentDirection() accomplishes these tasks.
+
+
+     ÚÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄ¿
+     ³       ³   2   ³       ³
+     ³   3   ³       ³   1   ³
+     ³      ³      ³      ³
+     ³      \³   ³   ³/      ³
+     ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄ´
+     ³       ³       ³       ³
+     ³  4 ÄÄ³       ³ÄÄ   0 ³
+     ³       ³       ³       ³
+     ÃÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄ´
+     ³      /³   ³   ³\      ³
+     ³      ³      ³      ³
+     ³   5   ³       ³   7   ³
+     ³       ³   6   ³       ³
+     ÀÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÙ
+
+     Figure 8-6.  Numeric codes for border pixel trace directions.
+
+
+                     ÚÄÄÄ¿                     Direction
+                     ³ a ³           a -> b        6
+                    ÃÄÄÄÅÄÄÄ¿       b -> c        6
+                     ³ b ³   ³       c -> d        5
+                    ÃÄÄÄÅÄÄÄÙ       d -> e        5
+               /     ³ c ³           e -> f        4
+                ÚÄÄÄÅÄÄÄ´           f -> g        4
+               ³ d ³   ³
+     ÚÄÄÄÂÄÄÄÂÄÄÄÅÄÄÄÅÄÄÄÙ
+     ³ g ³ f ³ e ³   ³
+     ÀÄÄÄÁÄÄÄÅÄÄÄÅÄÄÄÙ
+             ³   ³
+             ÀÄÄÄÙ
+
+     Figure 8-7.  Border pixel identification in TraceBorder().
+
+
+         ÚÄÄÄÂÄÄÄÂÄÄÄ¿                       ÚÄÄÄÂÄÄÄ¿
+         ³   ³   ³   ³                       ³   ³   ³
+     ÚÄÄÄÅÄÄÄÁÄÄÄÁÄÄÄÅÄÄÄ¿               ÚÄÄÄÅÄÄÄÁÄÄÄÅÄÄÄ¿
+     ³   ³           ³   ³               ³   ³       ³   ³
+     ÃÄÄÄ´           ÀÄÄÄÅÄÄÄÂÄÄÄÂÄÄÄÂÄÄÄÅÄÄÄÙ       ÃÄÄÄ´
+     ³   ³               ³ a ³   ³   ³   ³           ³   ³
+     ÃÄÄÄ´               ÀÄÄÄÁÄÄÄÁÄÄÄÁÄÄÄÙ           ÃÄÄÄ´
+     ³   ³                                           ³   ³
+     ÃÄÄÄ´                                           ÃÄÄÄ´
+     ³   ³                                           ³   ³
+     ÃÄÄÄ´                   ÚÄÄÄ¿                   ÃÄÄÄ´
+     ³   ³                   ³ b ³                   ³   ³
+     ÀÄÄÄÅÄÄÄ¿           ÚÄÄÄÅÄÄÄÅÄÄÄ¿           ÚÄÄÄÅÄÄÄÙ
+         ³   ³           ³   ³   ³   ³           ³   ³
+         ÀÄÄÄÅÄÄÄÂÄÄÄÂÄÄÄÅÄÄÄÙ   ÀÄÄÄÅÄÄÄÂÄÄÄÂÄÄÄÅÄÄÄÙ
+             ³   ³   ³   ³           ³   ³   ³   ³
+             ÀÄÄÄÁÄÄÄÁÄÄÄÙ           ÀÄÄÄÁÄÄÄÁÄÄÄÙ
+
+     Figure 8-8.  Pixels may border the interior on the left, right, or
+     both directions: Pixel a is a border pixel on the right of a
+     row of interior pixels; it is blocked to its right by other border
+     pixels. Pixel b serves as both a left and a right border.
+
+
+     TraceBorder() may seem complex, but it is a relatively fast routine.
+     The slowest steps in BorderFill() are actually SortBP(), which sorts
+     the table of border pixels, and ScanRegion(), which searches for
+     border pixels in the interior of the region. If SortBP() and
+     ScanRegion() are slow, BorderFill() will be slow, because these
+     routines are executed iteratively, once for each hole in the region.
+
+     You can significantly improve BorderFill()'s performance by modifying
+     TraceBorder() so that it builds its list of border pixels in the
+     proper order to begin with, avoiding the sort altogether. You can
+     build the ordered list efficiently using any of several data
+     structures, including a linked list, a heap, or a fixed-size table.
+     This type of modification is particularly effective when the algorithm
+     is used to fill regions that contain one or more holes. Instead of
+     sorting the list each time it detects a hole, the modified algorithm
+     simply inserts the hole's border pixels into the list.
+
+     Writing ScanRegion() in a high-level language is relatively easy, but
+     because the routine examines all pixels in the interior of the region,
+     you should write it in assembly language so it will execute rapidly.
+     Furthermore, using assembly language on the EGA, the VGA, and the
+     InColor Card offers a distinct advantage, because the graphics control
+     hardware in these subsystems can examine eight pixels at a time and
+     indicate which, if any, match the border pixel value. The assembly-
+     language routine ScanRight() in Listing 8-5, which can be used in EGA
+     and VGA 16-color graphics modes, runs 50 times faster than the C
+     version in Listing 8-4.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 8-5.  An assembly-language version of ScanRight().
+
+
+                TITLE   'Listing 8-4'
+                NAME    ScanRight10
+                PAGE    55,132
+
+;
+; Name:         ScanRight10
+;
+; Function:     Scan for a pixel of a given value in 16-color EGA/VGA graphics
+;
+; Caller:       Microsoft C:
+;
+;                       int ScanRight10(x,y);
+;
+;                       int x,y;                        /* starting pixel */
+;
+;                       extern  int BorderValue;        /* value of border pixel */
+;
+;               Returns the x-coordinate of the rightmost border pixel.
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+BytesPerLine    EQU     80              ; 80 for most 16-color graphics modes
+                                        ;  (40 for 320x200 16-color)
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _ScanRight10
+_ScanRight10    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+                push    di
+
+; calculate pixel address of (0,y)
+
+                mov     ax,ARGy         ; AX := y
+                xor     bx,bx           ; BX := 0
+                call    PixelAddr10     ; ES:BX -> buffer
+                mov     di,bx           ; ES:DI -> buffer
+
+; calculate offset of x in row
+
+                mov     ax,ARGx
+                mov     si,ax           ; SI,AX := x
+                mov     cl,ByteOffsetShift
+                shr     si,cl           ; SI := offset of x in row y
+
+                add     di,si           ; DI := offset of x in buffer
+
+; calculate a bit mask for the first byte to scan
+
+                mov     cl,al
+                and     cl,7            ; CL := x & 7
+                mov     ch,0FFh
+                shr     ch,cl           ; CH := bit mask for first scanned byte
+
+; configure the Graphics Controller
+
+                mov     dx,3CEh         ; DX := Graphics Controller port addr
+
+                mov     ah,_BorderValue ; AH := pixel value for Color Compare reg
+                mov     al,2            ; AL := Color Compare Reg number
+                out     dx,ax
+
+                mov     ax,805h         ; AH := 00001000b (Read Mode 1)
+                out     dx,ax           ; AL := Mode reg number
+
+                mov     ax,0F07h        ; AH := 00001111b (Color Compare reg value)
+                out     dx,ax           ; AL := Color Compare reg number
+
+; inspect the first byte for border pixels
+
+                mov     al,es:[di]      ; AL := nonzero bits corresponding to
+                                        ;  border pixels
+                inc     di              ; ES:DI -> next byte to scan
+                and     al,ch           ; apply bit mask
+                jnz     L01             ; jump if border pixel(s) found
+
+; scan remainder of line for border pixels
+
+                mov     cx,BytesPerLine
+                sub     cx,si           ; CX := BytesPerLine - (byte offset of
+                                        ;  starting pixel)
+                dec     cx              ; CX := # of bytes to scan
+
+                repe    scasb           ; scan until nonzero byte read; i.e.,
+                                        ;  border pixel(s) found
+
+; compute x value of border pixel
+
+                mov     al,es:[di-1]    ; AL := last byte compared
+
+L01:            sub     di,bx           ; DI := offset of byte past the one which
+                                        ;  contains a border pixel
+                mov     cl,ByteOffsetShift
+                shl     di,cl           ; DI := x-coordinate of 1st pixel in byte
+
+                mov     cx,8            ; CX := loop limit
+
+L02:            shl     al,1            ; isolate first border pixel
+                jc      L03
+
+                loop    L02
+
+L03:            sub     di,cx           ; DI := x-coordinate of border pixel
+
+; restore default Graphics Controller state and return to caller
+
+                mov     ax,2            ; AH := 0 (default Color Compare value)
+                out     dx,ax           ; restore Color Compare reg
+
+                mov     al,5            ; AH := 0, AL := 5
+                out     dx,ax           ; restore Mode reg
+
+                mov     ax,di           ; AX := return value
+
+                pop     di              ; restore caller registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ScanRight10    ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+                EXTRN   _BorderValue:byte
+
+_DATA           ENDS
+
+                END
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The fastest step in BorderFill() is the fill itself, because
+     horizontal lines can be drawn rapidly. Thus, if you need to fill the
+     same region repeatedly or to copy the same filled region several
+     times, you can preserve the list of border pixels generated the first
+     time you execute BorderFill(). This greatly accelerates subsequent
+     fills, because you can skip the border-tracing and sorting steps.
+
+
+Comparing the Algorithms
+
+
+     Which region fill algorithm is best? Each algorithm described in this
+     chapter has its pros and cons. You can compare them in several ways. A
+     valid comparison considers the simplicity of the algorithm, the speed
+     of the compiled code, and the suitability of each algorithm for
+     particular types of region fills.
+
+     The recursive, pixel-by-pixel algorithm implemented as PixelFill() is
+     about as simple as you can get. The source code is short and easy to
+     implement in assembly language as well as in a high-level language.
+     However, PixelFill() is too inefficient and too highly recursive to be
+     generally useful.
+
+     The line-adjacency fill algorithm LineAdjFill() is more complicated
+     than PixelFill(). Nevertheless, LineAdjFill() improves on the
+     performance of PixelFill() because it examines pixel groups instead of
+     individual pixels. LineAdjFill() also runs faster when it is written
+     to access the video buffer in one-byte increments instead of one-pixel
+     increments. LineAdjFill() is also much less recursive than
+     PixelFill(), so its runtime memory requirements are smaller than those
+     of PixelFill().
+
+     The three-step algorithm implemented in BorderFill() is more
+     complicated and somewhat slower than the other two algorithms. The
+     advantage of using BorderFill() is its generality. Its modules can be
+     readily adapted to alternate types of region fills, including pattern
+     fills and fills of regions defined as numeric lists of (x,y)
+     coordinates.
+
+     The performance of BorderFill() depends on the number of holes in the
+     region. It is as fast as LineAdjFill() in filling a region without
+     holes. However, when the region to be filled looks like Swiss cheese,
+     BorderFill() slows down because it must update the sorted list of
+     border pixels whenever it fills around a hole.
+
+     Nevertheless, BorderFill() can do several things that the other
+     algorithms cannot. For example, it can reliably fill regions that
+     contain previously filled pixels. Unlike BorderFill(), both
+     PixelFill() and LineAdjFill() rely on the implicit assumption tht no
+     interior pixels have the same value as the fill value. Thus,
+     BorderFill() correctly fills the region shown in Figure 8-9, but both
+     of the other routines fail.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 8-9 is found on page 264       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 8-9.  A test case for fill algorithms. Neither PixelFill() nor
+     LineAdjFill() can correctly fill this region with gray pixels, because
+     the "holes" are treated as if they have been already filled.
+
+
+       ÉÍÍÍ»     You could modify a routine such as LineAdjFill() so that
+       º T º     its detection of holes in the region does not depend on
+       º I º     the presence of previously filled pixels. This means the
+       º P º     algorithm must somehow keep track of pixels it has already
+       ÈÍÍÍ¼     filled. One way to do this is to keep track of points
+                 where the border reaches a local minimum or maximum (see
+                 Figure 8-10). These locations can identify the top and
+                 bottom of a hole in the region, enabling the fill
+                 algorithm to determine when to stop working its way around
+                 the hole.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 8-10 is found on page 265      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 8-10.  An algorithm can detect the presence of a hole in a
+     region by locating the border's local maximum and minimum. Pixels
+     marked a identify a local maximum. Pixels marked b identify a
+     local minimum.
+
+
+     For some applications, BorderFill() has a strong advantage over the
+     other algorithms, because its border-tracing and sorting steps
+     generate a list of numeric pixel coordinates. This list completely
+     defines a two-dimensional region of pixels. You can translate or
+     change the scale of the region by applying the appropriate conversions
+     to the list of border pixels. As long as you preserve the pixels'
+     order in the list, you can use the FillRegion() routine in
+     BorderFill() to fill the region the list defines. For this reason, the
+     BorderFill() algorithm is best suited for applications that must copy
+     arbitrary regions, change their scale or size, or draw them repeatedly
+     into the video buffer.
+
+     Furthermore, by modifying the horizontal line routine in BorderFill()
+     you can easily fill a region with an arbitrary pattern or allow pixel
+     AND, OR, and XOR functions. Although you can augment PixelFill() or
+     LineAdjFill() in this way, the source code can become complicated
+     because these algorithms inspect pixels to determine whether they have
+     been filled.
+
+     The trade-offs in complexity and performance in these algorithms leave
+     a great deal to your programming judgment. No single region fill
+     algorithm is best for all possible graphics applications. Your choice
+     of implementation should depend on your performance demands, the
+     requirements of the application itself, the capabilities of your video
+     display hardware, and the effort you can afford to expend in
+     integrating and optimizing the code.
+

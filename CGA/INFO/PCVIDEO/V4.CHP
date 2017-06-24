@@ -1,0 +1,1489 @@
+
+
+
+                         4  Graphics Modes
+
+
+                        Using Graphics Modes
+
+                    Mapping Pixels to the Screen
+                           CGA ş HGC ş EGA
+                Hercules InColor Card ş MCGA and VGA
+
+                          Pixel Coordinates
+                      Pixel Coordinate Scaling
+                            Aspect Ratio
+
+                      Pixel Display Attributes
+                           CGA ş HGC ş EGA
+                 Hercules InColor Card ş MCGA ş VGA
+
+
+
+     This chapter covers the basics of graphics-mode programming on the
+     CGA, EGA, MCGA, VGA, and Hercules cards. First the chapter describes
+     how pixels are represented in the video buffer and how they are mapped
+     to the screen. Then it focuses on pixel display attributes; that is,
+     on how to determine a pixel's color, intensity, and blinking.
+
+
+Using Graphics Modes
+
+
+     In graphics modes, your program can manipulate the color of every
+     pixel on the display. For this reason, graphics modes are sometimes
+     called All Points Addressable (APA) modes. Because you have control
+     over each pixel in the displayed image, you can construct complex
+     geometric images, fill arbitrary areas of the screen with solid colors
+     or blends of colors, and display animated images that move smoothly
+     across the screen.
+
+     Most programmers, however, use graphics modes only when pixel-by-pixel
+     control over the screen is essential to an application. The reason:
+     The price you pay for total control over the screen is increased
+     source code complexity and decreased performance. A simple comparison
+     of the amount of data required to display a full screen of information
+     in alphanumeric and in graphics modes shows why.
+
+     For example, to display 25 rows of 16-color, 80-column text in
+     alphanumeric mode on an EGA, you need to store 4000 bytes (80 x 25 x
+     2) in the video buffer. With a 350-line monitor, the text is displayed
+     with 640-by-350-pixel resolution. Obtaining the same resolution in a
+     16-color graphics mode requires 112,000 bytes (640 x 350 x 4 bits per
+     pixel / 8 bits per byte). Obviously, a program that must manipulate
+     112,000 bytes of data is more complex and slower than a program that
+     manipulates only 4000 bytes.
+
+     Of course, the performance penalty for using graphics-mode video
+     output is less apparent when you use a faster computer, such as an
+     80286-based or 80386-based machine whose CPU runs at a high clock
+     speed. Still, before you leap into graphics-mode programming, you
+     should carefully consider the alternatives. Alphanumeric modes are
+     sufficient for displaying text and simple block graphics and, hence,
+     for the majority of real-world applications.
+
+       ÉÍÍÍ»     An alternative in some applications is to use a video
+       º T º     subsystem that has an alphanumeric character generator
+       º I º     capable of displaying RAM-based character sets. (The EGA,
+       º P º     MCGA, VGA, HGC+, and InColor Card all have this
+       ÈÍÍÍ¼     capability.) With these subsystems, you can design
+                 "characters" that are actually subunits of a larger
+                 graphics image and then assemble the subunits into a
+                 complete image in an alphanumeric mode. (Chapter 10
+                 explains the technique in detail.)
+
+
+Mapping Pixels to the Screen
+
+
+     PC and PS/2 video subsystems store pixel data as groups of bits that
+     represent pixel values. The color of each pixel on the display is
+     determined, directly or indirectly, by its pixel value. Furthermore,
+     no pixel value is ever represented by more than eight bits, so one or
+     more pixels are mapped into every byte in the video buffer.
+
+     The format of the pixel map or bit map in the video buffer depends on
+     the number of bits required to represent each pixel, as well as on the
+     architecture of the video RAM. Obviously, the number of colors that a
+     given graphics mode can display at one time is determined by the
+     number of bits used to represent each pixel.
+
+     When pixel values are smaller than eight bits, pixels are mapped in
+     bit fields from left to right across each byte. The leftmost pixel
+     represented in a given byte is always found in that byte's high-order
+     bit(s). This is true on all PC and PS/2 video subsystems.
+
+
+Color Graphics Adapter
+
+     On the CGA, each pixel is represented either by two bits, as in 320-
+     by-200 4-color mode (see Figure 4-1a) or by one bit, as in 640-by-200
+     2-color mode (see Figure 4-1b). Because two bits are used to
+     represent pixels in 320-by-200 mode, a pixel can have any of four
+     different pixel values, so this mode can display four different colors
+     at a time. Only one bit is used to represent pixel values in 640-by-
+     200 mode, so that mode can display only two colors at a time.
+
+
+                  Bit fields in one byte
+     ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+     ³           ³           ³           ³           ³
+     ³  0     0  ³  0     1  ³  1     0  ³  1     1  ³
+     ³           ³           ³           ³           ³
+     ÀÄÄÄÄÄÅÄÄÄÄÄÁÄÄÄÄÄÅÄÄÄÄÄÁÄÄÄÄÄÅÄÄÄÄÄÁÄÄÄÄÄÅÄÄÄÄÄÙ
+           ³           ³           ³           ³
+         ÚÄÄ¿       ÚÄÄ¿       ÚÄÄ¿       ÚÄÄ¿
+         ³   ³       ³±±±³       ³²²²³       ³ÛÛÛ³ Pixels on screen
+         ÀÄÄÄÙ       ÀÄÄÄÙ       ÀÄÄÄÙ       ÀÄÄÄÙ
+     a.
+
+                  Bit fields in one byte
+     ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+     ³           ³           ³           ³           ³
+     ³  0     0  ³  0     1  ³  1     0  ³  1     1  ³
+     ³           ³           ³           ³           ³
+     ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+        ³     ³     ³     ³     ³     ³     ³     ³
+      ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿ ÚÄÄ¿
+      ³   ³ ³   ³ ³   ³ ³±±±³ ³±±±³ ³   ³ ³±±±³ ³±±±³ Pixels on screen
+      ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ
+     b.
+
+     Figure 4-1.  Pixel mapping in CGA graphics modes.
+
+
+     The pixel data is mapped in two interleaved halves of the CGA's 16 KB
+     video buffer. Data for the 100 even-numbered scan lines starts at
+     B800:0000, and data for the odd-numbered scan lines starts at
+     B800:2000 (see Figure 4-2). If the scan lines are numbered
+     consecutively from 0, the half of the video buffer in which the nth
+     scan line is represented can be determined by calculating n MOD 2.
+
+
+       ÉÍÍÍ»     This two-way buffer interleave lets the CGA's CRT
+       º T º     Controller display 200 lines of graphics data without
+       º I º     overflowing the 7-bit CRTC vertical timing registers. In
+       º P º     CGA graphics modes, the CRTC is set up to display 100 rows
+       ÈÍÍÍ¼     of "characters," each two scan lines high. The top (even)
+                 line of each character is derived from the first half of
+                 the video buffer, and the bottom (odd) line is read from
+                 the second half of the buffer.
+
+
+     B800:0000 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                             ÚÄÄÄÄÄÄÄÄÄ
+               ³                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Scan line 0 ³ÛÛÛÛÛÛÛÛÛ
+          0050 ÃÄÄÄÄÄÄVÄÄÄÄÄÄÄÄÄÄÄÄ´                             ³°°°°D°°°°
+               ³      i            ÃÄÄÄÄÄÄ¿  ÚÄÄÄÄÄ Scan line 1 ³ÛÛÛÛiÛÛÛÛ
+          00A0 ÃÄÄÄÄÄÄdÄÄÄÄÄÄÄÄÄÄÄÄ´      ³  ³                   ³°°°°s°°°°
+               ³      e            ÃÄÄÄÄ¿ ÀÄÄÅÄÄÄÄÄ Scan line 2 ³ÛÛÛÛpÛÛÛÛ
+          00F0 ÀÄÄÄÄÄÄoÄÄÄÄÄÄÄÄÄÄÄÄÙ    ³    ³                   ³°°°°l°°°°
+               ³                   ³    ³    ³  ÚÄÄ Scan line 3 ³ÛÛÛÛaÛÛÛÛ
+                Ä Ä Ä B Ä Ä Ä Ä Ä Ä     ³    ³  ³                ³°°°°y°°°°
+               ³      u            ³    ÀÄÄÄÄÅÄÄÅÄÄ Scan line 4 ³ÛÛÛÛÛÛÛÛÛ
+                Ä Ä Ä f Ä Ä Ä Ä Ä Ä          ³  ³                ³°°°°°°°°°
+               ³      f            ³         ³  ³ Ú Scan line 5 ³ÛÛÛÛÛÛÛÛÛ
+     B800:2000 ÚÄÄÄÄÄÄeÄÄÄÄÄÄÄÄÄÄÄÄ¿         ³  ³ ³
+               ³      r            ÃÄÄÄÄÄÄÄÄÄÙ  ³ ³
+          2050 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´            ³ ³
+               ³                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÙ ³
+          20A0 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´              ³
+               ³                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+          20F0 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               ³                   ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä 
+               ³                   ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä 
+               ³                   ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä 
+
+     Figure 4-2.  Video buffer interleave in CGA graphics modes.
+
+
+Hercules Graphics Card
+
+     In 720-by-348 graphics mode on the HGC and HGC+, pixel representation
+     is similar to that in the CGA's 640-by-200 2-color graphics mode. One
+     bit represents each pixel, so only two "colors" (pixel on or pixel
+     off) are available.
+
+     However, the HGC's 348 90-byte lines of pixel data are interleaved
+     using four separate areas of the video buffer (see Figure 4-3), each
+     containing 87 (348 / 4) lines of data. With this buffer organization,
+     the area in the buffer in which the nth scan line is represented can
+     be determined by n MOD 4.
+
+     On Hercules video adapters, the four-way interleave allows the CRTC to
+     be programmed to display 87 rows of characters which are four scan
+     lines high. (See Listing 2-4 in Chapter 2.) Each of the four scan
+     lines in a "character" is read from the corresponding location in one
+     of the four interleaved portions of the video buffer.
+
+
+     B000:0000 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                            ÚÄÄÄÄÄÄÄÄÄ
+               ³                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄ Scan line 0 ³ÛÛÛÛÛÛÛÛÛ
+          005A ÃÄÄÄÄÄÄÄÄVÄÄÄÄÄÄÄÄÄÄ´                            ³°°°°D°°°°
+               ³        i          ÃÄ¿  ÚÄÄÄÄÄÄÄÄÄ Scan line 1 ³ÛÛÛÛiÛÛÛÛ
+          00B4 ÀÄÄÄÄÄÄÄÄdÄÄÄÄÄÄÄÄÄÄÙ ³  ³                       ³°°°°s°°°°
+               ³        e          ³ ³  ³    ÚÄÄÄÄ Scan line 2 ³ÛÛÛÛpÛÛÛÛ
+                Ä Ä Ä Ä o Ä Ä Ä Ä Ä  ³  ³    ³                  ³°°°°l°°°°
+               ³                   ³ ³  ³ ÚÄÄÅÄÄÄÄ Scan line 3 ³ÛÛÛÛaÛÛÛÛ
+                Ä Ä Ä Ä B Ä Ä Ä Ä Ä  ³  ³ ³  ³                  ³°°°°y°°°°
+               ³        u          ³ ÀÄÄÅÄÅÄÄÅÄÄÄÄ Scan line 4 ³ÛÛÛÛÛÛÛÛÛ
+     B000:2000 ÚÄÄÄÄÄÄÄÄfÄÄÄÄÄÄÄÄÄÄ¿    ³ ³  ³                  ³°°°°°°°°°
+               ³        f          ÃÄÄÄÄÙ ³ÚÄÅÄÄÄÄ Scan line 5 ³ÛÛÛÛÛÛÛÛÛ
+          205A ÃÄÄÄÄÄÄÄÄeÄÄÄÄÄÄÄÄÄÄ´      ³³ ³                  ³°°°°°°°°°
+               ³        r          ÃÄÄÄÄÄÄÅÙ ³  ÚÄ Scan line 6 ³ÛÛÛÛÛÛÛÛÛ
+          20B4 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ      ³  ³  ³               ³°°°°°°°°°
+               ³                   ³   ÚÄÄÅÄÄÅÄÄÅÄ Scan line 7 ³ÛÛÛÛÛÛÛÛÛ
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä    ³  ³  ³  ³
+               ³                   ³   ³  ³  ³  ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä    ³  ³  ³  ³
+               ³                   ³   ³  ³  ³  ³
+     B000:4000 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³  ³  ³  ³
+               ³                   ÃÄÄÄÅÄÄÅÄÄÙ  ³
+          405A ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³  ³     ³
+               ³                   ÃÄÄÄÅÄÄÅÄÄÄÄÄÙ
+          40B4 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ³  ³
+               ³                   ³   ³  ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä    ³  ³
+               ³                   ³   ³  ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä    ³  ³
+               ³                   ³   ³  ³
+     B000:6000 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³  ³
+               ³                   ÃÄÄÄÅÄÄÙ
+          605A ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+               ³                   ÃÄÄÄÙ
+          60B4 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+               ³                   ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä 
+               ³                   ³
+                Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä 
+
+     Figure 4-3.  Video buffer interleave in Hercules graphics mode.
+
+
+Enhanced Graphics Adapter
+
+     When the EGA is configured to emulate a CGA graphics mode, pixels are
+     mapped in the video buffer just as they would be on the CGA. However,
+     in the EGA's native graphics modes (200-line 16-color modes and all
+     350-line modes), pixels are always mapped eight to a byte.
+
+     This mapping is dictated by the architecture of the EGA's video
+     buffer. The 256 KB video buffer consists of four 64 KB maps, or
+     parallel banks of RAM. The maps are parallel in the sense that they
+     occupy the same range of addresses in the CPU's address space; the
+     EGA's Sequencer and Graphics Controller allow the maps to be accessed
+     either individually or in parallel (more about this in Chapter 5).
+
+     A pixel's value is determined by the values of the corresponding bits
+     at the same byte offset and bit offset in each map (see Figure 4-4).
+     For this reason, in graphics modes, the four maps are called bit
+     planes. You might imagine each pixel's value as the result of
+     concatenating one bit from the same location in each bit plane.
+
+       ÉÍÍÍ»     The relationship of memory maps to bit planes is altered
+       º T º     in 350-line graphics modes on an IBM EGA equipped with
+       º I º     only 64 KB of video RAM. (To bring IBM's original EGA up
+       º P º     to 256 KB, you must install a piggyback board, called the
+       ÈÍÍÍ¼     Graphics Memory Expansion Card.) When you use INT 10H
+                 function 00H to select 640-by-350 graphics modes (mode
+                 0FH or 10H) on an EGA with a 64 KB video buffer, video
+                 buffer address decoding is altered so that even-numbered
+                 addresses in the buffer reference the even-numbered maps
+                 and odd-numbered addresses refer to odd-numbered maps
+                 (see Figure 4-5).
+
+                 In this way the four video buffer maps are chained
+                 together, with maps 0 and 1 forming bit plane 0 and maps
+                 2 and 3 forming bit plane 2. Routines that access pixels
+                 in the video buffer must accommodate this relationship
+                 between the bit planes and buffer addresses.
+
+
+                   ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+Bit          Map 3 ³  1  ³  1  ³  0  ³  0  ³  0  ³  0  ³  1  ³  1  ³
+fields in          ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+correspond-         ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ
+ing byte         ÚÄÄÄÄÚÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄ¿
+in each    Map 2 ³  0  ³  1  ³  0  ³  1  ³  0  ³  0  ³  1  ³  0  ³
+map              ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+                  ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ
+               ÚÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄ¿
+         Map 1 ³  1  ³  0  ³  1  ³  0  ³  1  ³  0  ³  0  ³  1  ³
+               ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ     Color
+                ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ        Plane
+             ÚÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄ¿      Enable
+       Map 0 ³  1  ³  0  ³  1  ³  1  ³  0  ³  1  ³  1  ³  0  ³    register
+             ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÙÚÄÄÄÄÄÄÄÄÄÄ¿
+                                                      ³   0111   ³
+Pixel          1011  1100  0011  0101  0010  0001  1101  1010 ÀÄÄÄÄÄÂÄÄÄÄÙ
+values          ³     ³     ³     ³     ³     ³     ³     ³   ÄÄÄÄÄÙ
+                                                   
+AND with       0011  0100  0011  0101  0010  0001  0101  0010
+Color Plane     ³     ³     ³     ³     ³     ³     ³     ³
+Enable                                             
+               ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿
+Pixels on      ³²³   ³Û³   ³²³   ³Û³   ³±³   ³°³   ³Û³   ³±³
+screen         ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ
+
+     Figure 4-4.  Pixel mapping in native EGA graphics modes.
+
+
+Bit fields
+in corres-     ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+ponding   Map 2³  0  ³  1  ³  0  ³  1  ³  0  ³  0  ³  1  ³  0  ³
+byte in        ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ      Color
+each map        ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ         Plane
+             ÚÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄ¿       Enable
+        Map 0³  1  ³  0  ³  1  ³  1  ³  0  ³  1  ³  1  ³  0  ³     register
+             ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÙÚÄÄÄÄÄÄÄÄÄÄÄ¿
+                                                      ³    0101   ³
+Pixel          01    10    01    11    00    01    11    00   ÀÄÄÄÄÄÂÄÄÄÄÄÙ
+values          ³     ³     ³     ³     ³     ³     ³     ³   ÄÄÄÄÄÙ
+                                                   
+AND with bits  01    10    01    11    00    01    11    00   Note: Bits
+2 and 0 of      ³     ³     ³     ³     ³     ³     ³     ³   2 and 0 mask
+Color Plane     ³     ³     ³     ³     ³     ³     ³     ³   pixel values.
+Enable          ³     ³     ³     ³     ³     ³     ³     ³   Bits 3 and 1
+                                                      should be 0.
+Pixels on      ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿
+screen         ³±³   ³²³   ³±³   ³Û³   ³ ³   ³±³   ³Û³   ³ ³
+               ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ
+a.
+
+
+Bit fields
+in corres-     ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+ponding   Map 3³  1  ³  1  ³  0  ³  0  ³  0  ³  0  ³  1  ³  1  ³
+byte in        ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙColor
+each map        ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   ÚÄÙ   Plane
+             ÚÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄÂÄÄÄÄ¿  Enable
+        Map 1³  1  ³  0  ³  1  ³  0  ³  1  ³  1  ³  0  ³  1  ³  register
+             ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÙÚÄÄÄÄÄÄÄÄÄÄÄ¿
+                                                      ³   0101    ³
+Pixel          11    10    01    00    01    01    10    11   ÀÄÄÄÄÄÂÄÄÄÄÄÙ
+values          ³     ³     ³     ³     ³     ³     ³     ³   ÄÄÄÄÄÙ
+                                                   
+AND with bits  11    10    01    00    01    01    10    11   Note: Bits
+2 and 0 of      ³     ³     ³     ³     ³     ³     ³     ³   2 and 0 mask
+Color Plane     ³     ³     ³     ³     ³     ³     ³     ³   pixel values.
+Enable          ³     ³     ³     ³     ³     ³     ³     ³   Bits 3 and 1
+                                                      should be 0.
+Pixels on      ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿   ÚÄ¿
+screen         ³Û³   ³²³   ³²³   ³ ³   ³±³   ³±³   ³²³   ³Û³
+               ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ   ÀÄÙ
+b.
+
+     Figure 4-5.  Video buffer maps in 350-line graphics modes (EGA with 64
+     KB video RAM). Pixel values at even addresses are stored in maps 0 and
+     2 (Figure 4-5a); pixels at odd addresses are stored in maps 1 and 3
+     (Figure 4-5b).
+
+
+     In native EGA graphics modes, there is no line-by-line interleaving of
+     the pixel data in the video buffer, as in CGA and HGC graphics modes.
+     Instead, rows of pixels are mapped linearly, just as rows of
+     characters are mapped linearly in alphanumeric video modes.
+
+
+Hercules InColor Card
+
+     In its 720-by-348 graphics mode, the InColor Card's video buffer has
+     four parallel maps organized as four parallel bit planes. As on the
+     EGA, a pixel's value is determined by concatenating the corresponding
+     bits in each of the bit planes. However, video buffer addressing is
+     not linear, as it is on the EGA.
+
+     Pixels are stored in the InColor Card's video buffer using the same
+     four-way interleave that the HGC and HGC+ use. In the buffer, 348
+     lines of 90 bytes (720 pixels) are mapped in a four-way interleave
+     starting at B000:0000. The buffer also contains two video pages (as on
+     the monochrome HGC), at B000:0000 and B000:8000. This aspect of the
+     InColor Card's design preserves its symmetry with Hercules monochrome
+     graphics cards but differentiates it from the EGA.
+
+
+MCGA and VGA
+
+     The PS/2 video subsystems support three graphics modes not found on
+     earlier PC video adapters. The 640-by-480 2-color mode (MCGA and VGA)
+     and 640-by-480 16-color mode (VGA only) resemble the native EGA
+     graphics modes: Both use a linear bit map starting at A000:0000. A
+     similar linear pixel map also is used in 320-by-200 (MCGA and VGA)
+     256-color mode, with one important difference: Each byte in the video
+     buffer represents one pixel (see Figure 4-6). Since there are eight
+     bits to a byte, each pixel can have any of 256 (2^8) different colors.
+
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³   8-bit pixel value  ³   Logical AND    ³      Video DAC Mask      ³
+     ³                      ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄ´                          ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ         ³        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                      
+                        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                        ³        Video DAC         ³
+                        ³   color register 0-0FFH  ³
+                        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                      ³
+                                      
+                    18-bit analog output to video display
+                     (6 bits each for red, green, blue)
+
+     Figure 4-6.  Color selection in MCGA and VGA 320-by-200 256-color
+     mode.
+
+
+       ÉÍÍÍ»     On the VGA, 640-by-480 2-color mode is nearly identical to
+       º T º     640-by-480 16-color mode. All four bit planes remain
+       º I º     active in the 2-color mode even though one bit plane is
+       º P º     sufficient to store a full screen of pixels. The only
+       ÈÍÍÍ¼     difference between the two modes is that the video BIOS
+                 makes only two palette colors available in the 2-color
+                 mode, whereas it sets up 16 palette colors in the 16-color
+                 mode.
+
+
+Pixel Coordinates
+
+
+     In graphics modes, the video buffer can be thought of as a flat, two-
+     dimensional array of pixels with its origin at the upper left corner.
+     What is visible on the screen is a subset of the pixels represented in
+     the buffer. On the CGA, the video buffer can contain only one
+     screenful of pixels, so the first byte in the buffer represents the
+     pixels in the screen's upper left corner. On the EGA, MCGA, and VGA,
+     however, the video buffer can store several screenfuls of pixels. You
+     can thus select which portion of the video buffer appears on the
+     screen.
+
+     Every pixel on the screen can be identified by a unique pair of (x,y)
+     coordinates relative to the screen's upper left corner. Each (x,y)
+     pair also corresponds to a particular byte offset in the video buffer
+     and a bit offset in that byte. Thus, given a pixel's (x,y) coordinates
+     on the screen, you can compute where in the video buffer the pixel is
+     represented.
+
+     Converting from pixel coordinates to the corresponding byte and bit
+     offsets is one of the most frequent operations in IBM video graphics
+     programming. The program examples in Listings 4-1 through 4-5
+     demonstrate how to do this efficiently and in a uniform manner.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-1.  Computing a pixel's address in 320-by-200 4-color
+
+                TITLE   ''Listing 4-1'
+                NAME    PixelAddr04
+                PAGE    55,132
+
+;
+; Name:         PixelAddr04
+;
+; Function:     Determine buffer address of pixel in 320x200 4-color mode
+;
+; Caller:       AX = y-coordinate (0-199)
+;               BX = x-coordinate (0-319)
+;
+; Returns:      AH = bit mask
+;               BX = byte offset in buffer
+;               CL = number of bits to shift left
+;               ES = video buffer segment
+;
+
+
+OriginOffset    EQU     0               ; byte offset of (0,0)
+VideoBufferSeg  EQU     0B800h
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  PixelAddr04
+PixelAddr04     PROC    near
+
+                mov     cl,bl           ; CL := low-order byte of x
+
+                xchg    ah,al           ; AX := 100h * y
+                shr     ax,1            ; AL := 80h * (y&1)
+                add     bh,al           ; BX := x + 8000h*(y&1)
+                xor     al,al           ; AX := 100h*(y/2)
+                add     bx,ax           ; BX := x + 8000h*(y&1) + 100h*(y/2)
+                shr     ax,1
+                shr     ax,1            ; AX := 40h*(y/2)
+                add     bx,ax           ; BX := x + 8000h*(y&1) + 140h*(y/2)
+                shr     bx,1
+                shr     bx,1            ; BX := x/4 + 2000h*(y&1) + 50h*(y/2)
+                add     bx,OriginOffset ; BX := byte offset in video buffer
+
+                mov     ax,VideoBufferSeg
+                mov     es,ax           ; ES:BX := byte address of pixel
+
+                mov     ah,3            ; AH := unshifted bit mask
+                and     cl,ah           ; CL := x & 3
+                xor     cl,ah           ; CL := 3 - (x & 3)
+                shl     cl,1            ; CL := # bits to shift left
+
+                ret
+
+PixelAddr04     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-2.  Computing a pixel's address in 640-by-200 2-color
+
+                TITLE   'Listing 4-2'
+                NAME    PixelAddr06
+                PAGE    55,132
+
+;
+; Name:         PixelAddr06
+;
+; Function:     Determine buffer address of pixel in 640x200 2-color mode
+;
+; Caller:       AX = y-coordinate (0-199)
+;               BX = x-coordinate (0-639)
+;
+; Returns:      AH = bit mask
+;               BX = byte offset in buffer
+;               CL = number of bits to shift left
+;               ES = video buffer segment
+;
+
+
+OriginOffset    EQU     0               ; byte offset of (0,0)
+VideoBufferSeg  EQU     0B800h
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  PixelAddr06
+PixelAddr06     PROC    near
+
+                mov     cl,bl           ; CL := low-order byte of x
+
+                xchg    ah,al           ; AX := 100h * y
+                shr     bx,1            ; BX := x/2
+                shr     ax,1            ; AL := 80h*(y&1)
+                add     bh,al           ; BX := x/2 + 8000h*(y&1)
+                xor     al,al           ; AX := 100h*(y/2)
+                add     bx,ax           ; BX := x/2 + 8000h*(y&1) + 100h*(y/2)
+                shr     ax,1
+                shr     ax,1            ; AX := 40h*(y/2)
+                add     bx,ax           ; BX := x/2 + 8000h*(y&1) + 140h*(y/2)
+                shr     bx,1
+                shr     bx,1            ; BX := x/8 + 2000h*(y&1) + 50h*(y/2)
+                add     bx,OriginOffset ; BX := byte offset in video buffer
+
+                mov     ax,VideoBufferSeg
+                mov     es,ax           ; ES:BX := byte address of pixel
+
+                and     cl,7            ; CL := x & 7
+                xor     cl,7            ; CL := number of bits to shift left
+                mov     ah,1            ; AH := unshifted bit mask
+
+                ret
+
+PixelAddr06     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Transforming pixel coordinates to a buffer offset involves simple
+     logic. Begin by calculating the offset of the start of pixel row y.
+     (For CGA and Hercules graphics modes, this calculation accounts for
+     the interleaving of the video buffer.) To this value, add the byte
+     offset of the xth pixel in the row. Finally, add the byte offset of
+     the start of the displayed portion of the video buffer to obtain the
+     final byte offset of the pixel.
+
+     PixelByteOffset = RowOffset(y) + ByteOffset(x) + OriginOffset
+
+     The bit offset of the pixel within the byte that contains its value
+     depends only on the number of pixels represented in each byte of the
+     video buffer. You could express the relationship this way:
+
+     PixelBitOffset = PixelsPerByte - (x MOD PixelsPerByte) - 1
+
+     However, it is more practical to represent a pixel's bit offset as a
+     bit mask rather than as an ordinal bit number. This can be done easily
+     with a table lookup (for example, an assembler XLAT instruction) or
+     with a logical shift instruction. (This is why Listings 4-1 through
+     4-4 return the bit offset as a number of bits to shift.)
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-3.  Computing a pixel's address in Hercules graphics mode.
+
+                TITLE   'Listing 4-3'
+                NAME    PixelAddrHGC
+                PAGE    55,132
+
+;
+; Name:         PixelAddrHGC
+;
+; Function:     Determine buffer address of pixel in 720x348 Hercules graphics
+;
+; Caller:       AX = y-coordinate (0-347)
+;               BX = x-coordinate (0-719)
+;
+; Returns:      AH = bit mask
+;               BX = byte offset in buffer
+;               CL = number of bits to shift left
+;               ES = video buffer segment
+;
+
+BytesPerLine    EQU     90
+OriginOffset    EQU     0               ; byte offset of (0,0)
+VideoBufferSeg  EQU     0B000h
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  PixelAddrHGC
+PixelAddrHGC    PROC    near
+
+                mov     cl,bl           ; CL := low-order byte of x
+
+                shr     ax,1            ; AX := y/2
+                rcr     bx,1            ; BX := 8000h*(y&1) + x/2
+                shr     ax,1            ; AX := y/4
+                rcr     bx,1            ; BX := 4000h*(y&3) + x/4
+                shr     bx,1            ; BX := 2000h*(y&3) + x/8
+                mov     ah,BytesPerLine
+                mul     ah              ; AX := BytesPerLine*(y/4)
+                add     bx,ax           ; BX := 2000h*(y&3) + x/8 + BytesPerLine*(y/4)
+                add     bx,OriginOffset ; BX := byte offset in video buffer
+
+                mov     ax,VideoBufferSeg
+                mov     es,ax           ; ES:BX := byte address of pixel
+
+                and     cl,7            ; CL := x & 7
+                xor     cl,7            ; CL := number of bits to shift left
+                mov     ah,1            ; AH := unshifted bit mask
+
+                ret
+
+PixelAddrHGC    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-4.  Computing a pixel's address in CGA and VGA graphics
+     modes.
+
+                TITLE   'Listing 4-4'
+                NAME    PixelAddr10
+                PAGE    55,132
+
+;
+; Name:         PixelAddr10
+;
+; Function:     Determine buffer address of pixel in native EGA and VGA modes:
+;                       320x200 16-color
+;                       640x200 16-color
+;                       640x350 16-color
+;                       640x350 monochrome (4-color)
+;                       640x480 2-color
+;                       640x480 16-color
+;
+; Caller:       AX = y-coordinate
+;               BX = x-coordinate
+;
+; Returns:      AH = bit mask
+;               BX = byte offset in buffer
+;               CL = number of bits to shift left
+;               ES = video buffer segment
+;
+
+
+BytesPerLine    EQU     80              ; bytes in one horizontal line
+OriginOffset    EQU     0               ; byte offset of (0,0)
+VideoBufferSeg  EQU     0A000h
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  PixelAddr10
+PixelAddr10     PROC    near
+
+                mov     cl,bl           ; CL := low-order byte of x
+
+                push    dx              ; preserve DX
+
+                mov     dx,BytesPerLine ; AX := y * BytesPerLine
+                mul     dx
+
+                pop     dx
+                shr     bx,1
+                shr     bx,1
+                shr     bx,1            ; BX := x/8
+                add     bx,ax           ; BX := y*BytesPerLine + x/8
+                add     bx,OriginOffset ; BX := byte offset in video buffer
+
+                mov     ax,VideoBufferSeg
+                mov     es,ax           ; ES:BX := byte address of pixel
+
+                and     cl,7            ; CL := x & 7
+                xor     cl,7            ; CL := number of bits to shift left
+                mov     ah,1            ; AH := unshifted bit mask
+                ret
+
+PixelAddr10     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Here is a high-level example of a pixel coordinate transformation for
+     the CGA's 320-by-200 4-color graphics mode. As Figure 4-1a shows,
+     each byte in the video buffer contains four pixels. At four pixels per
+     byte, 80 bytes of data represent one row of 320 pixels. The origin of
+     the screen--that is, the byte offset of the displayed portion of the
+     buffer--is 0, since the CGA video buffer contains only one screenful
+     of pixels.
+
+     int PixelsPerByte = 4;
+     int BytesPerRow = 80;
+     int OriginOffset = 0;
+     static int Masks[] = { 0xC0, 0x30, 0x0C, 0x03 };
+
+     unsigned int x,y;
+     unsigned int ByteOffset,BitMask;
+
+     /* buffer interleave (0 or 0x2000) */
+     ByteOffset = (y & 1) << 13;
+
+     /* offset of start of row */
+     ByteOffset += BytesPerRow * (y/2);
+
+     /* byte offset in screen */
+     ByteOffset += (x / PixelsPerByte) % BytesPerRow;
+
+     /* byte offset in video buffer */
+     ByteOffset += OriginOffset;
+
+     BitMask = Masks[x % PixelsPerByte];
+
+     The same routine in assembly language is much more efficient, because
+     all arithmetic can be done in registers and register halves (refer to
+     Listing 4-1). Also, if you know that the number of bytes per row of
+     pixels is a constant, you  can further increase performance by
+     performing multiplication and division as a sequence of bit shifts.
+
+     For example, in Listing 4-5, the y-coordinate is multiplied by 320
+     through a series of logical shift operations instead of a single MUL
+     instruction. The resulting routine runs about 40 percent faster on the
+     8086-based PS/2 Model 30 and about 10 percent faster on the 80286-
+     based PS/2 Model 60. This optimization complicates the assembly code
+     somewhat, but the speed gained is worth the effort--low-level routines
+     such as those in Listings 4-1 through 4-5 may execute many thousands
+     of times in a graphics-oriented application.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-5.  Computing a pixel's address in 320-by-200 256-color
+     mode.
+
+                TITLE   'Listing 4-5'
+                NAME    PixelAddr13
+                PAGE    55,132
+
+;
+; Name:         PixelAddr13
+;
+; Function:     Determine buffer address of pixel in 320x200 256-color mode
+;
+; Caller:       AX = y-coordinate (0-199)
+;               BX = x-coordinate (0-319)
+;
+; Returns:      BX = byte offset in buffer
+;               ES = video buffer segment
+;
+
+
+OriginOffset    EQU     0               ; byte offset of (0,0)
+VideoBufferSeg  EQU     0A000h
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  PixelAddr13
+PixelAddr13     PROC    near
+
+                xchg    ah,al           ; AX := 256*y
+                add     bx,ax           ; BX := 256*y + x
+                shr     ax,1
+                shr     ax,1            ; AX := 64*y
+                add     bx,ax           ; BX := 320*y + x
+
+                add     bx,OriginOffset ; BX := byte offset in video buffer
+
+                mov     ax,VideoBufferSeg
+                mov     es,ax           ; ES:BX := byte address of pixel
+                ret
+
+PixelAddr13     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Pixel Coordinate Scaling
+
+     One characteristic of most IBM graphics modes is that horizontal pixel
+     resolution differs from vertical pixel resolution. For example, in a
+     640-by-200 mode, a typical 200-line color monitor displays about 70
+     pixels per horizontal inch, but only about 30 pixels per vertical
+     inch.
+
+     This discrepancy complicates the mapping of pixels in the display
+     buffer to screen locations, as is shown in Figure 4-7. For example,
+     in a 640-by-200 mode, a line drawn between the pixel at (0,0) in the
+     screen's upper left corner and the pixel at (100,100) has a
+     mathematical slope of 1, so you would expect it to be displayed at a
+     45-degree angle from the display's top and left edges. However, the
+     displayed line (line a, Figure 4-7) is "compressed" in the horizontal
+     direction.
+
+     Displaying a line at a 45-degree angle requires scaling the pixel
+     coordinates to account for the discrepancy in vertical and horizontal
+     resolution. In a 640-by-200 mode, the horizontal scaling factor is
+     about 2.4 (horizontal resolution / vertical resolution). In the
+     example, you would scale the x-coordinates of the endpoints to 0 (0 *
+     2.4) and 240 (100 * 2.4). The scaled line (line b, Figure 4-7), with
+     endpoints at (0,0) and (240,100), appears at a 45-degree angle on the
+     screen.
+
+     You must scale the (x,y) coordinates of all pixels in all geometric
+     figures in all graphics modes--unless, of course, the scaling factor
+     happens to be 1. Otherwise, squares appear as rectangles and circles
+     as ellipses. Furthermore, you must adjust the scaling factor for the
+     horizontal and vertical resolutions of each graphics mode. Figure 4-8
+     is a table of the horizontal-to-vertical scaling ratios for graphics
+     modes on IBM video subsystems with typical monitors.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³ (O,O)                            ³
+     ³   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+     ³   ³³³                        ³   ³
+     ³   ³³ÀÄÄÄÄÄÄÄÄÄ¿              ³   ³
+     ³   ³ÀÄÄ¿       ³b.            ³   ³
+     ³   ³ a.³       ³(240,100)     ³   ³
+     ³   ³(100,100)                 ³   ³
+     ³   ³                          ³   ³
+     ³   ³                          ³   ³
+     ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ³
+     ³                                  ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 4-7.  Pixel coordinate scaling in 640-by-200 graphics.
+
+
+BIOS Mode   Mode                     Scaling Factor
+Number      Description              (horizontal/vertical)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+4,5         320-by-200 4-color       1.20
+6           640-by-200 2-color       2.40
+0DH         320-by-200 16-color      1.20
+0EH         640-by-200 16-color      2.40
+0FH         640-by-350 monochrome    1.26 (monochrome monitor)
+10H         640-by-350 16-color      1.37
+11H         640-by-480 2-color       1.00
+12H         640-by-480 16-color      1.00
+13H         320-by-200 256-color     2.40
+            720-by-348 (Hercules)    1.43 (monochrome monitor)
+     Figure 4-8.  Pixel scaling values for PC and PS/2 graphics modes. An
+     aspect ratio of 1.33 (4:3) for color monitors, 1.45 for monochrome
+     monitors, is assumed.
+
+
+Aspect Ratio
+
+     A related programming concern is the screen's aspect ratio--the ratio
+     of a screen's width to its height. The color monitors commonly used
+     with IBM video subsystems have aspect ratios of about 1.33 (4:3); for
+     the typical green monochrome monitor, the aspect ratio is about 1.45.
+     Because the screen is rectangular instead of square, the maximum
+     potential width of a screen image exceeds its maximum potential
+     height. This limitation must always be considered in scaling pixel
+     coordinates.
+
+       ÉÍÍÍ»     One attractive feature of the MCGA, the VGA, and other
+       º T º     video subsystems that offer 640-by-480 resolution is that
+       º I º     horizontal resolution and vertical resolution are the same
+       º P º     on a display with an aspect ratio of 4:3. You can think of
+       ÈÍÍÍ¼     the pixels in this situation as being "square." With
+                 "square" pixels, mapping the video buffer to the screen is
+                 simpler because the pixel coordinate scaling factor is 1.
+
+
+Pixel Display Attributes
+
+
+     In general, pixel values determine video attributes--in other words,
+     the bits that represent a pixel in the video buffer determine how the
+     pixel looks on the screen. The way that pixel values are decoded in
+     graphics modes is similar to the way that alphanumeric attributes are
+     decoded. But in graphics modes, pixel values may range from one
+     through eight bits, while alphanumeric attributes are four bits wide.
+
+
+Color Graphics Adapter
+
+     In 640-by-200 2-color mode, one bit represents each pixel. If the bit
+     is 0, the pixel is displayed as black. If the bit is 1, the pixel is
+     displayed with the color specified in bits 0 through 3 of the CGA's
+     Color Select register (port 3D9H). This is the same register that
+     specifies the overscan color in alphanumeric modes. If you change
+     video modes by directly programming the CGA's CRTC and Mode Control
+     registers, you should avoid spurious border colors or pixel colors by
+     programming the Color Select register as well.
+
+     You can use INT 10H function 0BH to select the displayed color of
+     nonzero pixels in 640-by-200 2-color mode (see Listing 4-6). This BIOS
+     function stores a color value in the Color Select register and updates
+     the variable CRT_PALETTE in the Video Display Data Area at 0040:0066.
+     If you bypass the video BIOS and program the Color Select register
+     directly, you should also update CRT_PALETTE.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-6.  Foreground color in CGA 640-by-200 2-color graphics.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     In 320-by-200 4-color modes, two bits represent each pixel, so pixel
+     values can range from 0 through 3. Pixels with the value 0 are
+     displayed with the color value stored in the Color Select register at
+     port 3D9H. A quirk of the CGA is that the Color Select register value
+     determines both the overscan (border) color and the color for pixel
+     value 0. This means you cannot specify a border color independently of
+     the background color on the CGA in this video mode.
+
+     The colors displayed for pixels with nonzero values are taken from one
+     of three hardware palettes (see Figure 4-9). The palette is selected
+     by the values of bit 5 of the Color Select register (port 3D9H) and of
+     bit 2 of the Mode Control register at port 3D8H (Listing 4-7). If bit
+     2 of the Mode Control register is 1, the palette comprises cyan, red,
+     and white. If this bit is 0, bit 5 of the Color Select register
+     selects either green, red, and yellow (if bit 2 in the Color Select
+     register is 0), or cyan, violet, and white (if bit 2 in the Color
+     Select register is 1). In effect, setting bit 2 in the Color Select
+     register adds blue to the palette; that is, green plus blue produces
+     cyan, red plus blue produces violet, and yellow plus blue produces
+     white.
+
+       ÉÍÍÍ»     Setting bit 2 of the CGA's Mode Control register to 1
+       º T º     disables the color burst component of the adapter's
+       º I º     composite video output signal. If you use a black-and-
+       º P º     white display, appropriate shades of gray are generated
+       ÈÍÍÍ¼     for the four possible pixel values when bit 2 is set to 1.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Bit 2 of Mode Control register = 0
+Pixel Value                    Color Displayed
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Bit 5 of Color Select register = 0
+1                              Green
+2                              Red
+3                              Yellow
+
+Bit 5 of Color Select register = 1
+1                              Cyan
+2                              Violet
+3                              White
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Bit 2 of Mode Control register = 1
+Pixel Value                    Color Displayed
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1                              Cyan
+2                              Red
+3                              White
+
+     Figure 4-9.  Palettes available in CGA 320-by-200 4-color mode.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-7.  Four-color palettes in CGA 320-by-200 4-color mode.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     You can use INT 10H functions to select among the three 4-color
+     palettes. The video BIOS assigns two video mode numbers to 320-by-200
+     4-color graphics mode: In BIOS mode 4, bit 2 of the Mode Control
+     register is 0, and in mode 5, bit 2 is set to 1. Thus, to select the
+     cyan-red-white palette, use INT 10H function 0 to set mode 5. To
+     select the other two palettes, use INT 10H function 0 to set mode 4,
+     and then call INT 10H function 0BH to choose either green-red-yellow
+     or cyan-violet-white, as shown in Listing 4-8.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 4-8.  Four-color palettes in CGA 320-by-200 4-color mode using
+     video BIOS.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     You can select high-intensity colors in the 320-by-200 4-color palette
+     by setting bit 4 of the Color Select register to 1. When this bit is
+     0, the same four colors are displayed with normal intensity.
+
+
+Hercules Graphics Card
+
+     Life is easy with an HGC as far as graphics attributes are concerned.
+     In the 720-by-348 monochrome graphics mode on the HGC and HGC+, one
+     bit represents each pixel. If the bit is set to 1, the pixel is
+     displayed. If the bit is set to 0, the pixel is not displayed.
+
+
+Enhanced Graphics Adapter
+
+     Although the EGA supports a number of graphics modes with pixel values
+     ranging from 1 to 4 bits, it decodes pixel values in a straightforward
+     manner. As in alphanumeric modes, each pixel's value is masked by the
+     value in the Attribute Controller's Color Plane Enable register; the
+     resulting 4-bit value selects one of the Attribute Controller's 16
+     palette registers. Thus, a pixel's displayed attribute is derived from
+     the palette register that corresponds to the pixel value.
+
+     When you use INT 10H function 0 to select an EGA video mode, the BIOS
+     routine loads a default set of color values into the palette registers
+     (see Figure 4-10). The actual values depend on the video mode, but
+     each set maps the palette registers so that the color displayed for a
+     given pixel value is the same as a CGA would display. Using this
+     function improves the portability of programs between the CGA and the
+     EGA, since a program that never touches the palette registers can run
+     with the same set of colors on both adapters.
+
+       ÉÍÍÍ»     The BIOS default palette register values for 320-by-200
+       º T º     and 640-by-200 16-color modes are correct for 200-line
+       º I º     monitors but incorrect for some EGA-compatible monitors.
+       º P º     IBM's Enhanced Color Display converts the 4-bit default
+       ÈÍÍÍ¼     color values in 200-line graphics modes (see Figure 4-10)
+                 to 6-bit color values that emulate the 16 CGA colors.
+                 Unfortunately, not all EGA-compatible monitors do this.
+                 Thus, if you use INT 10H function 0 to invoke these modes
+                 (mode numbers 0DH and 0EH), you generally should program
+                 the palette registers with an appropriate set of values,
+                 such as the default set used in 640-by-350 16-color mode.
+
+
+     CGA Emulation Modes
+     In 640-by-200 2-color mode, when bit 3 of the Attribute Controller
+     Mode Control register (10H) is 0, a pixel value of 0 designates
+     palette register 0, and a pixel value of 1 designates palette register
+     1. When Mode Control bit 3 is 1, palette registers 8 and 9 are used.
+     With a CGA-compatible display, these four palette registers can
+     contain any of the 16 displayable color values. With an EGA-compatible
+     350-line monitor, these registers can contain any four of the 64
+     displayable color values.
+
+
+350-Line 16-Color Modes
+Palette Register  Color Value          Attribute
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H               00H                  Black
+01H               01H                  Mid-intensity blue
+02H               02H                  Mid-intensity green
+03H               03H                  Mid-intensity cyan
+04H               04H                  Mid-intensity red
+05H               05H                  Mid-intensity violet
+06H               14H                  Brown
+07H               07H                  Mid-intensity white
+08H               38H                  Low-intensity white (gray)
+09H               39H                  High-intensity blue
+0AH               3AH                  High-intensity green
+0BH               3BH                  High-intensity cyan
+0CH               3CH                  High-intensity red
+0DH               3DH                  High-intensity violet
+0EH               3EH                  High-intensity yellow
+0FH               3FH                  High-intensity white
+
+200-Line 16-Color Modes
+Palette Register  Color Value          Attribute
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H               00H                  Black
+01H               01H                  Blue
+02H               02H                  Green
+03H               03H                  Cyan
+04H               04H                  Red
+05H               05H                  Violet
+06H               06H                  Yellow (brown)
+07H               07H                  White
+08H               10H                  Black (gray)
+09H               11H                  High-intensity blue
+0AH               12H                  High-intensity green
+0BH               13H                  High-intensity cyan
+0CH               14H                  High-intensity red
+0DH               15H                  High-intensity violet
+0EH               16H                  High-intensity yellow
+0FH               17H                  High-intensity white
+
+640-by-350 Monochrome Graphics
+Palette Register  Color Value          Attribute
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H               00H                  Not displayed
+01H               08H                  Normal intensity
+04H               18H                  High intensity
+05H               18H                  High intensity
+08H               00H                  Not displayed
+09H               08H                  Normal
+0CH               00H                  Not displayed
+0DH               18H                  High intensity
+     Figure 4-10.  Default EGA and VGA palette register values.
+
+
+     In 320-by-200 4-color mode, each of the four possible pixel values (0
+     through 3) designates a corresponding palette register. When bit 3 in
+     the Attribute Controller Mode Control register is 0, palette registers
+     0-3 are used; when bit 3 is 1, palette registers 8-0BH are used. With
+     a CGA-compatible monitor, you can store any eight of the 16
+     displayable color values in these palette registers. With an EGA-
+     compatible monitor, you can use any eight of the 64 displayable color
+     values in these registers.
+
+     In both CGA emulation modes, the video BIOS initializes the palette
+     registers with default color values that match the colors in the CGA
+     hardware palettes. In 640-by-200 2-color mode, the default colors are
+     black, white, and intense white. In 320-by-200 4-color modes, the BIOS
+     supports the green-red-yellow and cyan-violet-white palettes in normal
+     and high intensities.
+
+
+     16-Color Modes
+     In 320-by-200, 640-by-200, and 640-by-350 16-color modes, each 4-bit
+     pixel value designates one of the 16 palette registers. For a CGA-
+     compatible monitor, the palette registers can contain the usual 16
+     colors, but with an EGA-compatible monitor, you can specify any of the
+     64 displayable colors in each palette register.
+
+
+     Monochrome Graphics
+     There are two bits per pixel in the EGA's 640-by-350 monochrome
+     graphics mode, so pixel values can range from 0 through 3. However,
+     this graphics mode uses only even-numbered bit planes, so the EGA's
+     Attribute Controller interprets only the even-numbered bits of the
+     usual 4-bit pixel value. Thus, bits 0 and 1 of a 2-bit monochrome
+     pixel value designate bits 0 and 2 of the corresponding 4-bit palette
+     register number. (Bits 1 and 3 of the palette register number are
+     always 0.) Thus, the four possible pixel values--0, 1, 2, and 3--
+     actually reference palette registers 0, 1, 4, and 5 respectively (see
+     Figure 4-11).
+
+
+Pixel Value        Corresponding Palette Register
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0 (00B)            0 (0000B)
+1 (01B)            1 (0001B)
+2 (10B)            4 (0100B)
+3 (11B)            5 (0101B)
+     Figure 4-11.  Pixel values and palette registers in 640-by-350
+     monochrome graphics.
+
+
+       ÉÍÍÍ»     On EGAs with only 64 KB of video RAM, the odd bit planes
+       º T º     represent pixels at odd buffer addresses, and the even bit
+       º I º     planes represent pixels at even buffer addresses (see
+       º P º     Figure 4-5). In this situation, pixel values in 640-by-
+       ÈÍÍÍ¼     350 monochrome and 640-by-350 4-color graphics modes are
+                 two bits in size, but bits 0 and 2 are used for pixels at
+                 even byte addresses, while bits 1 and 3 are used for
+                 pixels at odd byte addresses.
+
+     Monochrome pixels can be undisplayed (palette register value 0), can
+     be displayed with normal intensity (08H), or can be displayed with
+     high intensity (18H). INT 10H function 00H loads the palette registers
+     with a default set of monochrome values whenever you select video mode
+     0FH (see Figure 4-11).
+
+
+
+     Blinking
+     In native graphics modes on the EGA (as well as on the VGA), pixels
+     can have a blinking attribute. As in alphanumeric modes, you select
+     blinking by setting the Enable Blink bit of the Attribute Controller's
+     Mode Control register (bit 3 of register 10H at port 3C0H) to 1. In
+     16-color modes, this causes the adapter to interpret the high-order
+     bit (bit 3) of each 4-bit pixel value as a blink attribute, in the
+     same way the high-order bit of a character's attribute byte is used in
+     alphanumeric modes. Thus, when the Enable Blink bit is set, pixels
+     with values 8 through 0FH blink, and pixels with values 0 through 7 do
+     not. In monochrome graphics mode, all pixels blink regardless of their
+     value.
+
+     However, the EGA blinks pixels differently in graphics modes than it
+     blinks characters in alphanumeric modes. In graphics modes, pixels are
+     blinked by alternately selecting two different palette registers for
+     each pixel's value. The two registers are designated by turning bit 3
+     of the pixel value on and off at the blink rate (about twice per
+     second). Thus, pixels are blinked by alternating the values in the
+     first eight palette registers (registers 00H through 07H) with the
+     values in the second eight (08H through 0FH).
+
+     For example, a pixel with a value of 0AH is blinked by repeatedly
+     changing the value of bit 3 whenever the Enable Blink bit is set.
+     Thus, the pixel's color alternates between that designated by palette
+     register 0AH (1010B) and that in palette register 02H (0010B). If you
+     use the set of BIOS default palette registers, this pixel blinks
+     between green and high-intensity green.
+
+     A peculiarity of the EGA's blinking attribute in color graphics modes
+     is what happens to pixels with values from 0 through 7; that is, where
+     bit 3 of the pixel value is 0. These pixels do not blink, but they are
+     displayed as if bit 3 were 1. For example, if you use the BIOS default
+     palette values, pixels displayed at lower intensity (pixel values 0
+     through 7) become nonblinking pixels displayed at high intensity using
+     palette registers 08H through 0FH.
+
+     Thus, in using the blinking attribute in graphics modes, you should
+     reprogram the palette registers each time you change the Enable Blink
+     bit, to maintain a consistent set of colors. For example, the palette
+     register values shown in Figure 4-12 might be useful in this context.
+     This palette is designed for use as an alternative to the default BIOS
+     palette (see Figure 4-10) when blinking is enabled. If this palette
+     is used with the Enable Blink bit set to 1, all high-intensity pixels
+     (pixel values 08H through 0FH) blink, but all normal-intensity pixels
+     do not.
+
+
+     Border Color
+     As in alphanumeric modes, you can set the overscan (border) color by
+     storing a color value in the Attribute Controller's Overscan Color
+     register (register 11H, port 3C0H). Techniques for setting the border
+     color are covered in Chapter 3.
+
+
+Palette Register    Color Value    Attribute
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H                 00H            Black (background)
+
+01H                 39H±
+02H                 3AH±
+03H                 3BH±
+04H                 3CH±ÄÄÄÄÄÄÄÄÄÄ(high-intensity colors)
+05H                 3DH±
+06H                 3EH±
+07H                 3FH±
+
+08H                 00H            Black (background)
+
+09H                 01H±
+0AH                 02H±
+0BH                 03H±
+0CH                 04H±ÄÄÄÄÄÄÄÄÄÄ(mid-intensity colors)
+0DH                 05H±
+0EH                 14H±
+0FH                 07H±
+     Figure 4-12.  Palette register values for blinking in 640-by-350
+     16-color mode.
+
+
+Hercules InColor Card
+
+     On the InColor Card, the value of bit 4 of the Exception register
+     (17H) determines whether the palette registers are used to decode
+     pixel values, just as it does in alphanumeric modes. When this bit is
+     set to 1, each 4-bit pixel value specifies a palette register, and the
+     6-bit color value in the palette register determines the displayed
+     color of the pixel.
+
+     Setting Exception register bit 4 to 0 bypasses the palette registers.
+     Each 4-bit pixel value is extended to 6 bits by replicating the high-
+     order bit, and the new value determines the color. This procedure,
+     called sign extension, in effect causes the high-order bit of a pixel
+     value to act as an "intensity" bit, similar to the way alphanumeric
+     attributes are decoded.
+
+
+MCGA
+
+     The MCGA emulates both of the CGA's graphics modes and adds two of its
+     own, a 640-by-480 2-color mode and a 320-by-200 256-color mode. The
+     256-color mode is the only MCGA video mode that uses the video Digital
+     to Analog Converter (DAC) to full advantage.
+
+
+     2-Color Graphics Modes
+     Pixel attributes in 640-by-200 and 640-by-480 2-color modes are
+     directed through the video DAC registers. Pixels with the value 0 are
+     always mapped through video DAC color register 0. Nonzero pixels also
+     select a predesignated video DAC color register, but this is done in
+     one of two ways, depending on the value of bit 2 of the Mode Control
+     register at 3D8H. If bit 2 is 1, video DAC color register 7 is
+     selected. If bit 2 is 0, bits 0 through 3 of the Color Select register
+     (port 3D9H) designate a video DAC register.
+
+     On the MCGA, the background color in 2-color graphics modes is not
+     necessarily black as it is on the CGA. Instead, both background and
+     foreground can be any of the 256 K colors or the 64 gray-scale values
+     that the MCGA can display. Use INT 10H function 10H to set the
+     appropriate video DAC color registers.
+
+       ÉÍÍÍ»     When the video BIOS sets up 2-color graphics modes, it
+       º T º     sets bit 2 of the Mode Control register to 0 and bits 0
+       º I º     through 3 of the Color Select register to 1111B (0FH).
+       º P º     Since the first 16 video DAC color registers contain the
+       ÈÍÍÍ¼     16 colors available on a CGA, this configuration emulates
+                 the default color configuration on a CGA in 640-by-200 2-
+                 color mode: Background pixels are displayed as black (the
+                 value in video DAC color register 0) and foreground pixels
+                 appear intense white (the value in video DAC color
+                 register 0FH).
+
+
+     4-Color Graphics Mode
+     The MCGA faithfully emulates this CGA graphics mode. The major
+     difference is that the MCGA maps the four available colors through the
+     video DAC color registers just as it does in 2-color graphics modes.
+     Thus, all four colors can be selected from the 256 K possibilities
+     that the video DAC offers.
+
+     The MCGA combines bits 4 and 5 of the Color Select register (port
+     3D9H) with each pixel's 2-bit value to create a 4-bit value that
+     designates one of the first 16 video DAC color registers (see Figure
+     4-13). The video BIOS initializes the video DAC color registers with
+     CGA-compatible palettes. The colors are chosen so that bit 5 of the
+     Color Select register selects the green-red-yellow and cyan-violet-
+     white palettes, and bit 4 toggles between normal- and high-intensity
+     palettes, as they do on the CGA. Of course, you can establish
+     completely arbitrary 4-color palettes by loading different color
+     values into the video DAC color registers.
+
+
+3D9H         Pixel Value    3D9H       Video DAC
+Bit 4                       Bit 5      Color Register
+(intensity)  Bit 1 Bit 0    (palette)  Number          Default Color
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+1           0     0        1         00H             Black
+
+0            0     1        0          02H             Green
+0            1     0        0          04H             Red
+0            1     1        0          06H             Brown
+
+1            0     1        0          0AH             High-intensity green
+1            1     0        0          0CH             High-intensity red
+1            1     1        0          0EH             High-intensity
+                                                       yellow
+
+0            0     1        1          03H             Cyan
+0            1     0        1          05H             Violet
+0            1     1        1          07H             White
+
+1            0     1        1          0BH             High-intensity cyan
+1            1     0        1          0DH             High-intensity
+                                                       violet
+1            1     1        1          0FH             High-intensity white
+     Figure 4-13.  Pixel values and palettes in MCGA 320-by-200 4-color
+     mode.
+
+
+     256-Color Graphics Mode
+     In 256-color mode, each pixel's value designates one of the 256 video
+     DAC color registers. To select a video DAC color register, a pixel's
+     value is combined (using a logical AND) with the value in the video
+     DAC Mask register (3C6H). The resulting value selects a DAC color
+     register (see Figure 4-6). Since you can store any of 256 K color
+     values in each video DAC color register, you can display a wide range
+     of tones and intensities and create quite realistic video images.
+
+
+            ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+      0-0FH ³ CGA-compatible  ³
+            ³ default colors  ³
+            ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+     10-1FH ³                 ³
+            ³   gray scale    ³
+            ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+            ³   blue, red,    ³ High        ±
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+     20-67H ³   blue, red,    ³ Moderate    ± High intensity
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+            ³   blue, red,    ³ Low         ±
+            ³     green       ³ saturation  ±
+            ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+            ³   blue, red,    ³ High        ±
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+     68-AFH ³   blue, red,    ³ Moderate    ± Moderate intensity
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+            ³   blue, red,    ³ Low         ±
+            ³     green       ³ saturation  ±
+            ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³
+            ³   blue, red,    ³ High        ±
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+     B0-F7H ³   blue, red,    ³ Moderate    ± Low intensity
+            ³     green       ³ saturation  ±
+            ³-----------------³             ±
+            ³   blue, red,    ³ Low         ±
+            ³     green       ³ saturation  ±
+            ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+     F8-FFH ³                 ³
+            ³     black       ³
+            ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 4-14.  Default video DAC colors in 320-by-200 256-color mode
+     (MCGA and VGA).
+
+     Normally, the video BIOS programs the video DAC registers with a
+     default spectrum of color values (see Figure 4-14) when 320-by-200
+     256-color mode is selected. Registers 0 through 0FH contain the
+     default gamut of CGA-compatible colors. Registers 10H through 1FH
+     contain a gray scale of gradually increasing intensity. The next 216
+     registers (20H through F7H) contain three groups of 72 colors, with
+     the first group (registers 20H through 67H) at high intensity, the
+     second (registers 68H through AFH) at an intermediate intensity, and
+     the third (registers B0H through F7H) at low intensity. Each 72-color
+     group is made up of three ranges of colors of decreasing saturation
+     (increasing whiteness); each range varies smoothly in hue from blue to
+     red to green.
+
+       ÉÍÍÍ»     To disable or enable default video BIOS programming of the
+       º T º     video DAC color registers, use INT 10H function 12H (see
+       º I º     Appendix A).
+       º P º
+       ÈÍÍÍ¼
+
+
+VGA
+
+     As on the EGA, VGA pixel values are decoded by the Attribute
+     Controller, using the palette registers, and then passed to the video
+     DAC, following the same logic as in alphanumeric modes (see Chapter
+     3). Thus, a pixel value selects the corresponding palette register;
+     the value in the palette register, along with the bit fields in the
+     Attribute Controller's Color Select register, selects one of the 256
+     video DAC color registers. The video DAC converts the 18-bit RGB value
+     in its color registers to the corresponding analog RGB signals, which
+     drive the monitor.
+
+     The only exception to this scheme of attribute decoding occurs in 320-
+     by-200 256-color mode. In this mode, as on the MCGA, each 8-bit pixel
+     value specifies one of the video DAC's 256 color registers directly,
+     without the Attribute Controller's mediation.
+

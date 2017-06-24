@@ -1,0 +1,241 @@
+'===========================================================================
+' Subject: MILLION-COLOR PALETTE             Date: 12/85 (00:00)          
+' Author:  John & Jeff Klein                 Code: TEXT                   
+' Origin:  Rolf@ice.prima.ruhr.de          Packet: FAQS.ABC
+'===========================================================================
+                Million-Color Palette for IBM PC
+    (COMPUTE! Magazine December 1985 by John and Jeff Klein)
+
+     No longer is your PC restricted to a palette of 16 colors and an
+inability to display them all in higher resolutions.  The secret is
+a combination of a techniques called tile painting and the trick of
+fooling a TV or composite monitor into displaying new solid colors.
+
+     Graphics images are stored differently in the computer's memory
+for each different graphics mode or screen.  The color of each pixel
+is stored in a section of memory.  This video memory is arranged by
+its location or coordinates on the screen.  The image you see on the
+screen, therefore, is a copy of the contents of video memory.  To
+figure out how many pixels can be represented in a byte of memory,
+remember that a byte is made up of 8 bits.  Simply divide the amount
+of memory required for a certain screen mode by the number of pixels
+on the screen.  The memory requirements for each screen mode are:
+
+Screen                   # of      Memory
+ Mode     Resolution    Colors   per Screen   Pixels/Byte   Bits/Pixel
+
+  1       320 x 200       4         16K            4            2
+  2       620 x 200       2         16K            8            1
+
+     Remember that RGB stands for the three primary colors of light:
+red, green and blue.  All colors can be made by mixing these three
+primary colors.  That's why RGB monitors, color TVs and composite color
+monitors have three electron guns, all of which are controlled by the
+computer to produce color.  If none of the guns is lighting a pixel,
+the pixel appears black.
+
+     Colors are represented in memory by arranging bits to denote
+which electron guns should be turned on or off when lighting the
+corresponding pixel.  For instance, if a certain pixel is supposed to
+be blue, the group of bits representing that pixel in memory shows the
+blue gun is on and the others off.  All the possible combinations of
+the three electron guns account for eight colors.  To get eight more
+colors, the intensity, also called luminance, is varied by mixing a
+little white with the first eight colors.  That's why the IBM PC has
+a total of 16 color variations -- two shades each of eight colors.
+The 16 colors are represented by the following bit combinations.
+
+
+                    Bits
+Luminance     Red  Green  Blue     Color
+    0          0     0     0       Black
+    0          0     0     1       Blue
+    0          0     1     0       Green
+    0          0     1     1       Cyan
+    0          1     0     0       Red
+    0          1     0     1       Magenta
+    0          1     1     0       Brown
+    0          1     1     1       Light Gray
+    1          0     0     0       Dark Gray
+    1          0     0     1       Light Blue
+    1          0     1     0       Light Green
+    1          0     1     1       Light Cyan
+    1          1     0     0       Pink
+    1          1     0     1       Light Magenta
+    1          1     1     0       Yellow
+    1          1     1     1       White
+
+Remember that each bit turns an electron gun either on or off.  Notice
+how many bits its takes to represent all the possible combinations.
+It takes four bits, or half a byte (sometimes called nybble) to
+represent all 16 colors.  So all screen modes which use four bits to
+represent a pixel are 16-color modes.  Only four-color combinations
+are possible with two bits, and only two combinations are possible
+with one bit.  That's why some screen modes can display only four or
+two colors at a time.
+
+     Once you're familiar with how pixels are represented in video
+memory, the technique of tile painting is easy to understand.  Tile
+painting uses the PAINT command to fill the bytes of screen memory
+with certain patterns of ones and zeros.  The pattern is programmable,
+and it represents what is displayed on the TV or monitor.  Instead of
+painting with the actual color, you paint with the bit pattern of the
+color.  By using bit patterns, you can actually paint with more than
+one color around some specified border color:
+
+PAINT (x,y),CHR$(bit pattern) + CHR$(bit pattern) + ...,boundary color
+
+     The bit pattern consists of eight bits, so its decimal equivalent
+can range from 0 to 255 (integers only).  The bit pattern must
+represent the colors of the pixels per byte of the screen mode you're
+using.  The color patterns are put in memory next to each other as
+vertical lines on the screen.  This example paints SCREEN 1 with
+vertical bands of blue and green lines:
+
+10 SCREEN 1:CLS
+20 PAINT (1,1),CHR$(102),3
+
+The reason why the lines are blue and green can be seen when the
+number 102 is expressed in binary, revealing the bit pattern:
+
+102 = 01100110
+
+Decimal 102 is derived from this binary number by:
+
+Value for
+each digit   128   64   32   16   8   4   2   1   01 = 0001 = blue
+                                                  10 = 0010 = green
+Binary         0    1    1    0   0   1   1   0
+
+128 * 0 =  0
+ 64 * 1 = 64
+ 32 * 1 = 32
+ 16 * 0 =  0
+  8 * 0 =  0
+  4 * 1 =  4
+  2 * 1 =  2
+  1 * 0 =  0
+         102
+
+
+
+SCREEN 1 stores four pixels per byte, so the pattern works out to:
+
+01       10        01       10
+blue     green     blue     green
+
+     Here's where things get tricky.  If the computer is plugged into
+a color TV or composite color monitor (not an RGB monitor), you won't
+see the blue and green vertical lines that are supposed to be there.
+Instead, you'll see a solid bar of color that's sort of blue.  And the
+blue is not one of the normal 16 colors available.  It is a new color
+-- one of the 16 shades that can be created on SCREEN 1 of the PC.
+
+     What's happening is something called artifacting.  This effect
+takes advantage of the limited resolution of TVs and composite color
+monitors.  When two very small pixels are placed next to each other
+on these screens, there isn't enough resolution to display them
+properly.  As a result, the pixels tend to blend together and create
+a false color -- an artifact color.  The color wouldn't be visible if
+the screen had more resolution.  RGB monitors have enough resolution
+to display the pixels as they're supposed to appear.
+
+     If the binary pattern 10 01 10 01 is used in the above example
+instead of 01 10 01 10, the ahsde is slightly different -- blue-green-
+blue-green does not appear the same as green-blue-green-blue on a
+color TV or composite monitor.  They mix differently to create an
+entirely new shade of blue-green.
+
+     The PC has only two graphics modes, SCREEN 1 and SCREEN 2.  Tile
+painting produces only 16 colors in SCREEN 1 and five shades of gray
+in SCREEN 2.  In SCREEN 1, tile painting lets us display up to 16 hues
+simultaneously.  Program 1 displays 16 shades.  Vertical bands with
+four colors don't blend in this mode, so somehow bands of two must be
+painted.  The secret is in line 40.  Since there are four pixels per
+byte, the last half of the byte has to be reflected in the first half.
+This technique insures that only two colors are in each band of four.
+The first half is the same as the last half, so the first band of two
+will be the same as the last band of two.
+
+     Tile painting doesn't work correctly in SCREEN 2, high resolution
+with two colors, because this screen is always in black and white.
+However, you can get five shades of gray, as shown in Program 2.
+Solid lines form the brightest white.  Lines separated by two or three
+lines of black yield the next two shades.  The middle gray can't be
+displayed when using the PAINT command, because it's not possible to
+create a bit pattern that represents two blacks and then a white.
+These bit patterns generate the various shades of gray:
+
+
+
+
+                Binary        Decimal   Hex      Shade
+color 1  =  1 1 1 1 1 1 1 1  =  256  =  &HFF  =  White
+            0 1 0 1 0 1 0 1  =   85  =  &H55  =  Dull White
+            (Not accessible)                  =  Middle Gray
+            0 0 0 1 0 0 0 1  =   17  =  &H11  =  Dark Gray
+color 0  =  0 0 0 0 0 0 0 0  =    0  =  &H00  =  Black
+
+     Program 3 provides a demo of tile painting in SCREEN 1.  It fills
+the screen with circles, displaying up to 16 colors on the PC.
+
+     Program 4, for the PC with an RGB monitor, demonstrates the
+usefulness of the many new colors in a fascinating experiment.  It
+uses SCREEN 1 and tile painting, but in a different way than Program 3.
+Closely spaced vertical lines don't blend together on an RGB monitor,
+so the previous technique won't work.  Program 4 uses the second part
+of the PAINT command.  The first CHR$(bit pattern) controls the
+horizontal line above the second CHR$(bit pattern).  Now the PAINT
+command can control the horizontal as well as the vertical lines,
+forming a checkerboard.  Although the checkerboard blends the lines
+together to create new colors, the colors aren't as solid as those
+produced by vertical lines on a TV or composite monitor.  Indeed, the
+effect won't look very pretty on a TV or composite monitor; it's
+passable on an RGB.
+
+     To use the new colors in your own programs, choose one of the
+example programs.  This table summarizes the programs and the number
+of color variations possible in each.
+
+           Screen     Max     Colors per    Display
+Program     Mode     Colors     Screen       Device
+
+   1       SCREEN 1    16         16        TV or CC
+   2       SCREEN 2     5          5        TV or CC
+   3       SCREEN 1    16         16        TV or CC
+   4       SCREEN 1    20         10          RGB
+
+Program 1:
+10 SCREEN 1:CLS:KEY OFF:COLOR ,0
+20 RANDOMIZE VAL(RIGHT$(TIME$,2)):Z=-1:A=INT(320/16):Y=0
+30 FOR X=0 TO 15:Z=Z+1
+40 LINE (X*A,0)-(X*A+A,200),3,B
+50 IF Z<>0 THEN PAINT (X*A+1,1),CHR$(Z+Z*16),3
+60 LINE (X*A,0)-(X*A+A,200),0,B
+70 NEXT X
+
+Program 2:
+10 SCREEN 2,1:CLS:KEY OFF
+20 FOR X=1 TO 100:LINE (X,1)-(X,200),1:NEXT X
+30 FOR X=101 TO 200 STEP 2:LINE (X,1)-(X,200),1:NEXT X
+40 FOR X=201 TO 300 STEP 3:LINE (X,1)-(X,200),1:NEXT X
+50 FOR X=301 TO 400 STEP 4:LINE (X,1)-(X,200),1:NEXT X
+60 GOTO 60
+
+
+
+Program 3:
+10 SCREEN 1:CLS:KEY OFF:COLOR ,0
+20 RANDOMIZE VAL(RIGHT$(TIME$,2))
+30 X=RND*320:Y=RND*200:R=RND*10+10:TILE=INT(RND*(15)+1)
+40 CIRCLE (X,Y),R,3:PAINT (X,Y),CHR$(TILE+TILE*16),3:CIRCLE (X,Y),R,0
+50 GOTO 20
+
+Program 4:
+10 SCREEN 1:CLS:KEY OFF:COLOR ,0
+20 RANDOMIZE VAL(RIGHT$(TIME$,2)):Z=-1:A=INT(320/16):Y=0:C=0
+30 FOR X=0 TO 15:Z=Z+1
+40 LINE (X*A,0)-(X*A+A,200),3,B:Y=Z+Z*16:Q=Y*4:R=INT(Q/256):Q=Q-R*256+R
+50 IF Z<>0 THEN PAINT (X*A+1,1),CHR$(Y)+CHR$(Q),3
+60 LINE (X*A,0)-(X*A+A,200),0,B
+70 NEXT X

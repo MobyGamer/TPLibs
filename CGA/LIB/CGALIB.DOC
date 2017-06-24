@@ -1,0 +1,171 @@
+CGALIB -- A graphics library for CGA.
+Yes, CGA.  You can stop laughing now.
+Written by trixter@oldskool.org.
+Last updated 20050626
+
+(Note:  This library is UNFINISHED and some routines are still UNIMPLEMENTED.
+Skip to the end of this document to read the "To-Do" list to see what is still
+unfinished.)
+
+Intro:
+
+This library is unfinished, so the documentation is also unfinished.  Here is
+the quick skinny:  CGALIB is a graphics and hardware library for IBM CGA
+graphics cards.
+
+The library directly interfaces with the Motorola 6845 character generator
+implemented on all true IBM CGA cards to get some things done, like
+initializing a screen mode without automatically clearing screen RAM, or
+altering registers to make new video modes, etc.  The m6845 had clone variants
+that found their way into Hercules, AT&T, Amstrad, etc. with some extended
+modes; these extended features are currently unsupported (but might be added
+in the future).  While the m6845 is also present on the MDA, the MDA is also
+not supported.
+
+CGALIB provides low-level pixel and line primitives, and also a high-level
+"wrapper" interface that makes the library easier to use. The wrapper formally
+defines some text-based and graphics-based video modes, and wraps common calls
+like pixels, lines, boxes, etc. to the appropriate low-level routines.
+However, the wrapper interface adds a tiny bit of time to each call due to the
+redundant passing of parameters, so if you want the full raw speed (or you're
+trying to implement something the wrapper can't do yet), then by all means
+feel free to call the low-level primitives directly.
+
+CGALIB also provides a Motorola 6845 character generator interface unit, which
+allows you to exactly specify things like vertical total scanlines displayed,
+horizontal sync offsets, and other fun registers so that you can experiment
+and create new modes.  (Some of these modes, such as 160x100x16, already have
+support in CGALIB; others, like a 90x30 text mode or 256x200x4 graphics mode,
+have not yet been implemented.)
+
+Specs:
+
+Graphics modes supported include text tweaks (40x25, 40x50, 40x100, 80x25,
+80x50, 80x100, 160x100), common graphics (320x200x4 and 640x200x2), and the
+99.98% forgotten true 16-color CGA composite 160x200 mode.  All the tools
+exist for you to create your own modes (if you know what you're doing!), as
+well as completely control existing modes (for example, you have access to the
+"third" CGA red-cyan-white palette, can change the 4th black color to any
+color you want, etc.).
+
+Mode specifics:
+
+320x200x4 and 640x200x2 are handled normally, no tricks.
+
+Text modes are not handled normally.  :-)  With the exception of 160x100x16,
+all of the text modes are implemented with the extended ASCII 177 ("±")
+character and treat colors as being from 0 to 255.  (This means you can
+consider the text modes as having "256 colors", like VGA, except that almost
+half of the colors are duplicates of each other, and the palette is fixed.)
+This was done on purpose because, on a real CGA monitor, the alternating
+pixels blend nicely together.  This allows you to "plot" a pixel by laying
+down a single byte, no bit shifting needed.  (In reality, there are duplicate
+color combinations, so the actual number of unique "colors" is factoral(16) or
+16+15+14...+1 = 136 unique combinations.)  The organization of text modes in
+this manner is so easy to manipulate that the UNoptimized line routines for
+textmodes are, for most modes, faster than the highly-optimized assembler line
+routines for graphics modes.
+
+Library specifics:
+
+Low-level primitives include:
+  - setting the video mode (properly)
+  - setpixel
+  - line (including optimized special cases for horizontal and vertical lines)
+  - clearing the graphics buffer
+
+High-level routines in the "wrapper" library include:
+  - Setting modes and filling out a description record with mode details
+  - high-level drawing primitives:
+    - rectangle (outline)
+    - box (filled)
+
+It is worth noting that, as of this writing in the year 2005, there are things
+this library does that can't even BEGIN to be emulated by MESS, DOSBox, etc.
+I encourage the creators of all PC emulators to use this library to write and
+test programs on a real PC/CGA, then use the results to improve the graphics
+portion of their emulators.
+
+Using the library:
+
+Sorry, this is the "unfinished" portion of our story.  But it's easy to figure
+out; the code is very well documented, so look at testline.pas for an example
+of how things work.  Here's some of the files included and an explanation of
+what they are for:
+
+cgalib.pas       8499   6-12-105   0:50 CGALIB main "wrapper" library
+This is the main wrapper library that initializes video modes, sets mode
+variables, etc.  
+
+cgalib_g.pas     1661   6-12-105   0:52 CGALIB Global Variables and definitions
+This is global variables used by all of the units in CGALIB *except* the
+low-level routines.  This is intentional in case you want to use the low-level
+routines yourself without all of the wrapper baggage.
+
+crtctwkg.pas     4106   5-23-105   0:15 Tweaks CRTC regs. to make new graf mode
+crtctwkt.pas     3974   6-09-105  23:51 Tweaks CRTC regs. to make new text mode
+These are interactive programs that let you fuck around with video modes.
+Check the source code so you can see what the various keys do.  (256x200.dmp
+was produced by the graphics tweaker, for example.)  To avoid losing sync on
+your monitor, remember the golden rule:
+If (VerticalTotal+1)*(MaximumScanLine+1)+VerticalTotalAdjust isn't 262,
+or at least very close to it, the monitor won't be able to sync.
+
+m320_640.pas     3759   6-09-105  21:49 CGALIB low-level routines for graphics
+m_lowres.pas    10766   6-10-105   0:00 CGALIB low-level code for 160x100x16
+m_textm.pas      8209   6-09-105  23:59 CGALIB low-level code for text modes
+Low-level primitives for various video modes.  
+
+m6845ctl.pas     9905   6-09-105   0:35 CGALIB Motorola 6845 char. gen. code
+The Motorola MC6845 character generator control unit.  Even if you don't use
+the functions it provides, it is still useful in that it has all of the common
+data values listed as constants.  Check out the colors section :-)
+
+testline.pas     4234   6-12-105  18:01 Visually shows line drawing performance
+testpix.pas       654   6-26-105  16:27 Tests the setpixel routine
+Check these out for some good examples of how to use the library.
+
+History:
+
+I'm a freak, what can I say?  When I was a teenager, with my clone 8086/CGA, I
+played lots of games and marveled at how some coders were able to achieve
+quite fast performance on such a limited machine.  When I was older, I got
+into the demoscene.  Now that I'm 34 (ACK!) I find myself trying to merge the
+two.  Demos... for 8088/CGA... running demos...  A few feverish nights and
+many weeks of neglecting responsibilities later, voila:  We have CGALIB.  Yes,
+I am crazy.  Someday I hope to create (maybe with other people's help) the
+first true 8088/CGA demo that is a *decent* demo, not just some cracker
+screens linked into a megademo.  There are lots of things to consider in doing
+so, like what to do about music (pc speaker sux, adlib takes up too much CPU
+time, digitized sound is too large, etc.)... but I digress.
+
+It may interest you to know that all of the code was written on a real 4.77MHz
+8088 with CGA.  In fact, it gets more hard-core than that:  The exact dev
+platform -- which I'm writing this text file on right now -- is an IBM Model
+5150, the first PC.  By "first", I'm talking about the 83-key keyboard, 5153
+color CGA monitor, 5-slot-Rev.B motherboard True Blue IBM original.  The only
+thing I added was a 20MB MFM hard drive so that I could more easily develop
+the code and make backups.
+
+To-Do:
+
+Tons of stuff still aren't implemented.  On the list to do:
+
+- text-based 60Hz Pageflip tweakmodes for 136 colors
+- hidden/offscreen buffering of primitives (both raw and linear)
+- more useful wrapper routines like clipping
+- more low-level primitives (most notably bitmap handling)
+- more high-level primitives like polygons (including filled), scaled bitmaps
+using fixed-point math (hint: ADD AX,STEPSIZE gives you AH.AL 8.8 fixed point)
+- optimize the textmode lines.  They are currently a generic bresnham (sp?)
+that calls setpixel; a better solution would be to do what the graphics line
+routines do and increment the address/bitmask as part of the line
+calculations.  But I'm lazy.
+
+Anyway, as fun as this has been, I have to get back to reality for a while,
+which includes finishing all of the video production for Mindcandy 2, fixing
+up the house, etc., etc.  Real Life(tm) stuff.  So, CGALIB, thank you for
+diverting my attention for a few weeks so that I could slowly climb out of the
+pit of depression that I was living in.  Remember, kids:  Nothing beats
+depression like a few obsessive weeks of programming something useless!
+

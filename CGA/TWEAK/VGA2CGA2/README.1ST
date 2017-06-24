@@ -1,0 +1,21 @@
+VGA2CGA  v2.0 Copr. (c) 1988 Lawrence & Marvin Gozum,MD
+
+VGA2CGA is a utility that converts/views colored GIF pictures (256
+colors and less) [1] error-distributed, dithered, 4-color CGA or
+16-Color EGA (emulated) pictures.   With a special unsupported mode,
+CGA users can convert/view up to 405 colors (from 16 color dither patterns).  VGA2CGA saves to
+
+You can view GIF pictures in CGA 320x200x14, and XCGA: 160x100x16 and
+80x100x"405" modes.
+
+DISTRIBUTION OF VGA2CGA.ARC MUST INCLUDE ALL THE FOLLOWING FILES BELOW.
+
+Files:   VGA2CGA .exe    Main Program
+         VGA2CGA .doc    User Manual
+         REGISTER.doc    registration form
+         README  .1st    this document
+         XCGAVU  .bas    QuickBASIC source for viewing CGX 160x100x16 pic
+         VGACAP  .com    utility to capture any viewable 320x200x256
+                         pic and save in .BLD and .PLT files
+
+

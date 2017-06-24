@@ -1,0 +1,144 @@
+                   LOWRES Unit Documentation
+                   =========================
+
+The LOWRES unit provides access to a 160 by 100 pixel 16 color
+undocumented graphics mode.  It is mentioned briefly in the IBM PC
+Technical Reference Manual, but no specifics are given as to how this
+mode is actually achieved.  The mode is possible on CGA, EGA, MCGA, and
+VGA video boards.  Though the resolution is very low, the 160x100 mode
+is useful for applications that must run on CGA boards but need more
+colors than the 4 available in the 320x200 CGA mode.
+
+The 160x100 "graphics" mode is actually a text mode.  The video
+registers are changed so that normal 80x25 color text mode squeezes four
+times as many rows of text characters onto the screen.  This produces
+80x100 characters.  Then, the screen is filled with character 221, "Ý".
+Each character on the screen is used for a pair of two horizontally
+adjacent pixels.  Of the pair, the left pixel's color is controlled by 
+the foreground color of the "Ý" character at that location and the right 
+pixel's color is controlled by the background color.  Finally, the 
+"blink" option on the video board must be turned off so that pixels do
+not blink when the right-half (odd column) pixels (which use the text 
+background color) have a color value is greater than 7.  Text characters 
+normally blink if the background color is in the 8...15 range.
+
+100 rows of characters are squeezed onto the screen by telling the video
+board that each character becomes one quarter as tall as before.  The
+values of several CGA board registers must be modified to change the
+text character height and to increase number of displayed rows to 100.
+On CGA cards, the character height is changed from 8 to 2 pixels.  MCGA
+and some CGA-compatible cards use more than 8 pixels for text characters
+by internally doubling the text character height register.  Setting the
+character height register to 2 still works correctly on these cards.
+
+On VGA boards, the text character height is normally 16, so it is
+changed to 4.  EGA boards, however, normally use a text height of 14
+pixels.  There is no way to change the text height to exactly one
+quarter of 14 pixels.  A text height of 3 is used, which is slightly too
+small: you actually get 116 rows of text instead of the desired 100.
+
+Blink is suppressed to get 16 background colors, so that the odd columns 
+of pixels do not cause blinking pixels.  This is done on CGA boards by 
+setting bit 5 of port 3d8 hex to zero.  On EGA and VGA cards, blink is
+suppressed by using subfunction 3 hex, function 10 hex of interrupt 10
+hex and setting BL to 0.
+
+The 160x100 mode uses 16000 bytes at b800:0000 hex to store 16000 4-bit
+pixels, which is twice the amount of memory that would be required in a
+normal graphics mode.  Each even byte of video memory is wasted to store 
+the character 221 ("Ý").  Moving blocks of video memory requires that
+only the odd bytes (storing the text foreground and background colors) 
+be copied.
+
+It is possible to use similar methods to those discussed above to get a
+160x100 monochrome mode that will run on IBM monochrome boards and
+Hercules monochrome boards.  It would not, however, be possible to get 
+three-intensity pixels (on, bright, and off) because a bright background 
+may not be combined with a normal foreground (and visa-versa) on these 
+boards.
+
+
+LOWRES Unit Interface
+---------------------
+procedure enter_lowres_mode;
+     This routine enters the 160x100 mode by choosing normal 80x25 color
+     text mode and then tweaking the video text character height
+     register to obtain 80 by 100 "characters".  Each "character"
+     handles two pixels through the foreground and background colors.
+     16 background colors are obtained by turning the blink option off.
+     Pixels may not be plotted until "prepare_low()" is called.
+
+procedure prepare_low(x1, y1, x2, y2: integer; fill, c1, c2: byte);
+     This routine prepares the video memory by filling it with a given
+     character using given foreground and background colors.  The usual
+     calling parameters are fill=221, c1=0, and c2=0.  This will fill
+     the screen with character 221 (the IBM special block character
+     whose left half is set: "Ý") with the color being black.  c1 and c2
+     may be set to other colors (usually equal to each other) to fill
+     the screen with a desired color.  Other fill characters may be used
+     to produce different effects.  For instance, characters 176 "°",
+     177 "±", or 178 "²" may be used to mix colors producing an 80x100
+     mode with 256 or more colors.  Filling the screen with character
+     177 with a foreground color of blue and a background color of
+     magenta will produce what looks like a new color between blue and
+     magenta.  This effect, however, does not work well on VGA boards
+     because the 9th column of pixels is left blank in the text font.
+     When two "±" characters are placed side-by-side ("±±"), vertical
+     bars are visible.
+
+procedure exit_lowres_mode;
+     Restores the screen to normal text mode.
+
+function video_card_detected: integer;
+     This routine is used by enter_lowres_mode() to determine which
+     video card is present.  It uses the Turbo Pascal graphics unit to
+     perform this test.  You may want to use this routine to test for
+     unsupported video cards such as the Monochrome or Hercules boards.
+
+procedure lplot(x, y: integer; c: byte);
+     Plot a pixel at a given x, y coordinate with a given color.  The
+     color should be in the 0...15 range.  Remember, this routine will
+     produce undetermined results if prepare_low() is not called
+     beforehand.  (Fill the screen with character 221, "Ý".)
+     
+function lgetdotcolor(x, y: integer): byte;
+     Determine what color pixel is at a given x, y screen position.
+
+procedure lline(x1, y1, x2, y2: integer; c: byte);
+     Draw a line from (x1, y1) to (x2, y2) with color c.  Uses the
+     Bresenham line drawing algorithm.
+
+procedure lbox(x1, y1, x2, y2: integer; c: byte);
+     Draw an unfilled box (rectangle) with upper-left corner at (x1, y1)
+     and lower right corner at (x2, y2) using color c.
+
+procedure lfill_box(x1, y1, x2, y2: integer; c: byte);
+     Draw a filled box (rectangle) with upper-left corner at (x1, y1)
+     and lower right corner at (x2, y2) using color c.
+
+procedure lwrite(st: string);
+     Write text onto the screen using the built-in 5x6 pixel 
+     proportional font using the current foreground and background 
+     colors at the current cursor position.  The cursor position is 
+     updated after writing text so later calls will place text directly 
+     afterwards on the screen.  Use ltextcolor() and ltextbackground()
+     to set the text color, and use lgotoxy() to set the text position
+     (if desired) before calling.
+     
+procedure lwrite_chr(ch: char);
+     Write a single character using current position and color.  Updates
+     text position.
+     
+procedure lwrite_num(x: integer);
+     Write an integer value onto the screen.
+     
+procedure lgotoxy(x, y: integer);
+     Change the text position.  (x, y) refers to the lower left corner 
+     of the next character to be written.
+     
+procedure ltextcolor(c: byte);
+     Change the current text foreground color.
+     
+procedure ltextbackground(c: byte);
+     Change the current text background color.
+     

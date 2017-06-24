@@ -1,0 +1,1558 @@
+
+
+           12  Some Advanced Video Programming Techniques
+
+
+                    A Vertical Interrupt Handler
+                         EGA and VGA ş MCGA
+
+                     Panning on the EGA and VGA
+               Positioning the Screen Window ş Panning
+                      Resizing the Video Buffer
+
+                         Bit-Plane Layering
+                                  
+                      EGA and VGA Split Screen
+                                  
+                       The Light Pen Interface
+                Light Pen Position ş Light Pen Switch
+                  Determining Hercules Video Modes
+
+
+
+     This chapter deals with some of the less frequently exploited
+     capabilities of PC and PS/2 video subsystems. Most programmers do not
+     concern themselves with these hardware features, because they are
+     infrequently used in most video software. Still, each of these
+     hardware features lends itself to programming techniques that can be
+     used in certain applications where nothing else is as effective.
+
+     Nothing in this chapter requires "gonzo programming" or any magical
+     knowledge of the hardware. You should nevertheless be comfortable with
+     80x86 assembly-language programming before tackling the details of
+     this material. Most of the chapter describes programming techniques
+     for the EGA and the VGA, but the discussions of the light pen
+     interface and bit-plane layering are pertinent to Hercules adapters as
+     well.
+
+
+A Vertical Interrupt Handler
+
+
+     It's neither the interrupt nor the handler that's vertical--it's the
+     fact that the CRTC on the EGA, the VGA, and the MCGA can generate a
+     hardware interrupt at the start of the vertical blanking interval,
+     that is, at the start of the scan line after the bottom line of
+     displayed video buffer data. An interrupt handler for this Vertical
+     Interrupt can thus update the video buffer or program the video
+     hardware without interfering with the display.
+
+     The interrupt is generated on interrupt request line 2 (IRQ2). The
+     computer's programmable interrupt controller (PIC) is set up during
+     the ROM BIOS coldstart to map IRQ2 to interrupt vector 0AH, so a
+     Vertical Interrupt handler should be designed to handle interrupt 0AH.
+
+       ÉÍÍÍ»     The programmable interrupt controller used in the IBM PC,
+       º T º     PC/AT, and PS/2 Models 50, 60, and 80 is the Intel 8259A;
+       º I º     in the PS/2 Model 30, the same functions are supported in
+       º P º     a proprietary VLSI chip, the I/O Support Gate Array. In
+       ÈÍÍÍ¼     all cases, however, the programming interface to the PIC
+                 for managing Vertical Interrupts is the same.
+
+
+EGA and VGA
+
+     The scan line number at which the interrupt is issued is 1 greater
+     than the value in the CRTC's Vertical Display Enable End register
+     (12H). The value in this register specifies the number of scan lines
+     of video buffer data that are displayed, so the CRTC generates
+     Vertical Interrupts at the start of the vertical blanking interval.
+
+     Bits 4 and 5 of CRTC's Vertical Retrace End register (11H) control
+     whether and when the CRTC  signals a Vertical Interrupt. You set bit 5
+     to 1 to enable the CRTC to generate the interrupt. Bit 4 controls a 1-
+     bit latch whose status appears in bit 7 of Input Status Register Zero
+     (3C2H). You must zero bit 4 to clear the status latch. When you set
+     bit 4 to 1, the latch status bit changes from 0 to 1 when the next
+     vertical interrupt occurs, and remains set to 1 until you again clear
+     the latch.
+
+     To use the Vertical Interrupt feature, you must perform the following
+     actions:
+
+     ş  Point the interrupt 0AH vector to a Vertical Interrupt handler.
+
+     ş  Enable IRQ2.
+
+     ş  Enable the Vertical Interrupt.
+
+     The routine in Listing 12-1 shows how to do this. Note how this
+     routine is coordinated with the interrupt handler itself. The routine
+     preserves the interrupt 0AH vector so the interrupt handler can chain
+     to the previous handler if necessary, and so the routine can
+     eventually restore the previous interrupt vector when the interrupt
+     handler is no longer needed.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-1.  Handling Vertical Interrupts on the EGA and VGA.
+
+                TITLE   'Listing 12-1'
+                NAME    VREGA
+                PAGE    55,132
+
+;
+; Name:         VREGA
+;
+; Function:     Vertical Interrupt Service routine for EGA and VGA
+;
+; Caller:       Microsoft C:
+;
+;                       int EnableISR0A();      /* returns 0 if installed ok */
+;
+;                       void DisableISR0A();
+;
+
+CRT_MODE        EQU     49h             ; addresses in video BIOS data area
+ADDR_6845       EQU     63h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+ISR0A           PROC    far             ; Interrupt handler for INT 0Ah
+
+                push    ax              ; preserve registers
+                push    dx
+                push    ds
+
+                mov     ax,seg DGROUP
+                mov     ds,ax           ; DS -> DGROUP
+
+; determine whether a vertical interrupt has occurred
+
+                mov     dx,3C2h         ; DX := I/O port for
+                                        ;  Input Status Register Zero
+                in      al,dx
+                test    al,80h          ; test bit 7 of the Status Reg value
+                jnz     L10             ; jump if vertical interrupt
+
+; not a vertical interrupt so chain to previous interrupt handler
+
+                pushf                   ; simulate an INT
+                call    ds:PrevISR0A    ;  to the previous INT 0Ah handler
+                jmp     short Lexit
+
+; handle a vertical interrupt
+
+L10:            mov     dx,Port3x4      ; DX := 3B4h or 3D4h
+
+                in      al,dx           ; AL := value of CRTC address reg
+                push    ax              ; preserve this value
+
+                mov     ax,DefaultVREnd ; AH := default value for VR End Reg
+                                        ; AL := 11h (register number)
+                and     ah,11101111b    ; AH bit 4 := 0 (clear interrupt latch)
+                out     dx,ax           ; update VR End Register
+                jmp     $+2             ; wait for CRTC to respond
+
+; send End of Interrupt to Intel 8259A Programmable Interrupt Controller
+;  to allow subsequent IRQ2 interrupts to occur
+
+                mov     al,20h          ; 8259A I/O port
+                out     20h,al          ; send nonspecific EOI to 8259A
+                jmp     $+2             ; wait for PIC to respond
+                sti                     ; enable interrupts
+
+; do something useful ...
+
+                inc     word ptr _VRcount       ; increment a counter
+
+; enable CRTC to generate another interrupt
+
+                cli                     ; disable interrupts
+                mov     ax,DefaultVREnd ; AH := default value for VR End Reg
+                                        ; AL := 11h (register number)
+                and     ah,11011111b    ; AH bit 5 := 0 (enable vertical int)
+                or      ah,00010000b    ; AH bit 4 := 1 (enable int latch)
+                out     dx,ax
+                jmp     $+2
+
+                pop     ax
+                out     dx,al           ; restore previous Address reg value
+
+Lexit:          pop     ds              ; restore registers and exit
+                pop     dx
+                pop     ax
+                iret
+
+ISR0A           ENDP
+
+;
+; EnableISR0A -- enable Vertical Interrupt Handler
+;
+                PUBLIC  _EnableISR0A
+_EnableISR0A    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+                push    di
+
+                mov     ax,40h
+                mov     es,ax           ; ES -> video BIOS data area
+
+; save default CRTC register values
+
+                mov     dx,es:[ADDR_6845]  ; DX := CRTC Address port
+                mov     Port3x4,dx      ; save port address
+
+                mov     ax,1A00h        ; AH := 1AH (INT 10H function number)
+                                        ; AL := 0 (read Display Combination)
+                int     10h             ; AL := 1AH if function 1AH supported
+                                        ; BL := active video subsystem
+                cmp     al,1Ah
+                jne     L20             ; jump if not a VGA
+
+                cmp     bl,7
+                je      L21             ; jump if VGA
+
+                cmp     bl,8
+                je      L21             ; jump if VGA
+
+                mov     ax,0FFFFh       ; return 0FFFFh if neither EGA nor VGA
+                jmp     short L23
+
+; get default value for EGA Vertical Retrace End register
+
+L20:            mov     al,es:[CRT_MODE]  ; AL := video BIOS mode number
+                mov     bx,offset DGROUP:EGADefaultVals
+                xlat                    ; AL := default value for VR End reg
+                jmp     short L22
+                                        ; 
+; get default value for VGA Vertical Retrace End register
+
+L21:            mov     al,VREndReg     ; AL := VR End register number
+                out     dx,al
+                inc     dx              ; DX := 3B5H or 3D5H
+                in      al,dx           ; AL := current value for register
+
+L22:            mov     VREndValue,al   ; save this value
+
+; save old interrupt 0Ah vector
+
+                mov     ax,350Ah        ; AH := 35H (INT 21h function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h             ; ES:BX := previous INT 0AH vector
+
+                mov     word ptr PrevISR0A,bx
+                mov     word ptr PrevISR0A+2,es ; save previous vector
+
+; update interrupt 0AH vector with address of this handler
+
+                push    ds              ; preserve DS
+                mov     dx,offset ISR0A
+                push    cs
+                pop     ds              ; DS:DX -> ISR0A
+                mov     ax,250Ah        ; AH := 25H (INT 21H function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h             ; update INT 0AH vector
+                pop     ds              ; restore DS
+
+; enable IRQ2 by zeroing bit 2 of the 8259A's mask register
+
+                cli                     ; clear interrupts
+                mov     dx,21h          ; DX := 8259A mask register
+                in      al,dx           ; AL := mask register value
+                and     al,11111011b    ; reset bit 2
+                out     dx,al
+
+; enable vertical interrupts
+
+                mov     dx,Port3x4      ; DX := 3B4H or 3D4H
+                mov     ax,DefaultVREnd
+
+                and     ah,11001111b
+                out     dx,ax           ; clear bits 4 and 5 of VR End reg
+                jmp     $+2             ; wait for CRTC to respond
+                or      ah,00010000b
+                out     dx,ax           ; set bit 4
+                jmp     $+2
+                sti                     ; enable interrupts
+
+                xor     ax,ax           ; AX := 0 (return value)
+
+L23:            pop     di              ; restore registers and exit
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_EnableISR0A    ENDP
+
+;
+; DisableISR0A -- disable Vertical Interrupt Handler
+;
+                PUBLIC  _DisableISR0A
+_DisableISR0A   PROC    near
+
+                push    bp
+                mov     bp,sp
+                push    si
+                push    di
+                push    ds
+
+; disable vertical interrupts
+
+                cli                     ; disable interrupts
+                mov     dx,Port3x4
+                mov     ax,DefaultVREnd
+                out     dx,ax           ; restore Vertical Retrace End reg
+                jmp     $+2
+                sti                     ; enable interrupts
+
+; restore previous interrupt 0Ah handler
+
+                lds     dx,PrevISR0A    ; DS:DX := previous INT 0AH vector
+                mov     ax,250Ah        ; AH := 25H (INT 21H function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h
+
+                pop     ds              ; restore registers and exit
+                pop     di
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_DisableISR0A   ENDP
+
+_TEXT           ENDS
+
+_DATA           SEGMENT word public 'DATA'
+
+                EXTRN   _VRcount:word   ; declared in C caller
+
+PrevISR0A       DD      ?               ; save area for old int 0Ah vector
+Port3x4         DW      ?               ; 3B4h or 3D4h
+
+DefaultVREnd    LABEL   word
+VREndReg        DB      11h             ; Vertical Retrace End register number
+VREndValue      DB      ?               ; default value for VR End register
+
+EGADefaultVals  DB      2Bh,2Bh,2Bh,2Bh,24h,24h,23h,2Eh ; default values for
+                DB      00h,00h,00h,00h,00h,24h,23h,2Eh ;  EGA VR End reg
+                DB      2Bh
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The handler itself, in procedure ISR0A, gains control whenever
+     interrupt 0AH occurs. To distinguish between the hardware Vertical
+     Interrupt on IRQ2 and a possible software interrupt 0AH, the handler
+     examines bit 7 of Input Status Register Zero. If this bit is 1, a
+     Vertical Interrupt has occurred, and the handler continues about its
+     business. If the bit is 0, no Vertical Interrupt has occurred, so the
+     handler chains to the previous interrupt 0AH handler.
+
+
+       ÉÍÍÍ»     A drawback to using the Vertical Interrupt is that any
+       º T º     hardware interrupt on IRQ2 causes the status bit in Input
+       º I º     Status Register Zero to be set. Thus, although the status
+       º P º     bit can be used to detect software interrupt 0AH, an
+       ÈÍÍÍ¼     interrupt handler cannot distinguish between EGA Vertical
+                 Interrupts and IRQ2 interrupts generated by other hardware
+                 unless the other hardware can be reliably interrogated.
+                 Since some other IBM PC adapters can use IRQ2 (for
+                 example, the bus version of the Microsoft Mouse), you can
+                 reliably use the Vertical Interrupt only when certain
+                 about the exact hardware configuration of the PC on which
+                 your program is running. 
+
+     Once the handler detects a Vertical Interrupt (that is, bit 7 of
+     Input  Status Register Zero is 1), it issues a nonspecific end-of-
+     interrupt (EOI) instruction to the interrupt controller so that
+     subsequent IRQ2 interrupts can be processed. Reentrance is not a
+     problem, because additional Vertical Interrupts will not be signalled
+     until the handler itself clears and reenables the status latch. Once
+     the EOI has been issued, the handler is free to perform some useful
+     action. In this example, it simply increments a counter. Just before
+     exiting, the handler reprograms the Vertical Retrace End register to
+     enable the next Vertical Interrupt.
+
+     The example in Listing 12-2 shows how you can integrate a Vertical
+     Interrupt handler into a high-level program. The example is
+     intentionally simple. It does nothing but count a designated number of
+     Vertical Interrupts and display a message. Of course, your own
+     Vertical Interrupt handler might perform more complicated actions than
+     simply updating a variable. For instance, you could perform animation
+     by updating the video buffer each time the interrupt occurs. You might
+     also update the CRT and Attribute controllers to produce a panning
+     effect using techniques described later in this chapter.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-2.  Using a Vertical Interrupt handler in a C program.
+
+/* Listing 12-2 */
+
+int     VRcount = 0;                    /* vertical interrupt counter */
+
+main()
+{
+        if ( EnableISR0A() )
+        {
+          printf( "\nCan't enable vertical interrupt handler\n" );
+          exit( 1 );
+        }
+
+        while (VRcount < 600)
+          printf( "\015Number of vertical interrupts:  %d", VRcount );
+
+        DisableISR0A();
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     Hardware support for the Vertical Interrupt feature can
+       º T º     vary. IBM's VGA adapter, for example, does not support
+       º I º     Vertical Interrupts at all. On some EGA clones, the
+       º P º     polarity of bit 7 in Input Status Register Zero is
+       ÈÍÍÍ¼     opposite to that of the equivalent EGA bit; that is, a
+                 Vertical Interrupt has occurred when bit 7 is 0. (Second-
+                 source manufacturers of EGA-compatible adapters do not
+                 always emulate every detail of the EGA's occasionally
+                 inscrutable hardware design.) To ensure that your Vertical
+                 Interrupt handler works correctly on EGA clones, determine
+                 the status bit's polarity when the bit is in a known state
+                 and devise your test for the Vertical Interrupt
+                 accordingly.
+
+
+MCGA
+
+     A Vertical Interrupt handler for the MCGA, such as the one in Listing
+     12-3, is similar to the handler for the EGA and the VGA. On the MCGA,
+     the Interrupt Control register (11H) contains the control and status
+     bits used to set up and detect a Vertical Interrupt. Zeroing bit 5 of
+     the Interrupt Control register enables the MCGA to generate a Vertical
+     Interrupt. Zeroing bit 4 clears the interrupt status latch. Setting
+     bit 4 to 1 allows the MCGA to detect subsequent interrupts. Bit 6 is
+     the interrupt status bit. The MCGA sets this bit to 1 to indicate that
+     a Vertical Interrupt has occurred.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-3.  Handling Vertical Interrupts on the MCGA.
+
+                TITLE   'Listing 12-3'
+                NAME    VRMCGA
+                PAGE    55,132
+
+;
+; Name:         VRMCGA
+;
+; Function:     Vertical Interrupt Service routine for MCGA
+;
+; Caller:       Microsoft C:
+;
+;                       int EnableISR0A();      /* returns 0 if installed ok */
+;
+;                       void DisableISR0A();
+;
+
+ADDR_6845       EQU     63h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+ISR0A           PROC    far             ; Interrupt handler for INT 0Ah
+
+                push    ax              ; preserve registers
+                push    dx
+                push    ds
+
+                mov     ax,seg DGROUP
+                mov     ds,ax           ; DS -> DGROUP
+
+                mov     dx,Port3x4      ; DX := CRTC Address reg number
+                in      al,dx
+                push    ax              ; preserve CRTC Address reg value
+
+; determine whether a vertical interrupt has occurred
+
+                mov     al,IContReg     ; AL := register number
+                out     dx,al
+                jmp     $+2             ; wait for MCGA to respond
+                inc     dx              ; DX := 3D5H
+                in      al,dx           ; AL := current Interrupt Control
+                                        ;  register value
+                dec     dx
+                test    al,40h          ; test bit 6
+                jnz     L10             ; jump if vertical interrupt
+
+; not a vertical interrupt so chain to previous interrupt handler
+
+                pushf                   ; simulate an INT to the
+                call    ds:PrevISR0A    ;  previous INT 0Ah handler
+                jmp     short Lexit
+
+; handle a vertical interrupt
+
+L10:            mov     ax,DefaultICont ; AH := default value for
+                                        ;  Interrupt Control register
+                                        ; AL := 11h (register number)
+                and     ah,11101111b    ; AH bit 4 := 0 (clear interrupt latch)
+                out     dx,ax           ; update Interrupt Control reg
+                jmp     $+2             ; wait for MCGA to respond
+
+; send End of Interrupt to Programmable Interrupt Controller
+;  to allow subsequent IRQ2 interrupts to occur
+
+                mov     al,20h          ; PIC I/O port
+                out     20h,al          ; send nonspecific EOI to PIC
+                jmp     $+2             ; wait for PIC to respond
+                sti                     ; enable interrupts
+
+; do something useful ...
+
+                inc     word ptr _VRcount       ; increment a counter
+
+; enable CRTC to generate another interrupt
+
+                cli                     ; disable interrupts
+                mov     ax,DefaultICont ; AH := default value for
+                                        ;  Interrupt Control register
+                                        ; AL := 11h (register number)
+                and     ah,11011111b    ; AH bit 5 := 0 (enable vert int)
+                or      ah,00010000b    ; AH bit 4 := 1 (enable int latch)
+                out     dx,ax
+                jmp     $+2
+
+Lexit:          pop     ax
+                out     dx,al           ; restore previous 3D4H value
+
+                pop     ds              ; restore registers and exit
+                pop     dx
+                pop     ax
+                iret
+
+ISR0A           ENDP
+
+;
+; EnableISR0A -- enable Vertical Interrupt Handler
+;
+                PUBLIC  _EnableISR0A
+_EnableISR0A    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+                push    di
+
+                mov     ax,40h
+                mov     es,ax           ; ES -> video BIOS data area
+
+; save default CRTC register values
+
+                mov     dx,es:[ADDR_6845]  ; DX := CRTC Address port
+                mov     Port3x4,dx      ; save port address
+
+                mov     ax,1A00h        ; AH := 1AH (INT 10H function number)
+                                        ; AL := 0 (read Display Combination)
+                int     10h             ; AL := 1AH if function 1AH supported
+                                        ; BL := active video subsystem
+                cmp     al,1Ah
+                jne     L20             ; jump if not an MCGA
+
+                cmp     bl,0Bh
+                je      L21             ; jump if MCGA
+
+                cmp     bl,0Ch
+                je      L21             ; jump if MCGA
+
+L20:            mov     ax,0FFFFh       ; return 0FFFFh if not an MCGA
+                jmp     short L23
+
+; get default value for MCGA Interrupt Control register
+
+L21:            mov     al,IContReg     ; AL := Interrupt Control reg number
+                cli
+                out     dx,al
+                jmp     $+2
+                inc     dx              ; DX := 3D5H
+                in      al,dx           ; AL := current value for register
+                sti
+
+                mov     IContValue,al   ; save this value
+
+; save old interrupt 0Ah vector
+
+                mov     ax,350Ah        ; AH := 35H (INT 21h function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h             ; ES:BX := previous INT 0AH vector
+
+                mov     word ptr PrevISR0A,bx
+                mov     word ptr PrevISR0A+2,es ; save previous vector
+
+; update interrupt 0AH vector with address of this handler
+
+                push    ds              ; preserve DS
+                mov     dx,offset ISR0A
+                push    cs
+                pop     ds              ; DS:DX -> ISR0A
+                mov     ax,250Ah        ; AH := 25H (INT 21H function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h             ; update INT 0AH vector
+                pop     ds              ; restore DS
+
+; enable IRQ2 by zeroing bit 2 of the PIC's mask register
+
+                cli                     ; clear interrupts
+                mov     dx,21h          ; DX := PIC mask register
+                in      al,dx           ; AL := mask register value
+                and     al,11111011b    ; reset bit 2
+                out     dx,al
+
+; enable vertical interrupts
+
+                mov     dx,Port3x4      ; DX := CRTC Address port
+                mov     ax,DefaultICont
+
+                and     ah,11001111b
+                out     dx,ax           ; clear bits 4 and 5 of Int Control reg
+                jmp     $+2             ; wait for MCGA to respond
+                or      ah,00010000b
+                out     dx,ax           ; set bit 4
+                jmp     $+2
+                sti                     ; enable interrupts
+
+                xor     ax,ax           ; AX := 0 (return value)
+
+L23:            pop     di              ; restore registers and exit
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_EnableISR0A    ENDP
+
+;
+; DisableISR0A -- disable Vertical Interrupt Handler
+;
+                PUBLIC  _DisableISR0A
+_DisableISR0A   PROC    near
+
+                push    bp
+                mov     bp,sp
+                push    si
+                push    di
+                push    ds
+
+; disable vertical interrupts
+
+                cli                     ; disable interrupts
+                mov     dx,Port3x4
+                mov     ax,DefaultICont
+                out     dx,ax           ; restore Interrupt Control register
+                jmp     $+2
+                sti                     ; enable interrupts
+
+; restore previous interrupt 0Ah handler
+
+                lds     dx,PrevISR0A    ; DS:DX := previous INT 0AH vector
+                mov     ax,250Ah        ; AH := 25H (INT 21H function number)
+                                        ; AL := 0AH (interrupt number)
+                int     21h
+
+                pop     ds              ; restore registers and exit
+                pop     di
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_DisableISR0A   ENDP
+
+_TEXT           ENDS
+
+_DATA           SEGMENT word public 'DATA'
+
+                EXTRN   _VRcount:word   ; declared in C caller
+
+PrevISR0A       DD      ?               ; save area for old int 0Ah vector
+Port3x4         DW      ?               ; 3B4h or 3D4h
+
+DefaultICont    LABEL   word
+IContReg        DB      11h             ; Interrupt Control register number
+IContValue      DB      ?               ; default value for Int Control reg
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     On the EGA and MCGA, if a Vertical Interrupt handler gains
+       º T º     control while a video BIOS (INT 10H) function is
+       º I º     executing, the interrupt handler may inadvertently disrupt
+       º P º     BIOS CRTC programming. The reason can be traced to a
+       ÈÍÍÍ¼     subroutine buried in the IBM BIOS in these video
+                 subsystems. This subroutine is called by several video
+                 BIOS routines to perform I/O port output to video hardware
+                 registers, including CRT Controller, Sequencer, Graphics
+                 Controller, and Attribute Controller registers.
+
+                 Unfortunately, this subroutine is not impervious to
+                 interrupts. It contains a sequence of two 8-bit port
+                 writes (OUT DX,AL). The first OUT loads the designated
+                 address register. The second OUT writes a data byte to the
+                 corresponding data register. If an interrupt occurs
+                 between the two port writes, and if the interrupt handler
+                 itself writes to the same port, the BIOS subroutine's
+                 second port write may be invalid.
+
+                 To avoid this situation on the EGA and MCGA, the Vertical
+                 Interrupt handlers in Listings 12-1 and 12-3 read the
+                 value of the CRTC Address register at port 3D4H (3B4H on
+                 an EGA with a monochrome display). On the EGA, this value
+                 is only readable for about 15 milliseconds after the port
+                 has been written, but this is enough time for the Vertical
+                 Interrupt handler to read and preserve the value of the
+                 CRTC Address register. The handler can thus restore the
+                 value before it returns from the interrupt.
+
+
+Panning on the EGA and VGA
+
+
+     The 256 KB video buffer of the EGA and the VGA can store several
+     screens of data. Thus, in a sense, what is displayed represents a
+     "screen window," a sort of hardware window into the contents of the
+     video buffer.
+
+
+Positioning the Screen Window
+
+     On an adapter such as the MDA or the CGA, the CRT Controller's Start
+     Address registers control which portion of the video buffer is
+     displayed. Because these registers contain a byte offset into the
+     video buffer, you can control the position of the screen window only
+     to the nearest byte. On the other hand, the CRT Controller on the EGA
+     and the VGA can position the start of the screen window at any given
+     pixel position.
+
+     In graphics modes, the contents of the CRTC's Start Address High and
+     Start Address Low registers (0CH and 0DH) locate the screen window to
+     the nearest byte offset in the video buffer. The contents of the
+     CRTC's Preset Row Scan register (08H) and the Attribute Controller's
+     Horizontal Pel Pan register (13H) "fine-tune" the screen window's
+     position pixel by pixel (see Figure 12-1).
+
+     When you change the screen window's position smoothly, pixel by pixel,
+     the displayed image appears to pan across the screen. A convenient way
+     to do this is to write a routine that locates the screen window at a
+     specified pixel position and then call the routine iteratively from
+     within a loop. This routine, as demonstrated in Listing 12-4, must
+     distinguish between alphanumeric and graphics modes. It must also
+     handle a 9-pixel-wide character matrix in VGA and EGA monochrome
+     alphanumeric modes.
+
+
+              ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿
+     ÚÄÄÄÄÄÄ0³   ³ ³   ³ ³   ³ ³²²²³ ³²²²³ ³   ³ ³   ³ ³   ³
+     ³        ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ
+Start Address ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿
+registers    1³   ³ ³   ³ ³²²²³ ³   ³ ³   ³ ³²²²³ ³   ³ ³   ³
+specify this  ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ
+character     ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿
+             2³   ³ ³²²²³ ³   ³ ³   ³ ³   ³ ³   ³ ³²²²³ ³   ³ Origin
+              ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ of screen
+              ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ window
+             3³   ³ ³²²²³ ³   ³ ³   ³ ³   ³ ³   ³ ³²²²³ ³   ³   º
+              ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÉÍÍÍÏÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+              ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿
+       ÚÄÄÄÄ4³   ³ ³²²²³ ³²²²³ ³²²²³ ³ÛÛÛ³ ³²²²³ ³²²²³ ³   ³ÍÍÍÍÍÍ»
+       ³      ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ       º
+       ³      ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿       º
+       ³     5³   ³ ³²²²³ ³   ³ ³   ³ ³   ³ ³   ³ ³²²²³ ³   ³       º
+       ³      ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ       º
+       ³      ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿       º
+       ³     6³   ³ ³²²²³ ³   ³ ³   ³ ³   ³ ³   ³ ³²²²³ ³   ³       º
+       ³      ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ       º
+       ³      ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿ ÚÄÄÄ¿       º
+       ³     7³   ³ ³   ³ ³   ³ ³   ³ ³   ³ ³   ³ ³   ³ ³   ³       º
+       ³      ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ ÀÄÄÄÙ       º
+       ³        0     1     2     3     4     5     6     7         º
+       ³                                                           º
+       ³                                ³                           º
+Value for Preset               Value for Horizontal                 º
+Row Scan register              Pel Pan register                     º
+                                            ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+                                         ÚÄÄ×ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                         ³  ABCDEFGÄÄÄÄÄÄÄÄÄÄ¿     ³
+                                         ³  HIJKLMN          ³     ³
+                                         ³  OPQR             ³     ³
+                                         ³  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ³
+                                         ³  Displayed portion      ³
+                                         ³  of buffer              ³
+                                         ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                Video buffer
+
+     Figure 12-1.  Control of the displayed portion of the video buffer in
+     alphanumeric modes.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-4.  Setting the screen origin on the EGA and VGA.
+
+                TITLE   'Listing 12-4'
+                NAME    ScreenOrigin
+                PAGE    55,132
+
+;
+; Name:         ScreenOrigin
+;
+; Function:     Set screen origin on EGA and VGA
+;
+; Caller:       Microsoft C:
+;
+;                       void ScreenOrigin(x,y);
+;
+;                               int     x,y;    /* pixel x,y coordinates */
+;
+
+ARGx            EQU     [bp+4]
+ARGy            EQU     [bp+6]
+
+
+CRT_MODE        EQU     49h             ; addresses in video BIOS data area
+ADDR_6845       EQU     63h
+POINTS          EQU     85h
+BIOS_FLAGS      EQU     89h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _ScreenOrigin
+_ScreenOrigin   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+                push    di
+
+                mov     ax,40h
+                mov     es,ax           ; ES -> video BIOS data area
+                mov     cl,es:[CRT_MODE]
+
+                mov     ax,ARGx         ; AX := pixel x-coordinate
+                mov     bx,ARGy         ; BX := pixel y-coordinate
+
+                cmp     cl,7
+                ja      L01             ; jump if graphics mode
+
+                je      L02             ; jump if monochrome alpha
+
+                test    byte ptr es:[BIOS_FLAGS],1
+                jnz     L02             ; jump if VGA
+
+                jmp     short L03
+
+; setup for graphics modes (8 pixels per byte)
+
+L01:            mov     cx,8            ; CL := 8 (displayed pixels per byte)
+                                        ; CH := 0 (value for Preset Row Scan)
+                div     cl              ; AH := bit offset in byte
+                                        ; AL := byte offset in pixel row
+                mov     cl,ah           ; CL := bit offset (for Horiz Pel Pan)
+                xor     ah,ah
+                xchg    ax,bx           ; AX := y
+                                        ; BX := byte offset in pixel row
+
+                mul     word ptr _BytesPerRow
+                                        ; AX := byte offset of start of row
+                jmp     short L05
+
+; setup for VGA alphanumeric modes and EGA monochrome alphanumeric mode
+;  (9 pixels per byte)
+
+L02:                                    ; routine for alpha modes
+                mov     cx,9            ; CL := 9 (displayed pixels per byte)
+                                        ; CH := 0
+                div     cl              ; AH := bit offset in byte
+                                        ; AL := byte offset in pixel row
+                dec     ah              ; AH := -1, 0-7
+                jns     L04             ; jump if bit offset 0-7
+                mov     ah,8            ; AH := 8
+                jmp     short L04
+
+; setup for EGA color alphanumeric modes (8 pixels per byte)
+
+L03:            mov     cx,8            ; CL := 8 (displayed pixels per byte)
+                                        ; CH := 0
+                div     cl              ; AH := bit offset in byte
+                                        ; AL := byte offset in pixel row
+
+L04:            mov     cl,ah           ; CL := value for Horiz Pel Pan reg
+                xor     ah,ah
+                xchg    ax,bx           ; AX := y
+                                        ; BX := byte offset in row
+                div     byte ptr es:[POINTS]  ; AL := character row
+                                              ; AH := scan line in char matrix
+                xchg    ah,ch           ; AX := character row
+                                        ; CH := scan line (value for Preset
+                                        ;               Row Scan register)
+                mul     word ptr _BytesPerRow   ; AX := byte offset of char row
+                shr     ax,1            ; AX := word offset of character row
+
+L05:            call    SetOrigin
+
+                pop     di              ; restore registers and exit
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ScreenOrigin   ENDP
+
+
+SetOrigin       PROC    near            ; Caller:  AX = offset of character row
+                                        ;          BX = byte offset within row
+                                        ;          CH = Preset Row Scan value
+                                        ;          CL = Horizontal Pel Pan value
+
+                add     bx,ax           ; BX := buffer offset
+
+                mov     dx,es:[ADDR_6845]  ; CRTC I/O port (3B4H or 3D4H)
+                add     dl,6            ; video status port (3BAH or 3DAH)
+
+; update Start Address High and Low registers
+
+L20:            in      al,dx           ; wait for start of vertical retrace
+                test    al,8
+                jz      L20
+
+L21:            in      al,dx           ; wait for end of vertical retrace
+                test    al,8
+                jnz     L21
+
+                cli                     ; disable interrupts
+                sub     dl,6            ; DX := 3B4H or 3D4H
+
+                mov     ah,bh           ; AH := value for Start Address High
+                mov     al,0Ch          ; AL := Start Address High reg number
+                out     dx,ax           ; update this register
+
+                mov     ah,bl           ; AH := value for Start Address Low
+                inc     al              ; AL := Start Address Low reg number
+                out     dx,ax           ; update this register
+                sti                     ; enable interrupts
+
+                add     dl,6            ; DX := video status port
+
+L22:            in      al,dx           ; wait for start of vertical retrace
+                test    al,8
+                jz      L22
+
+                cli                     ; disable interrupts
+
+                sub     dl,6            ; DX := 3B4H or 3D4H
+                mov     ah,ch           ; AH := value for Preset Row Scan reg
+                mov     al,8            ; AL := Preset Row Scan reg number
+                out     dx,ax           ; update this register
+
+                mov     dl,0C0h         ; DX := 3C0h (Attribute Controller port)
+                mov     al,13h OR 20h   ; AL bit 0-4 := Horiz Pel Pan reg number
+                                        ; AL bit 5 := 1
+                out     dx,al           ; write Attribute Controller Address reg
+                                        ;  (Attribute Controller address
+                                        ;    flip-flop has been reset by
+                                        ;    the IN at L22.)
+                mov     al,cl           ; AL := value for Horiz Pel Pan reg
+                out     dx,al           ; update this register
+
+                sti                     ; re-enable interrupts
+                ret
+
+SetOrigin       ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+                EXTRN   _BytesPerRow:word       ; bytes per pixel row
+
+_DATA           ENDS
+
+                END
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     ScreenOrigin() accepts as input the x- and y-coordinates of the pixel
+     that identifies the origin (the upper left corner) of the screen. The
+     routine first updates the CRTC's Start Address registers. In effect,
+     this positions the screen at the upper left pixel of the character
+     that contains the origin in alphanumeric modes, or at the leftmost
+     pixel in the byte that contains the origin in graphics modes. Then
+     ScreenOrigin() positions the virtual screen exactly by updating
+     the Horizontal Pel Panning and Preset Row Scan registers.
+
+     The content of the Attribute Controller Horizontal Pel Panning
+     register corresponds to the bit offset of the pixel in the screen's
+     upper left corner. The value to store in this register is thus
+
+     x MOD 8
+
+     In the case of 9-pixel characters in VGA alphanumeric modes and in 80-
+     by-25 monochrome mode on the EGA, the value is
+
+     (x + 8) MOD 9
+
+     The Horizontal Pel Panning register is programmed the same way in both
+     alphanumeric and graphics modes. This is not the case, however, for
+     the CRTC's Preset Row Scan register, which controls the vertical
+     position of the start of the screen.
+
+     In alphanumeric modes, the number of rows of pixels displayed for each
+     row of characters in the video buffer depends on the height of the
+     displayed character matrix. This is the value stored as POINTS in the
+     ROM BIOS Video Display Data Area. The Start Address registers position
+     the virtual screen to the particular character in the video buffer,
+     and the Preset Row Scan register indicates which line in the character
+     matrix contains the origin of the virtual screen. The Preset Row Scan
+     register thus contains a value between 0 (the top line of the
+     character) and POINTS-1 (the bottom line). In graphics modes, the
+     pixels in each byte in the video buffer correspond one-to-one with
+     pixels on the screen, so the Preset Row Scan register always contains
+     0.
+
+     To avoid interference with the display, updates to the Horizontal Pel
+     Panning, Preset Row Scan, and Start Address registers should be
+     synchronized with the display refresh cycle. The Horizontal Pel
+     Panning register must be updated during the vertical blanking
+     interval. On the other hand, the CRTC samples the values in the Start
+     Address and Preset Row Scan registers at the beginning of vertical
+     retrace, so these registers should be updated when vertical retrace is
+     not active.
+
+
+Panning
+
+     The routine in Listing 12-5 shows how you can call ScreenOrigin() to
+     pan the screen up and down or across the video buffer. Because the
+     position of the virtual screen always changes during a vertical
+     blanking interval, the panning effect is smooth, with no interference
+     on the screen.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-5.  A routine to perform smooth pixel-by-pixel panning on
+     an EGA or VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Resizing the Video Buffer
+
+     Horizontal panning introduces a problem. The way the video buffer is
+     normally mapped, the first byte of each line of data in the buffer
+     immediately follows the last byte of the previous line. If you try to
+     pan horizontally with this map, each line appears to wrap around the
+     screen as the screen window moves across the video buffer. To perform
+     horizontal panning usefully, you should resize the video buffer so
+     each line of data in it is wider than the screen window.
+
+     The value in the CRT Controller's Offset register (13H) controls the
+     way the CRTC maps lines in the video buffer. As it scans the raster,
+     the CRTC uses the value in this register to locate the start of each
+     line in the video buffer map. Normally, lines in the video buffer are
+     the same width as displayed lines. Increasing the value in the Offset
+     register widens the lines in the video buffer map so only part of each
+     line can be displayed at one time. This lets you pan horizontally
+     without wraparound.
+
+     For example, consider how you could double the logical width of the
+     video buffer in 80-by-25 alphanumeric mode. By default, the video BIOS
+     stores the value 28H in the CRTC's Offset register, so the CRTC
+     regards each line in the buffer as being 40 words (80 bytes) wide.
+     Although each logical line in the buffer contains 160 bytes of data
+     (80 character codes and 80 attribute bytes), character codes and
+     attributes are stored in different video memory maps (see Figure 10-3
+     in Chapter 10). Thus, to double the logical line width, store 50H (80
+     decimal) in the CRTC's Offset register. The CRTC will still display 80
+     characters in each row on the screen, but it skips 160 characters of
+     data between rows of characters in the  video buffer.
+
+     When you resize the video buffer by programming the CRTC's Offset
+     register, be careful not to exceed the bounds of the 256 KB video
+     buffer. For example, in 640-by-350 16-color graphics mode, one
+     screen's worth of pixels occupies 28,000 bytes (80 bytes per line *
+     350 lines) in each of the 64 KB video memory maps. If you resize the
+     video buffer by increasing the value stored in the CRTC Offset
+     register, you cannot go beyond 187 bytes per line in this video mode
+     without exceeding the 64 KB limit.
+
+     The routine BufferDims() in Listing 12-6a can be called to
+     redimension the video buffer in either graphics or alphanumeric modes.
+     It accepts as parameters the desired horizontal and vertical
+     dimensions of the buffer in pixels. The routine updates the relevant
+     variables in the video BIOS data area and then programs the CRTC
+     Offset register with the appropriate value. The example in Listing 12-
+     6b shows how BufferDims() could be called to transform a default
+     80-by-25 alphanumeric mode into a 160-by-102 mode in which the Pan()
+     routine in Listing 12-5 can be used.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-6a.  Redimensioning the video buffer.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-6b.  Creating a 160-by-102 alphanumeric mode.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Bit-Plane Layering
+
+
+     In EGA and VGA 16-color graphics modes and in the InColor Card's 720-
+     by-348 16-color mode, you can display any combination of the four bit
+     planes. On the EGA and VGA, the four low-order bits of the Attribute
+     Controller's Color Plane Enable register (12H) control which bit
+     planes are displayed. Similarly, on the InColor Card, the four low-
+     order bits of the Plane Mask register (18H) determine which bit planes
+     are displayed. In all three subsystems, all four bits are set to 1 to
+     enable the display of all four bit planes. You can zero any
+     combination of these bits to prevent display of the corresponding bit
+     planes.
+
+     When you disable a bit plane in this way, pixel values are interpreted
+     as though the corresponding bit in each pixel were set to 0. The
+     contents of a disabled bit plane are unaffected. This means you can
+     draw different images into different bit planes and display them
+     selectively. When bit planes containing different images are displayed
+     together, the images appear to overlap, as if the bit planes were
+     transparent and layered one above the other.
+
+     Consider the example in Figure 12-2. The grid is drawn in bit plane 3
+     and the cylinder in bit planes 0 through 2. (A quick way to draw both
+     figures into the bit planes is to OR the appropriate pixel values into
+     the video buffer.) If you use a default 16-color palette, the grid
+     appears gray, and the cylinder can have any of the usual eight
+     unintensified colors.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 12-2 is found on page 395      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 12-2.  Bit-plane layering. The cylinder's pixels have values
+     between 0 and 7 (bit planes 0 through 2); the grid's pixels have the
+     value 8 (bit plane 3 only). Selectively enabling or disabling bit
+     planes 0 through 2 and bit plane 3 displays the cylinder, the grid, or
+     both.
+
+
+     If all four bit planes are displayed, both grid and cylinder appear on
+     the screen. If you disable bit plane 3, the grid disappears. If you
+     disable bit planes 0 through 2, displaying only bit plane 3, the
+     cylinder disappears and only the grid is visible. In all three cases,
+     the contents of the bit planes remain intact.
+
+     In using the default palette register values with the grid and
+     cylinder, you'll find the pixels at which the grid and cylinder
+     intersect are displayed with intensified colors. You can avoid this by
+     updating the palette so that the colors displayed for the intersection
+     points (pixel values 9 through 0FH) are the same as the corresponding
+     unintensified colors (1 through 7). Then, when both grid and cylinder
+     are displayed, the cylinder appears in front of the grid.
+
+
+EGA and VGA Split Screen
+
+
+     You can configure the CRT Controller on the EGA and the VGA to display
+     two different portions of the video buffer on the same screen (see
+     Figure 12-3). To do this, program the CRTC's Line Compare register
+     (18H) with the raster line at which you want to split the screen, as
+     shown in Listing 12-7a and Listing 12-7b.
+
+
+
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+CRTC StartÄÄÄÄÄÄÄ ³ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ ³
+Address registers  ³ ³  ÄÄÄÄÄÄ                                         ³ ³
+                   ³ ³  ÄÄÄÄÄÄÄÄÄÄÄÄÄ                                  ³ ³
+                   ³ ³  ÄÄÄÄÄÄÄÄ  ÄÄÄÄÄÄ                               ³ ³
+                   ³ ³  ÄÄÄÄÄ ÄÄÄÄÄÄÄÄ ÄÄ                              ³ ³
+                   ³ ³                                                 ³ ³
+Start of videoÄÄÄÄ³ ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³
+buffer             ³ ³  ÄÄÄÄÄ  ÄÄÄÄÄ                                   ³ ³
+                   ³ ³  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ                   ³ ³
+                   ³ ³  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ                   ³ ³
+                   ³ ³  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ                   ³ ³
+                   ³ ³  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ  ÍÍÍÍ                   ³ ³
+                   ³ ³                                                 ³ ³
+                   ³ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ³
+                   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 12-3.  Appearance of an EGA or VGA split screen. The top part
+     of the screen displays data from the location in the video buffer
+     specified by the CRTC Start Address registers. The bottom part of the
+     screen displays data from the start of the video buffer.
+
+
+     The contents of the CRTC Start Address registers determine which
+     portion of the video buffer is displayed in the top part of the
+     screen. As the raster is drawn during each display refresh cycle, the
+     CRTC compares the current scan line with the value in the Line Compare
+     register. When the values are equal, the CRTC resets its internal
+     address counter so that the remaining scan lines in the raster are
+     drawn using data from the start of the video buffer. Thus, the top of
+     the video buffer is always displayed in the bottom part of the split
+     screen.
+
+     Both the EGA and the VGA accommodate Line Compare values larger than
+     eight bits (0FFH or 255 scan lines) by using other CRTC registers to
+     contain additional high-order bits. Thus, bit 8 of the Line Compare
+     value is represented in bit 4 of the CRTC Overflow register (07H).
+     On the VGA, a ninth bit must also be specified for the Line Compare
+     value; this bit is represented in bit 6 of the the Maximum Scan Line
+     register (09H). Programming the CRTC with a Line Compare value thus
+     requires you to update two different registers on the EGA and three
+     different registers on the VGA.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-7a.  Splitting the screen on the EGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-7b.  Splitting the screen on the VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     Because the CRTC uses the Line Compare value while it is
+       º T º     actively updating the raster, the best time to change this
+       º I º     value is during a vertical retrace interval as in Listings
+       º P º     12-7a and 12-7b.
+       ÈÍÍÍ¼
+
+                 The video BIOS default Line Compare value is the maximum
+                 possible value (1FFH on the EGA, 3FFH on the VGA). Use
+                 this default value to "unsplit" the screen. There are also
+                 certain values that the CRTC does not handle in a useful
+                 manner. On both the EGA and VGA, do not specify a Line
+                 Compare value that is between the Vertical Retrace Start
+                 and Vertical Total values. Also, in 200-line modes on the
+                 VGA, the Line Compare register value should be an even
+                 number.
+
+                 In native graphics modes in the IBM EGA, the CRTC
+                 duplicates the scan line at which the screen is split.
+                 This anomaly is also found in some EGA clones.
+
+     You might find it convenient to regard the bottom portion of the split
+     screen as a sort of window superimposed on the top portion. Use the
+     first portion of the video buffer for the window foreground (the lower
+     part of the split screen) and some other portion of the buffer for the
+     background.
+
+     One attractive way to use the split-screen feature is to scroll the
+     split smoothly up or down the screen. Do this by incrementing or
+     decrementing the value in the Line Compare register within a loop, as
+     is done by the routine in Listing 12-8.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-8.  Smooth vertical scrolling of a split screen on the EGA
+     or VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+The Light Pen Interface
+
+
+     On most video subsystems covered in this book, the CRT Controller can
+     return the position of a light pen. When you trigger a light pen, it
+     sends a signal to the CRTC at the moment the video display's electron
+     beam sweeps past the pen's light sensor. The CRTC responds by storing
+     the current value of its internal address counter into its Light Pen
+     High and Light Pen Low registers. This value corresponds to the offset
+     in the video buffer of the data displayed in the raster at the point
+     where the light pen was triggered. Thus, the value in the Light Pen
+     High and Low registers can be translated into row and column
+     coordinates for screen locations.
+
+       ÉÍÍÍ»     You can't attach a light pen to IBM's MDA, but Hercules
+       º T º     monochrome adapters can support one. However, a light pen
+       º I º     used with a monochrome display must be capable of
+       º P º     operating with the high-persistence P39 phosphor used in
+       ÈÍÍÍ¼     green monochrome displays.
+
+
+Light Pen Position
+
+     The light pen position that the CRTC returns is not an exact pixel
+     location. One reason is simply that the value returned in the CRTC's
+     Light Pen registers is a byte offset into the video buffer, so the
+     light pen's horizontal position can be determined only to the nearest
+     byte of pixels. Another source of inaccuracy is that the CRTC chip
+     itself introduces a small amount of delay between the time it receives
+     a signal from the light pen and the time it stores a value in its
+     Light Pen registers. The value returned in the Light Pen registers
+     thus can be as much as 5 bytes too large; the actual amount of error
+     must be determined empirically.
+
+     The light pen programming interface, shown in Figure 12-4, is similar
+     on all IBM and Hercules adapters. To determine a light pen's position,
+     your program must first reset the CRTC's light pen latch by writing a
+     0 to I/O port 3DBH (3BBH on an MDA, a Hercules adapter, or an EGA with
+     a monochrome display). Then it must poll the Status Port at 3DAH (3BAH
+     in monochrome modes). When bit 1 of the Status Port value changes from
+     0 to 1, the light pen has been triggered and the routine can obtain
+     its location from the CRTC (see Listing 12-9a).
+
+     After reading the light pen location from the Light Pen registers, you
+     must apply an empirical correction for the intrinsic delay in the
+     CRTC. The routine in Listing 12-9b, for the EGA's 80-by-25
+     alphanumeric mode, subtracts 7 from the value that the CRTC returns.
+     To convert the result into a pixel location, subtract the value in the
+     Start Address High and Start Address Low registers from the corrected
+     CRTC value. (You can get the Start Address value by dividing the value
+     in CRT_START in the Video Display Data Area by 2. You can also read it
+     from the Start Address High and Start Address Low registers on the
+     EGA, the HGC+, and the InColor Card.) Then divide the difference by
+     the number of characters in each row of the video buffer. (This value
+     is represented in the CRTC's Horizontal Displayed register, or in
+     CRT_COLS on the EGA.) The quotient is the y-coordinate of the light
+     pen location. The remainder is the character column corresponding to
+     the position of the light pen.
+
+
+I/O Port                         Function
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+MDA, HGC, HGC+, and InColor Card
+3B9H                             Set light pen latch
+3BAH bit 1                       Light pen trigger
+3BAH bit 2                       Light pen switch (IBM adapters only)
+3BBH                             Reset light pen latch
+
+CGA, EGA
+3DAH bit 1                       Light pen trigger
+3DAH bit 2                       Light pen switch (IBM adapters only)
+3DBH                             Reset light pen latch
+3DCH                             Set light pen latch
+     Figure 12-4.  Light pen programming interface. Note: In EGA
+     monochrome modes, read light pen trigger and switch status from 3BAH
+     instead of 3DAH.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-9a.  Getting the light pen's location from the
+     CRTC.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-9b.  Using GetLightPen in a C program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     If this seems like more trouble than it's worth, you're probably
+     right. On IBM video adapters, as well as in Hercules adapters'
+     alphanumeric modes, you can call INT 10H function 4 to return the
+     light pen location. If you plan to use a light pen in Hercules
+     graphics modes, however, you're on your own.
+
+
+Light Pen Switch
+
+     On IBM adapters, you can determine whether the light pen switch is
+     depressed by examining bit 2 of the Status Port value returned from
+     port 3DAH (3BAH in monochrome modes). This bit is set to 1 while the
+     switch is closed. It returns to 0 when the switch is opened. You
+     should usually test the status of the light pen switch before
+     attempting to read the CRTC's Light Pen registers.
+
+
+Determining Hercules Video Modes
+
+     The Light Pen registers can also be used to determine video modes on
+     Hercules adapters. In most applications, determining the current video
+     mode is not a problem, because the application itself establishes the
+     mode. Sometimes, however, a program may not know the video mode a
+     priori. For example, a screen dump program (see Appendix B) may need
+     to determine the video mode to correctly interpret the contents of the
+     video buffer. Similarly, a RAM-resident "pop up" program should save
+     and then restore the video mode into which it "pops."
+
+     You can easily determine the current ROM BIOS video mode by calling
+     INT 10H function 0FH. The task is more difficult for the Hercules
+     adapters, because the BIOS does not keep track of the video mode. You
+     can sometimes infer the video mode from the Video Display Data Area
+     variables CRT_COLS, CRT_LEN, and POINTS, but not everybody who writes
+     programs for Hercules adapters keeps these variables updated.
+
+     Moreover, there is no direct way to interrogate the hardware to
+     determine the video mode. For example, the Mode Control register
+     (3B8H), used to select the video mode, is unfortunately a write-only
+     register. Nevertheless, you can infer a Hercules adapter's video mode
+     by latching the 6845's Light Pen High and Low registers (10H and 11H)
+     at the start of vertical retrace, as shown in Listing 12-10.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 12-10.  Identifying the current video mode on a Hercules
+     adapter.
+
+                TITLE   'Listing 12-10'
+                NAME    GetHercMode
+                PAGE    55,132
+
+;
+; Name:         GetHercMode
+;
+; Function:     Determine video mode on Hercules adapters by estimating the size
+;               of the displayed portion of the video buffer.
+;
+; Caller:       Microsoft C:
+;
+;                       int GetHercMode(n);     /* returns approximate size */
+;                                               /*  of displayed portion of */
+;                                               /*  video buffer in words   */
+;
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _GetHercMode
+_GetHercMode    PROC    near
+
+                push    bp              ; preserve BP
+                mov     bp,sp
+
+; reset CRTC light pen latch
+
+                mov     dx,3BBh         ; DX := light pen reset port
+                out     dx,al           ; OUT to this port clears the latch
+                                        ;  (the value in AL doesn't matter)
+
+; wait for start of next vertical retrace
+
+                dec     dx              ; DX := 3BAH (CRT status port)
+L01:            in      al,dx           ; wait for start of vertical retrace
+                test    al,80h
+                jnz     L01
+
+L02:            in      al,dx           ; wait for end of vertical retrace
+                test    al,80h
+                jz      L02
+
+                cli                     ; disable interrupts
+L03:            in      al,dx           ; wait for start of vertical retrace
+                test    al,80h
+                jnz     L03
+
+; latch the current CRTC address counter in the Light Pen registers
+
+                dec     dx              ; DX := 3B9H
+                out     dx,al           ; OUT to this port loads the latch
+                sti                     ; re-enable interrupts
+
+; return the value in the Light Pen registers
+
+                mov     dl,0B4h         ; DX := 3B4H (CRTC address port)
+                mov     al,10h          ; AL := Light Pen High register number
+                out     dx,al
+                inc     dx
+                in      al,dx           ; read this register
+                dec     dx
+                mov     ah,al           ; AH := current Light Pen High value
+
+                mov     al,11h          ; AL := Light Pen Low register number
+                out     dx,al
+                inc     dx
+                in      al,dx           ; AX := current light pen latch value
+                                        ;  (i.e., value of CRTC address counter
+                                        ;   at start of vertical retrace)
+                pop     bp
+                ret             
+
+_GetHercMode    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The routine in Listing 12-10 waits for the start of vertical retrace
+     and triggers the light pen at this point with an OUT instruction to
+     port 3B9H. The Light Pen registers reflect the value of the CRTC's
+     internal address counter at the point where vertical retrace begins.
+     (This value is the product of the values in the CRTC Horizontal
+     Displayed and Vertical Sync registers.) You can expect the Light Pen
+     registers to contain at least 7D0H (80 words per character row x 25
+     rows) in 80-by-25 alphanumeric mode and 0F4BH (45 words per character
+     row x 87 rows) in 720-by-348 graphics mode. Inspecting the Light Pen
+     value thus reveals whether the HGC is in alphanumeric or graphics
+     mode.
+
+       ÉÍÍÍ»     In practice, the Light Pen value returned is somewhat
+       º T º     larger than these expected values because of the delay in
+       º I º     the CRTC timing. This imprecision makes the technique
+       º P º     somewhat less useful on the HGC+ and InColor cards, where
+       ÈÍÍÍ¼     you must distinguish among all the different character
+                 sizes that can be displayed by the CRTC in alphanumeric
+                 mode. For example, the value returned by GetHercMode()
+                 when 9-by-8 characters are displayed is near 0DC0H (80 x 
+                 44)  and near 0DB6H (90 * 39) when 8-by-9 characters are
+                 displayed. Because the Light Pen value is inexact, you may
+                 not be able to distinguish these two different CRTC
+                 configurations.
+

@@ -1,0 +1,2296 @@
+
+
+
+                   10  Alphanumeric Character Sets
+
+
+                     Character Definition Tables
+              Alphanumeric Character Definitions in ROM
+              Alphanumeric Character Definitions in RAM
+
+                  Updating Character Generator RAM
+              EGA and VGA ş HGC+ ş InColor Card ş MCGA
+
+                   Using RAM-based Character Sets
+                        ASCII Character Sets
+                       Extended Character Sets
+        Compatibility Problems with Extended Character Codes
+
+               Changing the Displayed Character Matrix
+              EGA ş VGA ş MCGA ş HGC+ and InColor Card
+
+               Graphics Windows in Alphanumeric Modes
+             HGC+ and InColor Card ş EGA and VGA ş MCGA
+
+
+
+     One of the easiest ways to speed up a program's video interface is to
+     use an alphanumeric video mode. To gain this speed advantage, however,
+     you must accept the limitations of the video subsystem's alphanumeric
+     character generator. 
+
+     On the original MDA and CGA, the only characters you could display in
+     alphanumeric mode were those defined in a table located in ROM on the
+     adapter. The hardware character generator on these adapters was not
+     designed to use a character definition table located in RAM. However,
+     the EGA, the MCGA, the VGA, the HGC+, and the InColor Card can all
+     display alphanumeric characters defined in RAM.
+
+     This chapter shows you how to exploit RAM-based alphanumeric character
+     sets on these subsystems. It describes how to format character
+     definition tables and where to place them in RAM to be used in
+     alphanumeric modes. It discusses the pros and cons of using extended
+     character sets that contain more than the usual 256 ASCII characters.
+     The chapter concludes with techniques for displaying true graphics
+     images in an alphanumeric video mode.
+
+
+Character Definition Tables
+
+
+     Like the software graphics character generators described in Chapter
+     9, the hardware alphanumeric character generator in all IBM video
+     subsystems references a memory-resident character definition table
+     that contains bit-pattern representations of the pixels in each
+     displayable character. Unlike the graphics-mode tables, whose location
+     in memory may vary, the alphanumeric tables must lie in a
+     predesignated portion of memory to allow the alphanumeric character
+     generator to access them.
+
+
+Alphanumeric Character Definitions in ROM
+
+     The MDA, the CGA, and the Hercules adapters have an alphanumeric
+     character definition table located in ROM that is not within the CPU's
+     address space. Only the character generator hardware can access it.
+     The character set that these adapters display in alphanumeric modes is
+     therefore not controlled by software.
+
+     On the EGA, the MCGA, and the VGA, the alphanumeric character
+     generator uses a table of bit patterns stored in RAM rather than in
+     dedicated ROM. The video ROM BIOS contains tables with which it
+     initializes character generator RAM whenever it establishes an
+     alphanumeric video mode. Because these video subsystems can set up
+     alphanumeric modes with different vertical resolutions, the sizes of
+     the default alphanumeric characters vary (see Figure 10-1).
+
+
+     200-Line Modes
+     The CGA's 200-line alphanumeric modes use an 8-by-8 character matrix.
+     In  80-by-25 alphanumeric mode, the screen is thus 640 pixels wide; in
+     40-by-25 alphanumeric mode, the screen is 320 pixels wide. Although
+     the CGA uses the same character set and font in its alphanumeric and
+     graphics modes, the character definitions for alphanumeric modes
+     reside in dedicated ROM, accessible only to the hardware character
+     generator. (As described in Chapter 9, the graphics-mode definitions
+     are found in the ROM BIOS and in a table in RAM addressed by the
+     vector for interrupt 1FH.)
+
+
+                                    Character Matrix
+Adapter      Video Mode             (width by height in pixels)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+MDA, HGC     Monochrome             9-by-14
+CGA          40-by-25 16-color      8-by-8
+             80-by-25 16-color      8-by-8
+EGA          80-by-25 16-color      8-by-8  (200-line resolution)
+                                    8-by-14 (350-line resolution)
+             80-by-25 monochrome    9-by-14
+MCGA         40-by-25 16-color      8-by-16
+             80-by-25 16-color      8-by-16
+VGA          40-by-25 16-color      8-by-8  (200-line resolution)
+                                    8-by-14 (350-line resolution)
+                                    9-by-16 (400-line resolution)
+             80-by-25 16-color      8-by-8  (200-line resolution)
+                                    8-by-14 (350-line resolution)
+                                    9-by-16 (400-line resolution)
+             80-by-25 monochrome    9-by-14 (350-line resolution)
+                                    9-by-16 (400-line resolution)
+HGC+         80-by-25 monochrome    9-by-14
+InColor Card 80-by-25 16-color      9-by-14
+     Figure 10-1.  The default alphanumeric character matrix in various
+     video modes.
+
+
+       ÉÍÍÍ»     The CGA comes with two tables of 8-by-8 characters in the 
+       º T º     alphanumeric character generator's ROM. A jumper on the 
+       º I º     adapter selects which table the alphanumeric character 
+       º P º     generator uses. By default, jumper P3 on the CGA is not 
+       ÈÍÍÍ¼     connected, and the usual "double-dot" 8-by-8 characters 
+                 are displayed. If you connect jumper P3, the CGA's 
+                 alphanumeric character generator uses a "single-dot" font 
+                 (see Figure 10-2). The "single-dot" characters appear 
+                 sharper on some monitors because their vertical strokes 
+                 are only one pixel wide.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 10-2 is found on page 299      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 10-2.  Double-dot and single-dot alphanumeric character sets on
+     the CGA.
+
+
+     350-Line Modes
+     In 350-line alphanumeric modes on the MDA and the Hercules adapters,
+     the characters are defined in an 8-by-14 matrix. Again, the character
+     definition table resides in ROM outside the CPU address space that is
+     dedicated to the hardware character generator. Because the horizontal
+     resolution is 720 pixels on these adapters, each 8-by-14 character
+     actually is displayed in a matrix 9 pixels wide. Thus, each row on the
+     screen contains 720/9, or 80, characters.
+
+     If characters are defined in ROM in an 8-by-14 matrix but displayed in
+     a 9-by-14 matrix, where does the extra pixel come from? The hardware
+     character generator in the MDA, the Hercules cards, the EGA, and the
+     VGA (in monochrome mode) adds an extra pixel to the right of each row
+     of eight pixels in each character. For the block graphics characters
+     (ASCII 0C0H through 0DFH), the value of the rightmost pixel is
+     replicated in each row. For all remaining character codes, the extra
+     pixel is displayed with the character's background attribute.
+
+     Since the ninth (rightmost) pixel in block graphics characters is a
+     copy of the eighth, these characters abut and can be used to draw
+     horizontal lines. All other displayable characters are separated from
+     each other by that ninth pixel. The resulting display appears less
+     crowded than it would be without the extra space.
+
+       ÉÍÍÍ»     With the EGA and the VGA, you can control whether or not 
+       º T º     the alphanumeric character generator replicates the eighth 
+       º I º     pixel of block graphics characters. When bit 2 of the 
+       º P º     Attribute Controller's Mode Control register (10H) is set 
+       ÈÍÍÍ¼     to 1, the ninth pixel is the same as the eighth. When bit 
+                 2 is set to 0, the ninth pixel is a background pixel.
+
+
+     400-Line Modes
+     The default alphanumeric modes of both the MCGA and the VGA have 400-
+     line vertical resolution. The characters used in these modes are
+     defined in an 8-by-16 matrix. On the VGA, the 8-by-16 characters are
+     displayed in a 9-by-16 matrix, just as on an MDA or an EGA with a
+     monochrome display.
+
+
+Alphanumeric Character Definitions in RAM
+
+     The EGA, the VGA, the MCGA, the HGC+, and the InColor Card all have
+     alphanumeric character generators that use character definition tables
+     located in predesignated areas of RAM. In all these subsystems, this
+     RAM lies within the address space of the video buffer. If you know how
+     character generator RAM is mapped, you can write programs that read or
+     update the alphanumeric character definition tables and thereby change
+     the displayed alphanumeric character set.
+
+
+     EGA and VGA
+     In alphanumeric modes on the EGA and the VGA, the video buffer is
+     organized as four parallel memory maps, just as in graphics modes. In
+     alphanumeric modes, however, only maps 0 and 1 contain displayable
+     data (see Figure 10-3). Even-numbered bytes (character codes) in the
+     CPU's address space are located in map 0, and odd-numbered bytes
+     (attribute bytes) are located in map 1. This mapping is invisible to
+     the CPU; the CRTC internally translates odd addresses to offsets into
+     map 1 and even addresses into references to map 0.
+
+
+
+                           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                           ³                       ³
+                           ³                       ³
+                       ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+                       ³ Character definitions ³   ³
+                       ³                       ³   ³
+                   ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³   ³
+                   ³    Attribute bytes    ³   ³   ³
+                   ³                       ³   ³   ³
+               ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³   ³   ³
+               ³    Character codes    ³   ³   ³   ³
+               ³                       ³   ³   ÃÄÄÄÙ Map 3
+               ³                       ³   ³   ³
+               ³                       ³   ³   ³
+               ³                       ³   ÃÄÄÄÙ Map 2
+               ³                       ³   ³
+               ³                       ³   ³
+               ³                       ÃÄÄÄÙ Map 1
+     B800:0000 ³                       ³
+        or     ³                       ³
+     B000:0000 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ Map 0    
+
+     Figure 10-3.  Video RAM layout in EGA and VGA alphanumeric modes.
+
+
+     The alphanumeric character generator uses a set of 256-character
+     tables stored in map 2. The EGA supports four such tables (see Figure
+     10-4); the VGA supports eight (see Figure 10-5). Each table consists
+     of 256 32-byte bit patterns, so the maximum height of the character
+     matrix is 32 scan lines. When the displayed character matrix contains
+     fewer than 32 lines, the character generator ignores the extra bytes
+     in each character definition.
+
+     On the EGA, each of the four alphanumeric character definition tables
+     starts at a 16 KB boundary. Since only 8 KB (256 characters * 32 bytes
+     per character) are used, 8 KB of unused RAM follows each table. On the
+     VGA, these unused areas in map 2 can contain additional character
+     definitions. Of course, in writing an application that must run on
+     both the EGA and the VGA, you should avoid using these extra tables
+     because the EGA does not support them.
+
+       ÉÍÍÍ»     On the IBM EGA, which may be equipped with less than 256 
+       º T º     KB of video RAM, the number of character definition tables 
+       º I º     you can load into video RAM depends on the amount of RAM 
+       º P º     installed on the card. For example, without IBM's Graphics 
+       ÈÍÍÍ¼     Memory Expansion Card, an IBM EGA has only 64 KB of video 
+                 RAM, so each video memory map in alphanumeric modes 
+                 contains only 16 KB, and only one character definition 
+                 table will fit in map 2.
+
+
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                   ³          (Unused)           ³
+                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             C000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³          (Unused)           ³
+                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+     Offset  8000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³          (Unused)           ³
+                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             4000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³          (Unused)           ³
+                   ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             0000H ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 10-4.  Character generator RAM in EGA video memory map 2.
+
+
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                   ³  256 character definitions  ³
+             E000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             C000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             A000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+     Offset  8000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             6000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             4000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             2000H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                   ³  256 character definitions  ³
+             0000H ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 10-5.  Character generator RAM in VGA video memory map 2.
+
+
+     HGC+
+     Character generator RAM on the HGC+ starts at B000:4000 and extends to
+     the end of available video RAM at B000:FFFF (see Figure 10-6). You can
+     fill this entire 48 KB area with character definitions. Each character
+     definition is 16 bytes long, so a table that defines 256 characters
+     occupies 4 KB. Thus, this RAM can hold 3072 character definitions.
+
+
+     B000:FFFF ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+               ³                                ³
+               ³      Character definitions     ³
+               ³                                ³
+               ³                                ³
+     B000:4000 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+               ³ Character codes and attributes ³
+     B000:0000 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 10-6.  Video RAM layout in alphanumeric modes on the HGC+.
+
+
+       ÉÍÍÍ»     If the HGC+ is configured so that video RAM above
+       º T º     B000:8000 is masked out of the CPU address space (that is,
+       º I º     bit 1 of the Configuration Switch at 3BFH is set to 0),
+       º P º     then only the 16 KB of RAM between B000:4000 and B000:7FFF
+       ÈÍÍÍ¼     can be used for character definitions.
+
+
+     InColor Card
+     Character generator RAM occupies the same range of addresses on the
+     InColor Card as on the HGC+, that is, B000:4000 through B000:FFFF.
+     Also, each InColor character definition is 16 bytes long. Unlike the
+     HGC+, however, the 16-color InColor Card uses all four bit planes in
+     this range of addresses for character definitions (see Figure 10-7).
+
+     Because of this, you can control the value of each pixel in each
+     character you define. You can also program the InColor Card so that
+     different bit planes define different characters; when the characters
+     are displayed, their attribute bytes select which bit plane is used.
+     By loading each of the four bit planes with different character
+     definitions, you can maintain as many as 12,288 (3072 x 4) character
+     definitions in RAM. Or, to preserve compatibility with the HGC+, you
+     can load all four bit planes with the same bit patterns.
+
+       ÉÍÍÍ»     In using both the EGA and the Hercules cards, be careful 
+       º T º     in changing from an alphanumeric mode that uses a RAM-
+       º I º     based character definition table to a graphics mode. The 
+       º P º     same RAM that contains pixel data in graphics modes is 
+       ÈÍÍÍ¼     used to store character definitions in alphanumeric modes. 
+                 You can corrupt or erase your character definition tables 
+                 by updating the video buffer in a graphics mode and then 
+                 returning to an alphanumeric mode.
+
+
+     MCGA
+     Unlike the EGA and VGA, the MCGA has no parallel memory maps in which
+     to store character definitions. Instead, alphanumeric character
+     definitions are maintained in the 32 KB of video RAM between A000:0000
+     and A000:7FFF. You can store as many as four 8 KB character definition
+     tables at A000:0000, A000:2000, A000:4000, and A000:6000 (see Figure
+     10-8).
+
+
+                           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                           ³                       ³
+                           ³ Character definitions ³
+                       ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ³
+                       ³                       ³   ³
+                       ³ Character definitions ³   ³
+                   ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ÃÄÄÄ´
+                   ³                       ³   ³   ³
+                   ³ Character definitions ³   ³   ³
+               ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ÃÄÄÄ´   ³
+               ³                       ³   ³   ÃÄÄÄÙ Bit plane 3
+               ³ Character definitions ³   ³   ³
+               ³                       ÃÄÄÄ´   ³
+               ³                       ³   ÃÄÄÄÙ Bit plane 2
+               ³                       ³   ³
+     B800:4000 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³   ³
+               ³                       ÃÄÄÄÙ Bit plane 1
+               ³    Character codes    ³
+               ³    and attributes     ³
+     B000:0000 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ Bit plane 0
+
+     Figure 10-7.  Video RAM layout in alphanumeric modes on the Hercules
+     InColor Card. Character definitions start at B000:4000 in all four bit
+     planes.
+
+
+                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                ³                                ³
+                ³ Character codes and attributes ³
+                ³                                ³
+       A000:8000³                                ³
+     (B800:0000)ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³    256 character definitions   ³ 30H
+       A000:6000ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³    256 character definitions   ³ 20H
+       A000:4000ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³    256 character definitions   ³ 10H
+       A000:2000ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+                ³    256 character definitions   ³ 00H
+       A000:0000ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ±±±
+                                                    ³
+                           Value in Character Font Pointer register
+
+     Figure 10-8.  Layout of video RAM in MCGA alphanumeric modes.
+
+
+     The format of the MCGA's character definition tables is very different
+     from that of any other tables discussed thus far. Each 8 KB table is
+     divided into 16 512-byte lists of character codes and bit patterns
+     (see Figure 10-9). Each list corresponds to one scan line of the
+     characters being defined; the first list represents the bit patterns
+     in the topmost scan line of each character, the second list
+     corresponds to the second scan line, and so on (see Figure 10-10).
+     Since there are 16 lists, the maximum height of a character is 16
+     lines.
+
+
+           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 0123456789ABCDEF
+A000:0400 00 00 01 7E 02 7E 03 00 04 00 05 00 06 00 07 00 ...~.~..........
+A000:0410 08 FF 09 00 0A FF 0B IE 0C 3C 0D 3F 0E 7F 0F 00 .........<.?....
+A000:0420 10 C0 11 06 12 18 13 66 14 7F 15 C6 16 00 17 18 .......f........
+A000:0430 18 18 19 18 1A 00 1B 00 1C 00 1D 00 1E 00 1F 00 ................
+A000:0440 20 00 21 18 22 66 23 00 24 7C 25 00 26 38 27 30  .!."F#.$|%.&8'0
+A000:0450 28 0C 29 30 2A 00 2B 00 2C 00 2D 00 2E 00 2F 00 (.)0*.+.,.-.../.
+A000:0460 30 7C 31 18 32 7C 33 7C 34 0C 35 FE 36 38 37 FE 0|1.2|3|4.5.687.
+A000:0470 38 7C 39 7C 3A 00 3B 00 3C 00 3D 00 3E 00 3F 7C 8|9|:.;.<.=.>.?|
+A000:0480 40 00 41 10 42 FC 43 3C 44 F8 45 FE 46 FE 47 3C @.A.B.C<D.E.F.G<
+A000:0490 48 C6 49 3C 4A 1E 4B E6 4C F0 4D C6 4E C6 4F 38 H.I<J.K.L.M.N.O8
+A000:04A0 50 FC 51 7C 52 FC 53 7C 54 7E 55 C6 56 C6 57 C6 P.Q|R.S|T~U.V.W.
+A000:04B0 58 C6 59 66 5A FE 5B 3C 5C 00 5D 3C 5E 6C 5F 00 X.YfZ.{<\.}<^1_.
+A000:04C0 60 18 61 00 62 E0 63 00 64 1C 65 00 66 38 67 00 `.a.b.c.d.e.f8g.
+A000:04D0 68 E0 69 18 6A 06 6B E0 6C 38 6D 00 6E 00 6F 00 h.i.j.k.l9m.n.o.
+A000:04E0 70 00 71 00 72 00 73 00 74 10 75 00 76 00 77 00 p.q.r.s.t.u.v.w.
+A000:04F0 78 00 79 00 7A 00 7B 0E 7C 18 7D 70 7E 76 7F 00 x.y.z.{.|.}p~v..
+A000:0500 80 3C 81 CC 82 18 83 38 84 CC 85 30 86 6C 87 00 .<.....8...0.1..
+A000:0510 88 38 89 CC 8A 30 8B 66 8C 3C 8D 30 8E C6 8F 38 .8...0.f.<.0...8
+A000:0520 90 60 91 00 92 3E 93 38 94 C6 95 30 96 78 97 30 .`...>.8...0.X.0
+A000:0530 98 C6 99 C6 9A C6 9B 18 9C 6C 9D 66 9E CC 9F 1B .........l.f....
+A000:0540 A0 30 A1 18 A2 30 A3 30 A4 76 A5 00 A6 6C A7 6C .0...0.0.v...l.l
+A000:0550 A8 30 A9 00 AA 00 AB C0 AC C0 AD 18 AE 00 AF 00 .0..............
+
+     Figure 10-9.  One of 16 lists of character codes and bit patterns in
+     MCGA character generator RAM. This table defines the bit patterns for
+     the third scan line of each character. Character codes are in the
+     even-numbered bytes. The odd-numbered bytes contain the corresponding
+     bit patterns.
+
+
+           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 0123456789ABCDEF
+A000:0000 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07 00 ................
+A000:0010 08 FF 09 00 0A FF 0B 00 0C 00 0D 00 0E 00 0F 00 ................
+
+A000:0200 00 00 01 00 02 00 03 00 04 00 05 00 06 00 07 00 ................
+A000:0210 08 FF 09 00 0A FF 0B 00 0C 00 0D 00 0E 00 0F 00 ................
+
+A000:0400 00 00 01 7E 02 7E 03 00 04 00 05 00 06 00 07 00 ...~ ~..........
+A000:0410 08 FF 09 00 0A FF 0B 1E 0C 3C 0D 3F 0E 7F 0F 00 .........<.?....
+
+A000:0600 00 00 01 81 02 FF 03 00 04 00 05 18 06 18 07 00 ................
+A000:0610 08 FF 09 00 0A FF 0B 0E 0C 66 0D 33 0E 63 0F 18 ................
+
+A000:0800 00 00 01 A5 02 DB 03 6C 04 10 05 3C 06 3C 07 00 .......l...<.<..
+A000:0810 08 FF 09 00 0A FF 0B 1A 0C 66 0D 3F 0E 7F 0F 18 .........f.?....
+
+A000:0A00 00 00 01 81 02 FF 03 FE 04 38 05 3C 06 7E 07 00 .........8.<.~..
+A000:0A10 08 FF 09 3C 0A C3 0B 32 0C 66 0D 30 0E 63 0F DB ...<...2.f.0.c..
+
+A000:0C00 00 00 01 81 02 FF 03 FE 04 7C 05 E7 06 FF 07 18 .........|......
+A000:0C10 08 E7 09 66 0A 99 0B 78 0C 66 0D 30 0E 63 0F 3C ...f...x.f.0.c.<
+
+A000:0E00 00 00 01 BD 02 C3 03 FE 04 FE 05 E7 06 FF 07 3C ...............<
+A000:0E10 08 C3 09 42 0A BD 0B CC 0C 3C 0D 30 0E 63 0F E7 ...B.....<.0.c..
+
+A000:1000 00 00 01 99 02 E7 03 FE 04 7C 05 E7 06 7E 07 3C .........|...~.<
+A000:1010 08 C3 09 42 0A BD 0B CC 0C 18 0D 30 OE 63 0F 3C ...B.......0.c.<
+
+A000:1200 00 00 01 81 02 FF 03 7C 04 38 05 18 06 18 07 18 .......|.8......
+A000:1210 08 E7 09 66 0A 99 0B CC 0C 7E 0D 70 0E 67 0F DB ...f.....~.p.g..
+
+A000:1400 00 00 01 81 02 FF 03 38 04 10 05 18 06 18 07 00 .......8........
+A000:1410 08 FF 09 3C 0A C3 0B CC 0C 18 0D F0 0E E7 0F 18 ...<............
+
+A000:1600 00 00 01 7E 02 7E 03 10 04 00 05 3C 06 3C 07 00 ...~.~.....<.<..
+A000:1610 08 FF 09 00 0A FF 0B 78 0C 18 0D E0 0E E6 0F 18 .......x........
+
+     Figure 10-10.  MCGA character definitions for the first 12 scan lines
+     of the first 16 characters. The top scan line for each character is
+     defined starting at A000:0000, the second scan line starting at
+     A000:2000, and so on. (Only the first 32 bytes of each 512-byte list
+     are shown.)
+
+
+Updating Character Generator RAM
+
+
+     After you create a table of character definitions (discussed in
+     Chapter 9), you must make the table accessible to the hardware
+     character generator by properly locating it in the video buffer. One
+     way to do this is to create the table in RAM (outside the video
+     buffer) and then copy it to character generator RAM. You can also read
+     the table directly from a disk file into character generator RAM.
+     Either technique works on any of the video subsystems discussed here.
+
+
+EGA and VGA
+
+     To copy a character definition table into video memory map 2, you must
+     program both the Sequencer's Memory Mode register and its Map Mask
+     register, as well as the Graphics Controller's Mode and Miscellaneous
+     registers, to make memory map 2 directly addressable. You can then
+     copy character definitions to any of the available table locations in
+     map 2. After you update map 2, restore the Sequencer and Graphics
+     Controller registers to values appropriate for the alphanumeric video
+     mode you are using.
+
+     Listing 10-1a demonstrates how the Sequencer and Graphics Controller
+     are programmed on both the EGA and the VGA to make character generator
+     RAM in map 2 accessible. Listing 10-1b is the converse routine; it
+     restores the Sequencer and Graphics Controller registers to their
+     alphanumeric mode default values. You can use the routines in Listings
+     10-1a and 10-1b in a program that copies character definitions
+     directly from a file into character generator RAM (as shown in
+     Listings 10-2a and 10-2b).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-1a.  Using character generator RAM on the EGA and
+     VGA.
+
+                TITLE   'Listing 10-1a'
+                NAME    CGenModeSet
+                PAGE    55,132
+
+;
+; Name:         CGenModeSet
+;
+;               Direct access to EGA and VGA alphanumeric character generator RAM
+;
+; Caller:       Microsoft C:
+;
+;                       void CGenModeSet();
+;
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _CGenModeSet
+_CGenModeSet    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+; Program the Sequencer
+
+                cli                     ; disable interrupts
+                mov     dx,3C4h         ; Sequencer port address
+                mov     si,offset DGROUP:SeqParms
+                mov     cx,4
+
+L01:            lodsw                   ; AH := value for Sequencer register
+                                        ; AL := register number
+                out     dx,ax           ; program the register
+                loop    L01
+                sti                     ; enable interrupts
+
+; Program the Graphics Controller
+
+                mov     dl,0CEh         ; DX := 3CEH (Graphics Controller port
+                                        ;               address)
+                mov     si,offset DGROUP:GCParms
+                mov     cx,3
+
+L02:            lodsw                   ; program the Graphics Controller
+                out     dx,ax
+                loop    L02
+
+                pop     si
+                pop     bp
+                ret             
+
+_CGenModeSet    ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+; Format of the parameters is:  Lo-order byte:  Register number
+;                               Hi-order byte:  Value for reg
+
+SeqParms        DW      0100h           ; synchronous reset
+                DW      0402h           ; CPU writes only to map 2
+                DW      0704h           ; sequential addressing
+                DW      0300h           ; clear synchronous reset
+
+GCParms         DW      0204h           ; select map 2 for CPU reads
+                DW      0005h           ; disable odd-even addressing
+                DW      0006h           ; map starts at A000:0000
+
+_DATA           ENDS
+
+                END
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-1b.  Restoring character generator RAM on the EGA and
+     VGA.
+
+                TITLE   'Listing 10-1b'
+                NAME    CGenModeClear
+                PAGE    55,132
+
+;
+; Name:         CGenModeClear
+;
+;               Restore EGA or VGA alphanumeric mode after accessing
+;                character generator RAM
+;
+; Caller:       Microsoft C:
+;
+;                       void CGenModeClear();
+;
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _CGenModeClear
+_CGenModeClear  PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+; Program the Sequencer
+
+                cli                     ; disable interrupts
+                mov     dx,3C4h         ; Sequencer port address
+                mov     si,offset DGROUP:SeqParms
+                mov     cx,4
+
+L01:            lodsw                   ; AH := value for Sequencer register
+                                        ; AL := register number
+                out     dx,ax           ; program the register
+                loop    L01
+                sti                     ; enable interrupts
+
+; Program the Graphics Controller
+
+                mov     dl,0CEh         ; DX := 3CEH (Graphics Controller port
+                                        ;               address)
+                mov     si,offset DGROUP:GCParms
+                mov     cx,3
+
+L02:            lodsw                   ; program the Graphics Controller
+                out     dx,ax
+                loop    L02
+
+                mov     ah,0Fh          ; AH := INT 10H function number
+                int     10h             ; get video mode
+
+                cmp     al,7
+                jne     L03             ; jump if not monochrome mode
+
+                mov     ax,0806h        ; program Graphics Controller
+                out     dx,ax           ;  to start map at B000:0000
+
+L03:            pop     si
+                pop     bp
+                ret             
+
+_CGenModeClear  ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+; Format of the parameters is:  Lo-order byte:  Register number
+;                               Hi-order byte:  Value for reg
+
+SeqParms        DW      0100h           ; synchronous reset
+                DW      0302h           ; CPU writes to maps 0 and 1
+                DW      0304h           ; odd-even addressing
+                DW      0300h           ; clear synchronous reset
+
+GCParms         DW      0004h           ; select map 0 for CPU reads
+                DW      1005h           ; enable odd-even addressing
+                DW      0E06h           ; map starts at B800:0000
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-2a.  Loading character definitions on an EGA or
+     VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-2b.  Calling CGenRead1 from a C program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     A faster and more portable way to load character definitions into RAM
+     is to use INT 10H function 11H with AL = 0 (see Listings 10-3a and 10-
+     3b). When you use the INT 10H function, you can selectively update any
+     portion of a table in map 2 by choosing appropriate values for DX (the
+     character offset into the table) and CX (the number of character
+     definitions to update). To use this video BIOS function, you must
+     first store the character definition table in an intermediate buffer.
+     This technique consumes more memory than reading character definitions
+     directly from disk, but it results in faster code.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-3a.  Using the BIOS to load character definitions.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-3b.  Calling CGenRead2 from a C
+     program.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The INT 10H function 11H services can also update character generator
+     RAM from the character tables in the ROM BIOS. To use one of the ROM
+     BIOS character definition tables, call INT 10H function 11H with AL =
+     1 (for 8-by-14 character definitions) or AL = 2 (for 8-by-8
+     definitions). (See Listing 10-4.)
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-4.  Using a ROM BIOS character definition table.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC+
+
+     Moving a character definition table into RAM is easier on the HGC+,
+     because memory addressing is simpler. Character generator RAM is
+     mapped linearly, starting at B000:4000. Since each 256-character table
+     occupies 4 KB (256 x 16), subsequent 256-character tables start at
+     B000:5000, B000:6000, and so on.
+
+
+     Because HGC+ memory has no bit planes, you can access character
+     generator RAM as easily as any other system RAM. You can, for example,
+     use a single REP MOVSB instruction to move bit patterns into character
+     generator RAM  from elsewhere in system RAM, or you can read a
+     character definition table directly into RAM from a disk file. For
+     example, you can modify Listing 10-2a to read a file directly into
+     HGC+ character generator RAM by changing the  values of CGenRAMSeg to
+     B000H, CGenStartOffset to 4000H, and CGenDefSize to 16.
+
+
+InColor Card
+
+     Although the InColor Card uses all four bit planes to store character
+     definitions, you can use virtually the same routine to copy bit
+     patterns into its character generator RAM that you use on the HGC+.
+     The only difference is that you can select which of the four bit
+     planes to update. Do this by setting bits 4 through 7  of the Plane
+     Mask register (18H) to write-protect one or more of the bit planes.
+     For compatibility with the HGC+, set these four bits to 0 so that all
+     four bit planes contain the same bit patterns.
+
+
+MCGA
+
+     As on the Hercules adapters, character generator RAM on the MCGA is
+     mapped linearly in the video buffer. Thus, you can update MCGA
+     character definitions simply by writing the bit patterns in the
+     appropriate format in the character definition tables.
+
+     If you update the MCGA character definition tables directly, however,
+     your program must store bit patterns and character codes in the format
+     expected by the MCGA character generator. It is usually better to use
+     INT 10H function 11H to copy character definitions into MCGA character
+     generator RAM. This video BIOS function translates character
+     definition tables from the linear format used on the EGA and VGA into
+     the formatted lists used on the MCGA.
+
+     The MCGA is different from the other video subsystems discussed here
+     in that its alphanumeric character generator does not fetch bit
+     patterns from the tables at A000:0000 as it generates characters.
+     Instead, the character generator uses two internal character
+     definition tables, called font pages. To display the characters from
+     one of the four tables in video RAM, you must load the table into one
+     of the character generator's font pages. Listing 10-5 shows how this
+     is done.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-5.  Loading font pages on an MCGA.
+
+                TITLE   'Listing 10-5'
+                NAME    SetFontPages
+                PAGE    55,132
+
+;
+; Name:         SetFontPages
+;
+;               Update MCGA Font Pages
+;
+; Caller:       Microsoft C:
+;
+;                       void SetFontPages(n0,n1);
+;
+;                       int     n0,n1;  /* font page values */
+;
+
+ARGn0           EQU     [bp+4]
+ARGn1           EQU     [bp+6]
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _SetFontPages
+_SetFontPages   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,1103h        ; AH := INT 10H function number
+                                        ; AL := 3 (Set Block Specifier)
+                mov     bl,ARGn1        ; BL := value for bits 2-3
+                shl     bl,1
+                shl     bl,1            ; BL bits 2-3 := n1
+                or      bl,ARGn0        ; BL bits 0-1 := n0
+                int     10h             ; load font pages
+
+                pop     bp
+                ret             
+
+_SetFontPages   ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Thus, displaying a new alphanumeric character set on the MCGA is a
+     two-step process. First, you store character definition tables in one
+     or more of the four 8 KB blocks of video RAM reserved for this
+     purpose. Then you update the character generator's font pages to
+     display the characters.
+
+
+Using RAM-based Character Sets
+
+
+     When you use characters defined in a RAM-based table, you must choose
+     how the alphanumeric character generator is to decode the character
+     codes and attributes stored in the displayed portion of the video
+     buffer. Using the usual 256-character ASCII set, with 8-bit
+     character codes and 8-bit attributes, is simplest. However,
+     to display more than 256 different characters at once or to switch
+     rapidly between character sets, you must use a wider range of
+     "extended" character codes and a different set of attributes.
+
+
+ASCII Character Sets
+
+     The simplest way to customize alphanumeric characters is to use 8-bit
+     ASCII character codes and attributes with a RAM-based character
+     definition table. Because there are only 256 ASCII character codes,
+     you can display only one 256-character set at a time. However, the
+     character codes and attribute bytes stored in the displayed portion of
+     the video buffer retain their usual format, so software that knows
+     nothing about the RAM-based character definitions can run unchanged
+     while displaying the RAM-based character set.
+
+
+     EGA, VGA, and MCGA
+     Whenever you select an alphanumeric video mode using the video BIOS,
+     the alphanumeric character generator is configured to display the
+     characters defined in the first table in character generator RAM.
+     Thus, to display a different set of ASCII characters, all you need do
+     is update the table. As described above, INT 10H function 11H provides
+     a convenient mechanism for doing this. This same BIOS function also
+     lets you display the 256 characters defined in any of the other
+     character definition tables as described later in this chapter.
+
+
+     HGC+ and InColor Card
+     When you power up an HGC+ or an InColor Card, the alphanumeric
+     character generator uses the ROM-based character definition table by
+     default. To display a different ASCII character set, configure the
+     alphanumeric character generator to use the RAM-based table (see
+     Listing 10-6) and then load a character definition table into video
+     RAM at B000:4000.
+
+     To do this, set bit 0 of the adapter's xMode register (14H) to 1. This
+     causes the adapter to display the characters defined in the table in
+     RAM at B000:4000. Also, set bit 0 of the Configuration Switch register
+     (3BFH) to 1 to make character generator RAM addressable at B000:4000.
+     (This configuration is called "4K RamFont mode" in Hercules
+     documentation.) After you update character generator RAM, you can
+     protect it from subsequent modification by resetting bit 0 of the
+     Configuration Switch register.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-6.  Configuring an HGC+ or InColor Card for updating
+     character generator RAM.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Updating character generator RAM is more complicated on the InColor
+     Card because all four bit planes are used for character definitions.
+     The complexity lies in the way colors are displayed for characters
+     defined in the bit planes. A character's color is determined not only
+     by its foreground and background attributes, but also by the bit
+     planes used to define its pixel pattern.
+
+     The InColor Card combines the pixel values in a character definition
+     (in character generator RAM) with the character's foreground and
+     background attributes (in the displayed portion of the video buffer)
+     to produce a 4-bit attribute for every pixel in the character. The
+     logic used is:
+
+     (pixel_value AND foreground_attribute) OR 
+
+     (NOT pixel_value AND background_attribute)
+
+     In the example in Figure 10-11, one of the pixels in a character has a
+     value of 2 (0010B) in the character definition table. The character's
+     attribute byte in the video buffer specifies a foreground value of 0
+     and a background value of 7 (0111B). The InColor Card thus displays
+     this pixel with an attribute of (2 AND 0) OR (NOT 2 AND 7), or 5.
+
+
+                                 AND
+      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄşÄÄÄÄÄ 0101 ÄÄ¿
+      ³ Background                ³              ³
+      ³ attribute               1101             ³
+ ±±±±±±±±±±                        NOT          ³
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ÚÄÄÄÄÄÁÄÄÄÄÄ¿        ³                 6-bit
+³0  1  1  1  0  0  0  0 ³   ³0  0  1  0 ³     OR şÄ0101ÄPaletteÄdigital
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ÀÄÄÄÄÄÂÄÄÄÄÄÙ        ³                 output
+             ±±±±±±±±±±           ³ Character definition pixel
+       Foreground ³               ³              ³
+        attribute ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄşÄÄÄÄÄ 0000 ÄÄÙ
+                                 AND
+
+     Figure 10-11.  InColor foreground color attribute decoding using RAM-
+     based character definitions (8-bit character codes). The pixel value
+     in the character definition and both attributes in the character's
+     attribute byte all contribute to foreground attribute decoding.
+
+
+     Using colors on the InColor Card is simpler if you load all four bit
+     planes with identical bit patterns so that all pixels in the character
+     definitions have the value 0FH (1111B). Then a character's foreground
+     and background attributes depend solely on the values in its attribute
+     byte. Alternatively, you can specify a foreground attribute of 0FH
+     (1111B) and a background attribute of 0 for every character in the
+     video buffer. In this case, the displayed colors depend solely on the
+     pixel values in the character definitions.
+
+     A more practical use of the InColor Card's character definition RAM is
+     to load each bit plane with a different character definition table.
+     Then each bit in a character's foreground attribute acts as a mask to
+     select a different character set. Of course, a 4-bit foreground
+     attribute is still generated, as in Figure 10-11, so in effect each
+     character set is associated with the color that corresponds to its bit
+     plane. You can, of course, display the character sets in any colors
+     you want by programming the palette registers.
+
+     To load the bit planes separately, use the high-order nibble in the
+     Plane Mask register (18H) to write-protect the bit planes each time
+     you load a different character set. This permits you to use different
+     foreground attributes to display the different character sets. For
+     example, if all four bit planes contain different character sets, you
+     can select each of the four character sets by using the foreground
+     attributes 1, 2, 4, and 8.
+
+
+Extended Character Sets
+
+     All of the video subsystems discussed in this chapter have enough
+     character generator RAM to store definitions for more than 256
+     characters, so they all provide a way for the character generator to
+     recognize extended character codes larger than the usual eight bits.
+
+
+     EGA and VGA
+     On the EGA and the VGA, the usual range of 256 ASCII codes is doubled
+     by using bit 3 of a character's attribute byte to designate one of the
+     character definition tables in map 2 (see Figure 10-12). In this way,
+     512 different characters can be displayed in an alphanumeric mode.
+
+     Normally, the value of bit 3 of a character's attribute byte does not
+     affect the character set displayed. This is why: The value of this bit
+     selects one of two bit fields in the Sequencer Character Map Select
+     register. In turn, the value in each of these two bit fields
+     designates one of the available character definition tables in RAM.
+     When the video BIOS establishes a video mode, it loads a default set
+     of character definitions into the first character definition table in
+     map 2 and clears both bit fields in the Character Map Select register.
+     Thus, default alphanumeric characters are defined by the bit patterns
+     in the first table in map 2, regardless of the value of bit 3 of the
+     attribute bytes of the characters displayed.
+
+     Changing the value in the Character Map Select register, however,
+     changes the character definition tables associated with bit 3 of each
+     character's attribute byte. If two different values appear in the bit
+     fields in the Character Map Select register, the value of bit 3
+     designates one of two different character definition tables. 
+
+
+     7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+    ÚÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄ¿
+    ³High-order byte³Low-order byte ³
+    ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÙ
+     º º º º º º º º ³ ³ ³ ³ ³ ³ ³ ³ 
+     º º º º º º º º ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÄÄÄÄ8-bit character code
+     º º º º ÈÍÊÍÊÍÊÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ4-bit foreground attribute
+     ÈÍÊÍÊÍÊÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ4-bit background attribute
+   a.
+
+     7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+    ÚÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄ¿
+    ³High-order byte³Low-order byte ³
+    ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÙ
+     º º º º º³º º º ³ ³ ³ ³ ³ ³ ³ ³ 
+     º º º º ºÀ×Ä×Ä×ÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÄÄÄÄ9-bit extended character code
+     º º º º ÈÍÊÍÊÍÊÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ4-bit foreground attribute
+     ÈÍÊÍÊÍÊÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ4-bit background attribute
+   b.
+
+     7 6 5 4 3 2 1 0 7 6 5 4 3 2 1 0 
+    ÚÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄÂÄ¿
+    ³High-order byte³Low-order byte ³
+    ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÙ
+     º º º º ³ ³ ³ ³ ³ ³ ³ ³ ³ ³ ³ ³ 
+     º º º º ÀÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÁÄÄÄÄÄ12-bit extended character code
+     ÈÍÊÍÊÍÊÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ4-bit attribute
+   c.
+
+     Figure 10-12.  Character codes and attributes. Figure 10-12a shows the
+     usual 8-bit format. Figure 10-12b shows the extended 9-bit format used
+     on the EGA, VGA, and MCGA. Figure 10-12c shows the extended 12-bit
+     format used on the HGC+ and InColor Card.
+
+
+     For example, in Figure 10-13, bit 3 is set to 1, so bits 2, 3, and 5
+     of the Character Map Select register designate which character
+     definition table to use. (This example pertains to the VGA; on the
+     EGA, only bits 2 and 3 of the Character Map Select value would be
+     meaningful.)
+
+
+               ÚÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄ¿ ³
+ ³ x  x  x  x  1  x  x  x ³ ³
+ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ³                                      Offset
+       Attribute byte       ³               3-bit value            in map 2
+                                                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+               Character Map Select register  111³                 ³
+                ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´E000H
+                ³ 0   x   1   0    x   x ³    011³                 ³
+                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´C000H
+                  ±±±±±±±±±±±±±               110³                 ³
+                        ³                        ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´A000H
+                        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ010³                 ³
+                                                 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´8000H
+                                              101³                 ³
+                                                 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´6000H
+                                              001³                 ³
+                                                 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´4000H
+                                              100³                 ³
+                                                 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´2000H
+                                              000³                 ³
+                                                 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ0
+
+     Figure 10-13.  Function of the VGA Character Map Select register.
+
+
+     Listing 10-7 illustrates two methods of updating this register.
+     Although the technique of using an INT 10H function call generally
+     requires less code and is more portable, you might prefer to program
+     the Sequencer directly in applications that require rapid switching
+     between character sets.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-7.  Programming the Sequencer Character Map Select
+     register on the EGA and VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     If both bit fields in the Character Map Select register contain the
+     same value, the value of bit 3 of a character's attribute byte does
+     not affect which character set is used. If the bit fields designate
+     different character definition tables, then the value of bit 3 of each
+     character's attribute byte selects between two different character
+     sets. Keep in mind, however, that bit 3 is also part of each
+     character's 4-bit foreground attribute. When bit 3 of a character's
+     foreground attribute is set to 0, the character's displayed color is
+     taken from one of the first eight palette registers (0000B through
+     0111B). When bit 3 is set to 1, the color derives from one of the
+     second eight palette registers (1000B through 1111B).
+
+     Thus, the two 256-character sets selected by bit 3 are displayed with
+     two different sets of eight palette register values. This is handy if
+     you want to associate a particular set of colors with a character set.
+     Otherwise, you might prefer to load the second eight palette registers
+     with the same set of values as the first eight so that the value of
+     bit 3 of a character's attribute byte has no effect on its displayed
+     color. Another technique is to mask bit 3 of the foreground attribute
+     by zeroing bit 3 of the Attribute Controller's Color Plane Enable
+     register, as in Listing 10-8. Because the value in the Color Plane
+     Enable register masks the 4-bit attribute value, zeroing bit 3 in this
+     register allows only the first eight palette registers to be
+     referenced, regardless of the value of bit 3 in a character's
+     attribute byte.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-8.  Zeroing bit 3 of the Color Plane Enable register. This
+     causes bit 3 of a character's attribute byte to have no effect on its
+     displayed attribute.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     MCGA
+     The MCGA supports 8-bit and 9-bit character codes with the same BIOS
+     interface as the EGA and VGA, although the hardware implementation is
+     different. On the MCGA, the two character definition tables selected
+     by bit 3 of a character's attribute byte are the ones in the MCGA's
+     two internal font pages. Although you can load the font pages by
+     programming the MCGA's Character Generator Interface register (12H),
+     Character Font Pointer register (13H), and Number of Characters to
+     Load register (14H), it is easier to use INT 10H function 11H with
+     AL = 3.
+
+     As on the EGA and VGA, bit 3 of a character's attribute byte does
+     double duty as part of the 9-bit character code as well as the high-
+     order bit of the character's foreground attribute. If you want to use
+     the same colors for both 256-character sets, you can call INT 10H
+     function 10H to store the same set of color values in the second eight
+     video DAC color registers as you do in the first eight. You can also
+     call INT 10H function 10H to mask bit 3 out of alphanumeric attribute
+     decoding (see Listing 10-8).
+
+
+     HGC+ and InColor Card
+     On the HGC+ and the InColor Cards, you can configure the character
+     generator to regard the four low-order bits of each character's
+     attribute byte as part of the character code. Do this by setting both
+     bit 2 and bit 1 of the xMode register to 1. (Hercules calls this
+     configuration "48K RamFont mode.")
+
+     By using 12-bit character codes, you can display all characters
+     defined anywhere in the Hercules adapter's 48 KB of character
+     generator RAM. In practice, you can regard all 48 KB of character
+     generator RAM as one continuous character definition table. However,
+     in some applications, you might find it more convenient to think of
+     character generator RAM as a set of twelve 256-character tables, where
+     the four high-order bits of the character code designate one of the
+     tables, and the eight low-order bits designate a character definition
+     within a table.
+
+     When 12 bits are used as an extended character code, only bits 4
+     through 7 of the high-order byte specify a character's attribute (see
+     Figure 10-12c). The attributes that Hercules assigned to these bits
+     differ somewhat from the usual monochrome display attributes (see
+     Figure 10-14).
+
+
+               Enable Blink Bit = 1  Enable Blink Bit = 0
+Attribute Bit  (blink enabled)       (blink disabled)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+7              High-intensity        Boldface
+6              Blink                 Reverse
+5              Overstrike            No overstrike
+4              Underline             No underline
+     Figure 10-14.  Extended attribute set on the HGC+ and the InColor
+
+
+     Card.
+
+
+       ÉÍÍÍ»     When using 12-bit character codes on the HGC+ and the 
+       º T º     InColor Card, you can specify the scan line on which the 
+       º I º     overstrike and underscore attributes appear. Bits 0 
+       º P º     through 3 of the Underscore register (15H) control the 
+       ÈÍÍÍ¼     position of the underscore. Bits 0 through 3 of the 
+                 Overstrike register (16H) control the position of the 
+                 overstrike. On the InColor Card, you can also control the 
+                 displayed color of the underscore and overstrike by 
+                 storing a value between 1 and 0FH in bits 4 through 7 of 
+                 the corresponding control register.
+
+     As on the HGC+, the 12-bit character codes on the InColor Card
+     designate locations in the character definition tables. Attribute
+     decoding is more complicated on the InColor Card, however (see Figure
+     10-15). The 4-bit foreground attribute generated for each pixel in a
+     character is derived by combining the character's 4-bit attribute with
+     the pixel's value in the character definition table.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+MDA-compatible Attributes (Exception register bit 5 = 1)
+              Enable Blink On                 Enable Blink Off
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Foreground    (pixel value) OR (background)   (pixel value) XOR 
+                                              (background)
+Background    0 if bit 7 of attribute = 0     0 if bit 6 of attribute = 0
+              8 if bit 7 of attribute = 1     0FH if bit 6 of attribute = 1
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Color Attributes (Exception register bit 5 = 0)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Foreground    (pixel value) AND (NOT attribute)
+Background    0 
+
+     Figure 10-15.  InColor Card color attribute decoding using 12-bit
+     character codes.
+
+
+     As was the case when using 8-bit character codes, the peculiar
+     interaction of character attributes with the pixel values in the
+     character definition table makes controlling colors difficult. To
+     simplify matters, you can store the same character definitions in all
+     four bit planes when using color attribute decoding; this allows each
+     character's 4-bit attribute to specify all 16 colors. When using MDA-
+     compatible attributes, you can store the same bit patterns in bit
+     planes 0 through 2 and zero bit plane 3. Again, this allows each
+     character's 4-bit attribute to completely control the displayed
+     attributes.
+
+     If you elect to store different character definition tables in each
+     bit plane, each of a character's attribute bits can select one of the
+     bit planes. Again, you should program the palette registers carefully
+     so that characters from different bit planes are displayed with
+     appropriate colors.
+
+
+Compatibility Problems with Extended Character Codes
+
+     Most PC and PS/2 programs, including the BIOS, MS-DOS, and most
+     commercially available applications, expect you to use 8-bit ASCII
+     character codes. This means you can update character generator RAM
+     with an 8-bit ASCII character set in a different font, but you cannot
+     take advantage of the extended 9-bit or 12-bit character codes
+     supported by IBM and Hercules.
+
+     If you use the INT 10H interface to display characters with extended
+     character codes, you must be careful when you use certain ROM BIOS
+     functions. For example, INT 10H function 0AH, which stores an 8-bit
+     character code in the video buffer, is not very useful for writing
+     characters with a 9-bit or a 12-bit extended character code. On the
+     other hand, you can use INT 10H function 9, which handles a 16-bit
+     character code and attribute combination, to process extended
+     character codes and attributes.
+
+     When you run an application that uses extended character codes, you
+     can encounter problems when your application interacts inadvertently
+     with software that doesn't recognize the different character-attribute
+     format. Consider what might happen if a RAM-resident utility program
+     popped up in the middle of your application without being "aware" that
+     you were using extended character codes. When the utility program
+     placed 8-bit character codes and attributes in the buffer, the
+     alphanumeric character generator would interpret them as extended
+     character codes and attributes. The results would probably be
+     unusable.
+
+
+Changing the Displayed Character Matrix
+
+
+     There is another dimension to customizing a RAM-based character
+     definition table: You can control the height of the character matrix
+     in which characters are displayed. The height of the displayed
+     character matrix determines how many rows of characters appear on the
+     screen. For example, a 350-line display accommodates 43 rows of 8-by-8
+     characters but only 25 rows of 8-by-14 characters.
+
+     With all of the subsystems discussed in this chapter, you can vary the
+     displayed height of alphanumeric characters by programming the CRT
+     Controller to display characters the same size as the characters
+     defined in character generator RAM. Thus, to display 8-by-8 characters
+     on a 350-line display, you place 8-by-8 character definitions into
+     character generator RAM and then program the CRTC to display
+     characters that are 8 pixels high.
+
+     On the EGA and the VGA, you can perform both these tasks by calling
+     INT 10H function 11H, although in some situations you may prefer to
+     update the character definitions or program the CRTC explicitly.
+     Hercules adapters, of course, have no ROM BIOS, so you must do the
+     work yourself.
+
+
+EGA
+
+     Consider how you would display 43 rows of 8-by-8 characters in an EGA
+     alphanumeric mode with 350-line vertical resolution, as in Listing 10-
+     9. In this example, the call to INT 10H function 11H with AL = 12H
+     copies the ROM's 8-by-8 character set (normally used in 200-line video
+     modes) into the first of the four tables in map 2 and then calculates
+     the proper CRTC register values based on the values of POINTS and ROWS
+     in the BIOS Video Display Data Area.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-9.  Establishing an 80-by-43 alphanumeric mode on an EGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     INT 10H function 11H calls INT 10H function 1 to set the position of
+     the alphanumeric cursor in the displayed character matrix. As
+     described in Chapter 3, the EGA BIOS version of INT 10H function 1
+     computes this cursor position incorrectly, leading to an improperly
+     displayed cursor. Therefore, the routine in Listing 10-9 updates the
+     CRTC Cursor Start and Cursor End registers directly.
+
+       ÉÍÍÍ»     If your program changes the number of displayed character 
+       º T º     rows, it should also call INT 10H function 12H to select 
+       º I º     the EGA BIOS's alternate print screen routine. This 
+       º P º     routine functions identically to the one in the 
+       ÈÍÍÍ¼     motherboard BIOS except that it uses the Video Display 
+                 Data Area value ROWS to determine how many lines to print. 
+                 (The motherboard BIOS routine disregards ROWS and always 
+                 prints 25 lines.)
+
+
+VGA
+
+     You can also use INT 10H function 11H on the VGA to establish an
+     alphanumeric mode with a nondefault character matrix (see Listing
+     10-10). On the VGA, you set the vertical resolution of the video mode
+     using INT 10H function 12H (with BL = 30H) before calling function
+     11H. Also, the cursor emulation computations are performed properly in
+     the VGA BIOS, so no extra code is required to avoid cursor emulation
+     on the VGA.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-10.  Establishing an 80-by-50 alphanumeric mode on a VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+MCGA
+
+     The MCGA can only display characters with 2, 4, 6, 8, 10, 12, 14, or
+     16 scan lines. (This is a limitation of the MCGA's Memory Controller.)
+     To change the displayed character matrix, use INT 10H function 11H to
+     load a new character set into the character generator. Then program
+     the Scan Lines per Character register (09H) with a value from 0
+     through 7; if the value is n, the number of scan lines displayed in
+     the character matrix is (n + 1) * 2. Listing 10-11 shows how to set up
+     an 8-by-10 character matrix using the MCGA's 400-line vertical
+     resolution to produce 40 rows of 80 characters.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-11.  Establishing an 80-by-40 alphanumeric mode on an
+     MCGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     For some values in the Scan Lines per Character register, the MCGA
+     incorrectly displays the bottommost scan line of the screen.
+     Specifically, when the value in the Scan Lines per Character register
+     is 1, 3, 5, or 6, the MCGA replicates part of the topmost scan line on
+     the screen at the bottom of the screen. Thus, you should generally
+     avoid using these values for the Scan Lines per Character register.
+
+
+HGC+ and InColor Card
+
+
+     You must program the HGC+ CRTC explicitly to change the number of
+     displayed lines in alphanumeric characters. The subroutine SetHercCRTC
+     in Listing 10-14 illustrates a table-driven technique for setting up
+     the CRTC's vertical timing parameters for a variety of character
+     sizes. Figure 10-16 summarizes the CRTC timing parameters recommended
+     by Hercules for any character matrix between 4 and 16 scan lines high
+     as well as for characters that are either 8 or 9 pixels wide.
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                    Width of Character Matrix
+CRTC register      8 Pixels           9 Pixels
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H                6DH                61H 
+01H                5AH                50H 
+02H                5CH                52H 
+03H                0FH                0FH 
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CRTC                  Height of Character Matrix (in pixels)
+register  4    5    6    7    8    9    10   11   12   13   14   15   16
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+04H       5CH  4Ah  3DH  34H  2DH  28H  24H  20H  1DH  1BH  19H  17H  16H
+05H       02H  00H  04H  06H  02H  01H  00H  07H  0AH  06H  06H  0AH  02H
+06H       58H  46H  3AH  32H  2BH  26H  23H  1FH  1DH  1AH  19H  17H  15H
+07H       59H  46H  3BH  33H  2CH  27H  23H  20H  1DH  1BH  19H  17H  16H
+
+     Figure 10-16.  CRTC timing parameters for height and width of the
+     alphanumeric character matrix (HGC+ and InColor Card).
+
+
+     On the InColor Card, the techniques for changing the displayed
+     character matrix parallel those used on the HGC+. The values you place
+     in the CRTC registers for each possible character matrix are also the
+     same.
+
+
+     Programming Examples
+     The routines on the following pages unify the programming techniques
+     for changing the displayed character matrix on the EGA (see Listing
+     10-12), on the VGA (see Listing 10-13), and on the HGC+ and InColor
+     Card (see Listing 10-14). In each case, the function AlphaModeSet()
+     programs the alphanumeric character generator and the CRTC to
+     accommodate the dimensions of the specified character matrix and
+     character code size.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-12.  Programming the EGA alphanumeric character
+     size.
+
+                TITLE   'Listing 10-12'
+                NAME    AlphaModeSet
+                PAGE    55,132
+
+;
+; Name:         AlphaModeSet
+;
+;               Program the CRTC in 80-column EGA alphanumeric modes
+;
+; Caller:       Microsoft C:
+;
+;                       void AlphaModeSet(w,h,c);
+;
+;                       int     w;      /* width of character matrix */
+;                       int     h;      /* height of character matrix */
+;                       int     c;      /* character code size */
+;
+
+ARGw            EQU     byte ptr [bp+4]         ; must be 8 or 9 pixels wide
+ARGh            EQU     byte ptr [bp+6]         ; must be 2-32 pixels high
+ARGc            EQU     byte ptr [bp+8]         ; must be 8 or 9 bits
+
+CRT_MODE        EQU     49h             ; addresses in video BIOS data area
+CRT_COLS        EQU     4Ah
+ADDR_6845       EQU     63h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _AlphaModeSet
+_AlphaModeSet   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+; Program the CRTC
+
+                mov     bx,40h
+                mov     es,bx           ; ES := video BIOS data segment
+
+                mov     bl,ARGw         ; BL := character width
+                mov     bh,ARGh         ; BH := character height
+                call    SetCRTC
+
+; Program the Sequencer and Attribute Controller for 8 or 9 dots per character
+
+                mov     dx,3C4h
+                mov     ax,0100h        ; AH bit 1 := 0 (synchronous reset)
+                                        ; AL := 0 (Reset register number)
+                cli                     ; disable interrupts
+                out     dx,ax           ; Sequencer synchronous reset
+
+                mov     bx,1            ; BH,BL := values for 8-wide chars:
+                                        ;  BH := 0 (value for Horiz Pel Pan)
+                                        ;  BL := 1 (value for Clocking Mode)
+                cmp     ARGw,8
+                je      L01             ; jump if 8-wide characters
+
+                mov     bx,0800h        ; BH,BL := values for 9-wide characters
+
+L01:            mov     ah,bl           ; AH := value for Clocking Mode reg
+                mov     al,1            ; AL := Clocking Mode reg number
+                out     dx,ax           ; program the Sequencer
+
+                mov     ax,0300h        ; AH := 3 (disable reset)
+                                        ; AL := 0 (Sequencer register number)
+                out     dx,ax           ; disable Sequencer reset
+                sti                     ; enable interrupts
+
+                mov     bl,13h          ; BL := Horizontal Pel Pan reg number
+                mov     ax,1000h        ; AH := 10H (INT 10H function number)
+                                        ; AL := 0 (set specified register)
+                int     10h             ; program Attribute Controller
+
+; Program the Attribute Controller for 8- or 9-bit character codes
+
+                mov     ax,1000h        ; AH := 10H (INT 10H function number)
+                                        ; AL := 0 (set specified register)
+                mov     bx,0F12h        ; BH := 0FH (Color Plane Enable value)
+                                        ; BL := 12H (Color Plane Enable reg #)
+                cmp     ARGc,8
+                je      L02             ; jump if 8-bit character codes
+
+                mov     bh,7            ; BH bit 3 := 0 (ignore bit 3 of all
+                                        ;  attributes)
+L02:            int     10h             ; update Color Plane Enable register
+
+; update video BIOS data area
+
+                cmp     byte ptr es:[CRT_MODE],7
+                jne     L03             ; jump if not monochrome mode
+
+                mov     ax,720          ; AX := displayed pixels per row
+                div     ARGw            ; AL := displayed character columns
+                mov     es:[CRT_COLS],al
+
+L03:            pop     si
+                pop     bp
+                ret
+
+_AlphaModeSet   ENDP
+
+
+SetCRTC         PROC    near            ; Caller:       BH = character height
+                                        ;               BL = character width
+
+                push    dx
+                mov     dx,es:[ADDR_6845]  ; CRTC I/O port
+
+; establish CRTC vertical timing and cursor position in character matrix
+
+                push    bx              ; preserve height and width
+                mov     ax,1110h        ; AH := 11H (INT 10H function number)
+                                        ; AL := 0 (user alpha load)
+                xor     cx,cx           ; CX := 0 (store no characters)
+                int     10h             ; call BIOS to program CRTC for
+                                        ;  vertical size of characters
+
+                pop     ax              ; AH := character height
+                push    ax              ; preserve height and width
+                sub     ah,2            ; AH := starting scan line for cursor
+                mov     al,0Ah          ; AL := 0AH (Cursor Start reg number)
+                out     dx,ax           ; update CRTC Cursor Start register
+
+                mov     ax,000Bh        ; AH := 0 (Cursor End value)
+                                        ; AL := 0BH (Cursor End reg number)
+                out     dx,ax           ; update CRTC Cursor End register
+
+; establish CRTC horizontal timing
+
+                pop     bx              ; BX := character height and width
+                cmp     byte ptr es:[CRT_MODE],7
+                jne     L10             ; exit if not monochrome mode
+
+                xor     bh,bh           ; BX := character width
+                sub     bl,8            ; BX := 0 or 1
+                neg     bx              ; BX := 0 or 0FFFFH
+                and     bx,14           ; BX := 0 or 14 (offset into table)
+                mov     si,bx           ; SI := offset into table
+
+                add     si,offset DGROUP:HorizParms     ; DS:SI -> parameters
+                call    UpdateCRTC
+
+L10:            pop     dx
+                ret
+
+SetCRTC         ENDP
+
+
+UpdateCRTC      PROC    near            ; Caller:       DX = CRTC address port
+                                        ;               DS:SI -> parameters
+                                        ; Destroys:     AX,CX
+
+                mov     cx,7            ; CX := number of registers to update
+                
+L20:            lodsw                   ; AH := data for CRTC register in AL
+                out     dx,ax           ; update the register
+                loop    L20
+
+                ret
+
+UpdateCRTC      ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+HorizParms      DW      6C00h,5901h,6002h,2403h,5B04h,6A05h,2D13h  ; 8-wide
+                DW      6000h,4F01h,5602h,3A03h,5104h,6005h,2813h  ; 9-wide
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-13.  Programming the VGA alphanumeric character
+     size.
+
+                TITLE   'Listing 10-13'
+                NAME    AlphaModeSet
+                PAGE    55,132
+
+;
+; Name:         AlphaModeSet
+;
+;               Program the CRTC in 80-column VGA alphanumeric modes
+;
+; Caller:       Microsoft C:
+;
+;                       void AlphaModeSet(w,h,c);
+;
+;                       int     w;      /* width of character matrix */
+;                       int     h;      /* height of character matrix */
+;                       int     c;      /* character code size */
+;
+
+ARGw            EQU     byte ptr [bp+4]         ; must be 8 or 9 pixels wide
+ARGh            EQU     byte ptr [bp+6]         ; must be 2-32 pixels high
+ARGc            EQU     byte ptr [bp+8]         ; must be 8 or 9 bits
+
+CRT_COLS        EQU     4Ah             ; addresses in video BIOS data area
+ADDR_6845       EQU     63h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _AlphaModeSet
+_AlphaModeSet   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+; Program the CRTC
+
+                mov     bx,40h
+                mov     es,bx           ; ES := video BIOS data segment
+
+                mov     bl,ARGw         ; BL := character width
+                mov     bh,ARGh         ; BH := character height
+                call    SetCRTC
+
+; Program the Sequencer and Attribute Controller for 8 or 9 dots per character
+
+                mov     dx,3C4h
+                mov     ax,0100h        ; AH bit 1 := 0 (synchronous reset)
+                                        ; AL := 0 (Reset register number)
+                cli                     ; disable interrupts
+                out     dx,ax           ; Sequencer synchronous reset
+
+                mov     bx,1            ; BH,BL := values for 8-wide chars:
+                                        ;  BH := 0 (value for Horiz Pel Pan)
+                                        ;  BL := 1 (value for Clocking Mode)
+                cmp     ARGw,8
+                je      L01             ; jump if 8-wide characters
+
+                mov     bx,0800h        ; BH,BL := values for 9-wide characters
+
+L01:            mov     ah,bl           ; AH := value for Clocking Mode reg
+                mov     al,1            ; AL := Clocking Mode reg number
+                out     dx,ax           ; program the Sequencer
+
+                mov     ax,0300h        ; AH := 3 (disable reset)
+                                        ; AL := 0 (Sequencer register number)
+                out     dx,ax           ; disable Sequencer reset
+                sti                     ; enable interrupts
+
+                mov     bl,13h          ; BL := Horizontal Pel Pan reg number
+                mov     ax,1000h        ; AH := 10H (INT 10H function number)
+                                        ; AL := 0 (set specified register)
+                int     10h             ; program Attribute Controller
+
+; Program the Attribute Controller for 8- or 9-bit character codes
+
+                mov     ax,1000h        ; AH := 10H (INT 10H function number)
+                                        ; AL := 0 (set specified register)
+                mov     bx,0F12h        ; BH := 0FH (Color Plane Enable value)
+                                        ; BL := 12H (Color Plane Enable reg #)
+                cmp     ARGc,8
+                je      L02             ; jump if 8-bit character codes
+
+                mov     bh,7            ; BH bit 3 := 0 (ignore bit 3 of all
+                                        ;  attributes)
+L02:            int     10h             ; update Color Plane Enable register
+
+; update video BIOS data area
+
+                mov     ax,720          ; AX := displayed pixels per row
+                div     ARGw            ; AL := displayed character columns
+                mov     es:[CRT_COLS],al
+
+                pop     si
+                pop     bp
+                ret
+
+_AlphaModeSet   ENDP
+
+
+SetCRTC         PROC    near            ; Caller:       BH = character height
+                                        ;               BL = character width
+
+                push    dx
+                mov     dx,es:[ADDR_6845]  ; CRTC I/O port
+
+; establish CRTC vertical timing and cursor position in character matrix
+
+                push    bx              ; preserve char height and width 
+                mov     ax,1110h        ; AH := 11H (INT 10H function number)
+                                        ; AL := 0 (user alpha load)
+                xor     cx,cx           ; CX := 0 (store no characters)
+                int     10h             ; call BIOS to program CRTC
+                pop     bx
+
+; enable I/O writes to CRTC registers
+
+                mov     al,11h          ; AL := Vertical Retrace End reg number
+                out     dx,al
+                inc     dx
+                in      al,dx           ; AL := current value of this register
+                dec     dx
+
+                mov     ah,al           ; AH := current value
+                mov     al,11h          ; AL := register number
+                push    ax              ; save on stack
+
+                and     ah,01111111b    ; zero bit 7
+                out     dx,ax           ; update this register
+
+; establish CRTC horizontal timing
+
+                xor     bh,bh           ; BX := character width
+                sub     bl,8            ; BX := 0 or 1
+                neg     bx              ; BX := 0 or 0FFFFH
+                and     bx,14           ; BX := 0 or 14 (offset into table)
+                mov     si,bx           ; SI := offset into table
+
+                add     si,offset DGROUP:HorizParms     ; DS:SI -> parameters
+                call    UpdateCRTC
+
+; write-protect CRTC registers
+
+                pop     ax              ; AX := previous VR End register data
+                out     dx,ax           ; restore this register
+
+                pop     dx
+                ret
+
+SetCRTC         ENDP
+
+
+UpdateCRTC      PROC    near            ; Caller:       DX = CRTC address port
+                                        ;               DS:SI -> parameters
+                                        ; Destroys:     AX,CX
+
+                mov     cx,7            ; CX := number of registers to update
+                
+L10:            lodsw                   ; AH := data for CRTC register in AL
+                out     dx,ax           ; update the register
+                loop    L10
+
+                ret
+
+UpdateCRTC      ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+HorizParms      DW      6A00h,5901h,5A02h,8D03h,6304h,8805h,2D13h  ; 8-wide
+                DW      5F00h,4F01h,5002h,8203h,5504h,8105h,2813h  ; 9-wide
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-14.  Programming the alphanumeric character size on the
+     HGC+ and InColor Card.
+
+                TITLE   'Listing 10-14'
+                NAME    AlphaModeSet
+                PAGE    55,132
+
+;
+; Name:         AlphaModeSet
+;
+; Function:     Program the CRTC in alphanumeric modes on HGC+ or InColor card
+;
+; Caller:       Microsoft C:
+;
+;                       void AlphaModeSet(w,h,c);
+;
+;                       int     w;      /* width of character matrix */
+;                       int     h;      /* height of character matrix */
+;                       int     c;      /* character code size */
+;
+
+ARGw            EQU     byte ptr [bp+4]         ; must be 8 or 9 pixels wide
+ARGh            EQU     byte ptr [bp+6]         ; must be 4-16 pixels high
+ARGc            EQU     byte ptr [bp+8]         ; must be 8 or 12 bits
+
+CRT_COLS        EQU     4Ah
+CRT_LEN         EQU     4Ch
+CRT_MODE_SET    EQU     65h
+ROWS            EQU     84h
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                PUBLIC  _AlphaModeSet
+_AlphaModeSet   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    ds
+                push    si
+
+; Set Configuration Switch to bring RAM starting at B000:4000 into memory map
+
+                mov     dx,3BFh         ; DX := Configuration Switch port
+                mov     al,1            ; AL bit 1 := 0 (exclude 2nd 32K of
+                                        ;                 video buffer)
+                                        ; AL bit 0 := 1 (make RAM at B000:4000
+                out     dx,ax           ;                 addressable)
+
+; Blank the screen to avoid interference during CRTC programming
+
+                mov     dx,3B8h         ; DX := CRTC Mode Control Register port
+                xor     al,al           ; AL bit 3 := 0 (disable video signal)
+                out     dx,al           ; blank the screen
+
+; Program the CRTC
+
+                mov     bh,ARGw         ; BH := character width
+                mov     bl,ARGh         ; BL := character height
+                call    SetHercCRTC
+
+; Set the xModeReg
+
+                mov     dx,3B4h         ; DX := CRTC address port
+                mov     ax,114h         ; AH bit 0 := 1 (enable RAM-based
+                                        ;  character generator)
+                                        ; AL := 14h (xModeReg number)
+                cmp     ARGw,9
+                je      L01             ; jump if 9-wide characters
+
+                or      ah,2            ; AH bit 1 := 1 (8-wide characters)
+
+L01:            cmp     ARGc,8
+                je      L02             ; jump if 8-bit character codes
+
+                or      ah,4            ; AH bit 2 := 1 (12-bit character codes)
+
+L02:            out     dx,ax           ; update the register
+
+; update video BIOS data area
+
+                mov     ax,40h
+                mov     ds,ax           ; DS := video BIOS data segment
+
+                mov     ax,720          ; AX := displayed pixels per row
+                div     ARGw            ; AL := displayed character columns
+                mov     ds:[CRT_COLS],al
+
+                mov     ax,350          ; AX := number of displayed scan lines
+                div     ARGh            ; AL := displayed character rows
+                dec     al              ; AL := (character rows) - 1
+                mov     ds:[ROWS],al
+
+                inc     al
+                mul     byte ptr ds:[CRT_COLS]
+                shl     ax,1            ; AX := rows * columns * 2
+                mov     ds:[CRT_LEN],ax
+
+; re-enable display and exit
+
+                mov     dx,3B8h         ; DX := CRT Mode Control port
+                mov     al,ds:[CRT_MODE_SET]    ; restore previous value
+                out     dx,al
+
+                pop     si
+                pop     ds
+                pop     bp
+                ret
+
+_AlphaModeSet   ENDP
+
+
+SetHercCRTC     PROC    near            ; Caller:       BH = character width
+                                        ;               BL = character height
+
+                push    dx
+                mov     dx,3B4h         ; DX := CRTC Address Reg port 3B4h
+
+; establish cursor position in character matrix
+
+                mov     ah,bl
+                dec     ah              ; AH := value for Max Scan Line reg
+                mov     al,9            ; AL := Max Scan Line register number
+                out     dx,ax
+
+                mov     al,0Bh          ; AL := Cursor End reg number
+                out     dx,ax           ; set cursor to end on last line of
+                                        ;   character matrix
+
+                sub     ax,101h         ; AH := second-to-last line
+                                        ; AL := 0AH (Cursor Start reg number)
+                out     dx,ax           ; set cursor to start on second-to-
+                                        ;  last line
+
+; compute offsets into parameter tables
+
+                sub     bx,0804h        ; BH := 0 or 1
+                                        ; BL := 0 through 12
+                add     bx,bx
+                add     bx,bx           ; BH := 0 or 4
+                                        ; BL := 0 through 48
+; establish CRTC horizontal timing
+
+                push    bx              ; preserve BX
+                mov     bl,bh
+                xor     bh,bh           ; BX := 0 or 4
+                add     bx,offset DGROUP:HorizParms     ; DS:BX -> parameters
+
+                mov     al,0            ; AL := first CRTC reg to update
+                call    UpdateCRTC
+
+; establish vertical timing
+
+                pop     bx
+                xor     bh,bh           ; BX := 0 through 48
+                add     bx,offset DGROUP:VertParms      ; DS:BX -> parameters
+
+                mov     al,4            ; AL := first CRTC reg to update
+                call    UpdateCRTC
+
+                pop     dx              ; restore DX
+                ret
+
+SetHercCRTC     ENDP
+
+
+UpdateCRTC      PROC    near            ; Caller:       AL = first reg number
+                                        ;               DX = CRTC address port
+                                        ;               DS:BX -> parameters
+                                        ; Destroys:     AX,CX
+
+                mov     cx,4            ; CX := number of registers to update
+                
+L10:            mov     ah,[bx]         ; AH := data for CRTC register in AL
+                out     dx,ax           ; update the register
+                inc     ax              ; AL := next register number
+                inc     bx              ; DS:BX -> next value in table
+                loop    L10
+
+                ret
+
+UpdateCRTC      ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+HorizParms      DB      6Dh,5Ah,5Ch,0Fh         ; 8 pixels wide
+                DB      61h,50h,52h,0Fh         ; 9 pixels wide
+
+
+VertParms       DB      5Ch,02h,58h,59h         ; 4 scan lines high
+                DB      4Ah,00h,46h,46h         ; 5
+                DB      3Dh,04h,3Ah,3Bh         ; 6
+                DB      34h,06h,32h,33h         ; 7
+                DB      2Dh,02h,2Bh,2Ch         ; 8
+                DB      28h,01h,26h,27h         ; 9
+                DB      24h,00h,23h,23h         ; 10
+                DB      20h,07h,1Fh,20h         ; 11
+                DB      1Dh,0Ah,1Dh,1Dh         ; 12
+                DB      1Bh,06h,1Ah,1Bh         ; 13
+                DB      19h,06h,19h,19h         ; 14
+                DB      17h,0Ah,17h,17h         ; 15
+                DB      16h,02h,15h,16h
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Graphics Windows in Alphanumeric Modes
+
+
+     When you update a RAM-resident character definition table, you alter
+     the appearance of any characters displayed using those definitions.
+     The contents of the displayed portion of the video buffer need not be
+     updated. You can exploit this characteristic of RAM-based character
+     definitions to display pixel-addressable graphics images in an
+     alphanumeric mode, thereby displaying text with maximum speed while
+     including pixel-by-pixel graphics images on the same screen.
+
+     The technique is similar on both IBM and Hercules subsystems. Tile an
+     area of the screen with a sequence of characters whose attribute
+     selects a character definition table that contains the graphics image
+     (see Figure 10-17). The graphics image is created and modified by
+     updating the appropriate character definitions in the table. You can
+     regard the character definition table as a sort of virtual graphics
+     buffer and access individual pixels within it just as you do in the
+     usual graphics modes.
+
+     On the InColor Card, you can specify the value of each individual
+     pixel you store in the character definition table as though you were
+     using 720-by-348 16-color graphics mode. On other subsystems, however,
+     only one memory map is used for character definitions, so you do not
+     have pixel-by-pixel attribute control. Instead, pixels in the
+     character definition table have a value of 0 or 1; the attributes with
+     which the character codes are stored in the video buffer determine the
+     appearance of the pixels.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 10-17 is found on page 338     º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 10-17.  A tiled graphics window in an alphanumeric mode.
+
+
+     Listing 10-15 illustrates the technique for producing a tiled graphics
+     window in 80-column alphanumeric mode on the EGA and VGA. The first
+     part of the program creates the tiled window by storing the second 128
+     ASCII characters in four rows of 32 at the start of the video buffer
+     (that is, in the upper left corner of the screen). Then the program
+     clears the window by setting the second 128 character definitions to
+     0.
+
+     To update a pixel in the window, the subroutine SetPixel() computes a
+     byte offset in the character definition table that corresponds to the
+     pixel's location in the tiled window. As in graphics modes, the
+     routine accesses each individual pixel with a bit mask.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-15.  Creating a tiled graphics window on the EGA or
+     VGA.
+
+/* Listing 10-15 */
+
+#define Points          14      /* displayed scan lines per character */
+#define StartCharCode   0x80    /* first character code in "window" */
+#define CGenDefSize     32      /* (use 16 for Hercules) */
+
+char far *CRT_MODE = 0x00400049;        /* BIOS video mode number */
+int  far *CRT_COLS = 0x0040004A;        /* characters per row */
+
+char far *VideoBuffer;                  /* pointer to video buffer */
+char far *CharDefTable = 0xA0000000;    /* pointer to char def RAM */
+                                        /* (use 0xB0004000 for Hercules) */
+main()
+{
+        int     i;
+        int     CharCode;
+        int     CharOffset;
+        int     CharScanLine;
+        int     CharDefOffset;
+        int     Row,Column;
+
+
+        /* establish alphanumeric mode */
+
+        if (*CRT_MODE == 7)             /* set video buffer pointer */
+          VideoBuffer = 0xB0000000;
+        else
+          VideoBuffer = 0xB8000000;
+
+        AlphaModeSet( 8, Points, 8 );
+
+
+        /* establish a tiled graphics window in the upper left corner */
+
+        CharCode = StartCharCode;
+
+        for ( Row=0; Row<4; Row++ )
+          for ( Column=0; Column< 32; Column++ )
+          {
+            CharOffset = (Row*(*CRT_COLS) + Column) * 2;
+            VideoBuffer[CharOffset] = CharCode++;
+          }             
+
+
+        /* clear the window */
+
+        CGenModeSet();          /* make character generator RAM addressable */
+
+        for (CharCode=StartCharCode; CharCode<256; CharCode++ )
+          for ( CharScanLine=0; CharScanLine<Points; CharScanLine++ ) 
+          {
+            CharDefOffset = CharCode*CGenDefSize + CharScanLine;
+            CharDefTable[CharDefOffset] = 0;
+          }
+
+
+        /* draw a few lines */
+
+        for ( i=0; i<256; i++ )         /* horizontal lines */
+        {
+          SetPixel( i, 0 );
+          SetPixel( i, 4*Points-1 );
+        }
+
+        for ( i=0; i<4*Points-1; i++ )  /* vertical lines */
+        {
+          SetPixel( 0, i );
+          SetPixel( 255, i );
+        }
+
+        for( i=0; i<Points*4; i++ )     /* diagonal lines */
+        {
+          SetPixel( i, i );
+          SetPixel( 255-i, i );
+        }
+
+        CGenModeClear();                /* restore alphanumeric mode */
+
+}
+
+SetPixel( x, y )
+int     x,y;            /* pixel coordinates */
+{
+        int     CharCode;
+        int     CharScanLine;
+        int     BitMask;
+        int     CharDefOffset;
+
+
+        CharCode = StartCharCode + (y/Points)*32 + x/8;
+        CharScanLine = y % Points;              /* y MOD Points */
+        BitMask = 0x80 >> (x % 8);              /* 10000000b SHR (x MOD 8) */
+
+        CharDefOffset = CharCode*CGenDefSize + CharScanLine;
+        CharDefTable[CharDefOffset] |= BitMask; /* OR the pixel */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC+ and InColor Card
+
+     Clearly, the size of a tiled graphics window is restricted if you use
+     8-bit character codes because the 8-bit ASCII character set contains
+     only 256 characters. If you configure a Hercules adapter for 12-bit
+     character codes, however, you can create much larger tiled windows
+     without running out of character codes. Also, you can create larger
+     windows by displaying taller characters (that is, by increasing the
+     height of the displayed character matrix). Of course, if you use
+     taller characters you decrease the number of rows of text that you can
+     display at the same time; this can be a drawback in some applications.
+
+     You can use similar programming techniques for alphanumeric graphics
+     on Hercules adapters and on IBM subsystems. For example, Listing
+     10-15 can be modified for use with the HGC+ and InColor Card by
+     changing the values of CGenDefSize and CharDefTable and removing the
+     calls to the functions CGenModeSet() and CGenModeClear().
+
+       ÉÍÍÍ»     In establishing a graphics window on a Hercules card, 
+       º T º     avoid using a character matrix that is 9 pixels wide. 
+       º I º     Because the ninth (rightmost) pixel in each character is 
+       º P º     actually a hardware-generated copy of the eighth dot, you 
+       ÈÍÍÍ¼     cannot control it independently by updating the character 
+                 definition table.
+
+
+EGA and VGA
+
+     On the EGA and VGA, you can create larger tiled graphics windows if
+     you use 9-bit extended character codes. For instance, you could
+     dedicate one 256-character definition table to text characters and a
+     second character definition table to graphics tiling characters.
+     Nevertheless, the EGA and VGA are still limited to displaying no more
+     than 512 different characters at a time, so the largest tiled graphics
+     window is much smaller than it can be on a Hercules adapter.
+
+       ÉÍÍÍ»     When you update pixels in the tiled window, you should 
+       º T º     minimize  the number of times your program resets the
+       º I º     Sequencer (for example, in the routines CGenModeSet() and 
+       º P º     CGenModeClear()). If you reset the Sequencer each time 
+       ÈÍÍÍ¼     you update a pixel, you might create screen interference. 
+                 (Synchronizing Sequencer resets with the vertical retrace 
+                 interval can eliminate this interference but can also 
+                 greatly decrease the speed of a program.) If you draw a 
+                 complicated graphics figure containing many pixels, draw 
+                 the entire figure at one time as in Listing 10-15.
+
+
+MCGA
+
+     Character definition tables in MCGA character generator RAM are
+     formatted differently than those on the EGA and VGA, so a routine that
+     manipulates pixels in character generator RAM must address the tables
+     differently (see Listing 10-16). Also, remember that the screen does
+     not reflect changes to the MCGA's character definition tables until
+     you load the character generator's font pages (see Listing 10-5).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 10-16.  A routine to set pixels in a tiled graphics window on
+     the MCGA.
+
+SetPixel( x, y )
+int     x,y;            /* pixel coordinates */
+{
+        int     CharCode;
+        int     CharScanLine;
+        int     BitMask;
+        int     CharDefOffset;
+
+
+        /* the window is 32 characters across */
+        CharCode = StartCharCode + (y/Points)*32 + x/8;
+        CharScanLine = y % Points;              /* y MOD Points */
+        BitMask = 0x80 >> (x % 8);              /* 10000000b SHR (x MOD 8) */
+
+        CharDefOffset = CharCode*2 + CharScanLine*512 + 1;
+        CharDefTable[CharDefOffset] |= BitMask; /* OR the pixel */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+

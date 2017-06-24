@@ -1,0 +1,397 @@
+
+
+
+             VGA2CGA (c) Copr. 1989 Lawrence Gozum & Marvin Gozum
+          컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+
+                                 User Manual
+
+
+    DISCLAIMER
+
+    This product is distributed AS IS.  The authors specifically disclaim all 
+    warranties ,expressed or implied, including ,but not limited to, implied 
+    warranties of merchantability and fitness for a particular purpose with 
+    respect to defects in the diskette and documentation, and program license 
+    granted herein, in particular, and without limiting operation of the 
+    program license with respect to any particular application use or 
+    purpose.  In no event shall the authors be liable for any loss of profit 
+    or any other commercial damage including but not limited to special, 
+    incidental, consequential or other damages.
+
+
+    LICENSING AGREEMENT
+
+    You may use this program on a TRIAL BASIS only;  this means that you may 
+    freely evaluate the usefulness of this program for 10 DAY TRIAL PERIOD.  
+    Should you find this program useful, you must register it (see last 
+    section of this manual).   You will then be provided with the latest 
+    releases of applications that will run on your system.
+
+    You may freely distribute copies of this program in its UNMODIFIED state 
+    provided you do not include it in other software packages, with the 
+    exception of distributing it as part of a bundle of Public Domain or 
+    shareware programs on a single diskette.  You may not charge more that 
+    $3.50 for copying and/or distributing this program in the absence of 
+    recognized Users Group guidelines (e.g., Association of Shareware 
+    Professionals or New York Amateur Computer Club)
+
+
+    WHAT IS VGA2CGA ?
+
+    VGA2CGA is a utility that converts/views colored GIF pictures (256 colors 
+    and less) and any of the following listed below to [1] error-distributed, 
+    4-color dithered CGA or 16-Color CGA pictures, with a special unsupported 
+    mode; CGA users can convert/view up to 405 colors (from 16 color dither 
+    patterns).  VGA2CGA saves to GIF or .CGX (for the unsupported mode); you 
+    can use VGA2CGA as a CGA viewer for use in batch (.BAT) files.
+
+    1)   ANY colored GIF picture (32 colors and up recommended), with any 
+         size (up to 2048 x 2048 x 256).
+
+    2)   ANY VIEWABLE VGA/MCGA 320x200x256 picture captured with VGACAP;
+
+    3)   VGACAD pictures;
+
+    4)   16-color pictures converted to 320x200x256 with EGA2VGA.
+
+
+
+
+
+
+
+
+
+
+
+
+
+    VGA2CGA uses a unique error-distribution algorithm; it uses a Floyd- 
+    Steinberg matrix with Stucki filter values (8,4,2,2).  Users can 
+    individually adjust the color and contrast levels and dither density.
+
+    CGA2VGA supports a "quarter-resolution" mode by direct manipulation of 
+    CGA registers.  16 colors can be displayed at any time.  The effective 
+    pixel resolution is 640x200x16 with 405 color dither combinations.
+
+    SEE THOSE 256 COLOR GIF PICTURES ON CGA !
+
+
+    WHAT IS VGACAP ?
+
+    VGACAP is a terminate-stay-resident (TSR) utility that captures 256 color 
+    palettes and screens in VGA/MCGA 320x200x256 color mode.  VGACAP will 
+    capture and "Bsave" the pictures of commercial and other Shareware 
+    viewing/painting/graphics/CAD programs.
+
+
+    REQUIREMENTS
+
+    VGA2CGA requires, at the minimum, a 100% IBM Hardware Compatible CGA 
+    card.  Hercules users with HGCIBM may find that the program works on 
+    their system, BUT ONLY WITH OPTION (1) AT THE MAIN MENU.
+
+    SVGA and EEGA card users must set CGA hardware emulation to see the 
+    unsupported 160x100x16 or 80x100x"405" mode  (e.g, "SETMODE IBMCGA" on 
+    STB VGA cards).
+
+    About 512KB of memory is required, although it uses about 2/3 of that.
+
+    You MUST have a VGA or MCGA adaptor (at least BIOS compatible) present 
+    and an analog monitor to use VGACAP.  VGACAP uses less than 2K of RAM.
+
+
+    HOW TO USE VGACAP
+
+    Run VGACAP before entering your painting/CAD or digitized picture 
+    viewer.   Press <ALT-F10>, while viewing your picture in any paint/CAD 
+    program and your current screen and palette will be saved in your default 
+    drive and directory in the standard Bsave format for all BASIC programs.
+
+    The first time you run the program it will save your screen and palette 
+    to SCREEN00.BLD and SCREEN00.PLT respectively.  If there is an existing 
+    SCREENxx.BLD or SCREENxx.PLT file, then it will increment to the next 
+    higher number.  You can use your favorite memory managers to remove this 
+    TSR or reboot to release it from memory.
+
+         Note:  When in DOS or using a picture viewer (e.g., PICEM, VPIC, 
+         VGAGIF) or application which requires a keypress to continue, it is 
+         necessary to hit another key after hitting the 'HOTKEY'.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    LOADING PICTURES INTO VGA2CGA
+
+    Two formats are accepted by VGA2CGA: GIF and BLD/PLT files;  At the start 
+    of the program, you will be prompted to select [G]IF or [B]LD files to to 
+    selected or [Q]uit to exit.
+
+    All pictures are interpolated to a 320x200 size.  As such, SuperVGA GIF 
+    files (e.g., 640x480x256, 800x600x256 and 1024x768x256) are interpolated 
+    to 320x200x256;  SQZGIF is recommended for LARGE GIF pictures to retain 
+    more color information and better color rendition.
+
+    16-color EGA/EEGA/VGA pictures will also be interpolated; use EGA2VGA to 
+    process such pictures before loading into VGA2CGA.
+
+    You can select any filename by moving a highlighted bar (with the arrow 
+    keys) and pressing the <return> key.  Pressing <Spc> allows you to select 
+    a different PATH, while <Esc> exits.  When selecting a *.BLD file, be 
+    sure it has a corresponding  *.PLT file or a error message will result.
+
+    PATHs MUST end with a backslash character "\" or your specified PATH will 
+    be rejected (an error beep will result).  The following are legal PATH 
+    examples:
+
+              "A:\"
+              "B:\"
+              "C:\GIF\"
+              "D:\GIF\VGA\LARGE\"
+
+    Every captured picture, VGACAD picture, converted EGA2VGA or SQZGIF or 
+    MAC2GIF picture will have two files:screen and palette.  The extension 
+    .BLD stands for BLoaD and .PLT for PaLetTe.
+
+
+    THE MAIN MENU
+
+
+    After successful loading of your picture you will see these options:
+
+    (1)  Red-Grn-Yel Plane Dithering 320 x 200 x 4   (IBM-STD w/ GIF save)
+
+    (2)  EGA Low Contrast Emulation  160 x 100 x 16  (NON-STD w/ CGX save)
+    (3)  EGA Med Contrast Emulation  160 x 100 x 16  (NON-STD w/ CGX save)
+    (4)  EGA Hi  Contrast Emulation  160 x 100 x 16  (NON-STD w/ CGX save)
+    (5)  EGA Monochrome   Emulation  160 x 100 x 16  (NON-STD w/ CGX save)
+
+    (6)  HI Color Averaged Dithering  80 x 100 x 405 (NON-STD w/ CGX save)
+    (7)  LO Color Averaged Dithering  80 x 100 x 405 (NON-STD w/ CGX save)
+    (8)  Grey     Averaged Dithering  80 x 100 x 13  (NON-STD w/ CGX save)
+
+    (F)ine Tuning
+    (N)ew Picture
+    (Q)uit
+
+    Select the letter or the number to initiate that function or option.
+
+
+
+
+
+
+
+
+
+
+
+
+    VIEWING & SAVING
+
+    Whenever you select a viewing mode you will have the option change the 
+    path and file names for saving.
+
+              Pathname               : C:\GIF\
+              Filename               : NONAME.GIF
+
+    While viewing the picture in CGA 320x200x4 mode you can change the 
+    palette to alter the tone of the picture by pressing numbers 0-9.
+
+    With unsupproted modes 2 to 8, only saves to a CGX file are allowed since 
+    it is a weird text screen format; the .CGX extension is provided to avoid 
+    confusion with your other .BIN files.   To use VGA2CGA as a viewer type 
+    "VGA2CGA [picname]" without the extension.
+
+    Pressing <return> while viweing saves your converted picture; pressing 
+    <Esc> aborts processing and saving.
+
+
+    FINE TUNING
+
+    To get the BEST color dithering or color matching, interactively adjust 
+    the color levels, contrast levels and dither density levels.
+
+    When you select (F)ine Tuning, you can adjust the global amounts of Red, 
+    Green and Blue in you picture.  At default it is 100%; this can be 
+    increased up to 200%  The CGA 320x200x4 color mode uses only red and 
+    Green; Blue is disregarded.
+
+    While "fine tuning", you can adjust the contrast levels for each of the 
+    RGB planes; this has no effect on color-averaging and is limited to the 
+    red-green-yellow dithering 320x200x4 mode.  Increasing the contrast will 
+    increase the amount of "black" in the picture by making a sharp cutoff 
+    (i.e., no color will be plotted).
+
+    Dither Density is how closely packed neighboring pixel will be; at 
+    default this is set to 1 - the highest density possible.  If you want to 
+    "spread the dots" you can increase this level up to 200.
+
+
+    REGISTRATION
+
+
+    BONUS: Registered users of VGACAD v1.4-1.5, VGA2EGA v1-2, SQZGIF 
+           v1.0-v1.3, GIFDOT v1.0-1.3, MAC2GIF v1-2 and/or EGA2VGA v1-3 
+           and/or GIFPUB v1.0-v1.4 are registered.  Copy your REGISTER.OVL 
+           file into the directory of VGA2CGA and it will operate as a 
+           registered version.  IF YOU HAVE NOT REGISTERED ANY OF THESE 
+           PROGRAMS, DO SO NOW; when VGACAD v1.60 is released, all new 
+           releases will require REGISTER.V16 to operate as a non-shareware 
+           version.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    For 19.95 (outside of U.S.A. add USD $15.00) you will be entitled to the 
+    latest update of VGA2CGA and REGISTER.V16 file (when released).  The 
+    following programs listed below are provided (latest copy or update) to 
+    registered users.  As much as possible, we are changing all utilities to 
+    work with ANY video card; programs that, at present, work with ANY video 
+    card are: GIFPUB, GIFDOT, EGA2VGA, MAC2GIF and SQZGIF.  We intend to 
+    release as many utilities to with device-independent capabilities. If you 
+    upgrade to EGA or VGA, please inform us as soon as possible so that we 
+    may send you EGA-dependent and VGA-dependent releases too.
+
+
+    * Device-independent utilities
+
+    GIFPUB - converts 256 color GIFs to B&W images of varying sizes for 
+    desktop publishing/printing as .PCX (ZSoft format for Ventura Desk Top 
+    Publisher, First Publisher, Publisher's Paintbrush, PC  Paintbrush+) or 
+    rename files to .PCC for importing in Aldus Pagemaker.
+
+    GIFDOT - converts 256 color GIFs to B&W images of varying sizes for 
+    printing on IBM and Epson compatible printers (separate drivers).  
+    Several print sizes with perfect aspect ratios.  Variable Brightness and 
+    Contrast Stretching. Single or Double pass printing.  Histogram Analysis
+
+    SQZGIF - converts LARGE GIF pictures (up to 2048x2048x256) to 320x200x256 
+    using interpolation and "color averaging" techniques to blend/smooth 
+    "jaggies" inherent in reducing LARGE GIFS while retaining a maximum of 
+    color information.
+
+    MAC2GIF - converts .MAC ("readmac") pictures to 5-16 grey shades or color 
+    and saves results as .GIF or BLD/PLT file, and other formats; graphics 
+    are viewable in VGA, MCGA or EGA - no video card is required for direct 
+    Black & White conversion to GIF.
+
+    EGA2VGA (v3.0) - converts GIFs (16 colors and below) or ANY VIEWABLE 2-16 
+    color EGA/EEGA picture to 320x200x256; creates 256 new colors; outputs 
+    directly to GIFPUB, GIFDOT, VGACAD, VGA2CGA or VGA2EGA.
+
+
+    * Device-dependent utilities/applications
+
+    VGA2EGA - Conversion program for displaying 256 color pictures on 
+    EGA-bound systems.  Features extensive control of RGBCMY color, contrast, 
+    dithering levels.  Variable Sizing.  Extended EGA support. Saves to GIF.  
+    Optional PCX save to 4 RGBI planes for Desktop Color Separation.
+
+    VGACAD - extensive paint/image processing program for VGA/MCGA users;  
+    v1.50 features extensive paintingcapabilities, an integrated GIF 
+    interface, Airbrushes, color and grey image processing functions 
+    (smoothing, noise removal, shading, contrast stertching, edge detection, 
+    high frequency-boosting, ... more), Bezier/spline curves, multi-featured 
+    Cut&Paste, variable sizing, multi-directiona 256-color gradient fills, 
+    256 color 16x16 pattern fills, and a LOT of other 256-color capabilities.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Whats next ?
+
+    SYNPCX is utility to convert dithered, monochrome .PCX (Zsoft) files to 
+    smooth grey shades.  This utility is primarily designed to convert 
+    scanned (e.g., Logitech & DFI hand scanners) Black & White images, saved 
+    to a .PCX file, for use and image processing with VGACAD, redithering 
+    with GIFPUB, printing with GIFDOT, or EGA conversion with VGA2EGA.  
+    SYNPCX will be graphics device independent (No Video Required).
+
+     We are also, developing VGASHW (a 256-color presentation system), VGACBT 
+    (the PROGRAMMABLE Computer-Based Training counterpart of VGASHW) AND 
+    MANNEQUIN (what "Weird Science" tried to do in the movie it will do on 
+    the computer screen with potential applications for Advertising and 
+    Fashion Design, aside from creating your own artistic nudes).
+
+    If you support maverick authors like us, we will continue to develop 
+    innovative products like nothing seen commercially - otherwise they will, 
+    as many (sigh!) good Shareware programs, simply "DIE" from lack of 
+    support !  Compare the cost/benefit ratio of any of our products with 
+    commercial products; we want to continue supporting and developing these 
+    products.  Please support the User-Supported  (Shareware) concept; you, 
+    and you alone, determine whether it will be worthwhile to continue 
+    developing.
+
+    To register, send in the registration form and check payable to
+
+                             Dr. Marvin Gozum
+                      2 Independence Place Apt. 303-2
+                            6th & Locust Street
+                          Philadelphia, PA 19106
+
+
+    NEW!      3.5" disk users:  We are now supporting this format.
+              If you want your updates in this format, add $10.00.
+
+
+
+
+    컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+    Graphics Interchange Format and GIF are trademarks (tm)
+    of CompuServe Inc. an H&R Block Company. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

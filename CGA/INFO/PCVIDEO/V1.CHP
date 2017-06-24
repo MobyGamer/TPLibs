@@ -1,0 +1,882 @@
+
+TITLE PAGE
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+               PROGRAMMER'S GUIDE TO PC(R) AND PS/2(TM) 
+
+                            VIDEO SYSTEMS 
+
+
+    Maximum Video Performance from the EGA(TM), VGA, HGC, and MCGA 
+
+
+
+
+                            RICHARD WILTON 
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+PUBLISHED BY
+Microsoft Press
+A Division of Microsoft Corporation
+16011 NE 36th Way, Box 97017, Redmond, Washington 98073-9717
+
+Copyright(C) 1987 by Richard Wilton
+All rights reserved. No part of the contents of this book may
+be reproduced or transmitted in any form or by any means without
+the written permission of the publisher.
+
+Library of Congress Cataloging in Publication Data
+Wilton, Richard, 1953-
+The programmer's guide to PC and PS/2 video systems.
+Includes index.
+1. IBM Personal Computer--Programming.  2. Expansion boards
+   (Microcomputers).
+3. Computer graphics.  I. Title.
+QA76.8.I2594W55    1987    005.265    87-20264
+ISBN 1-55615-103-9
+
+Printed and bound in the United States of America.
+
+1 2 3 4 5 6 7 8 9  FGFG  8 9 0 9 8 7
+
+Distributed to the book trade in the
+United States by Harper & Row.
+
+Distributed to the book trade in
+Canada by General Publishing Company, Ltd.
+
+Distributed to the book trade outside the
+United States and Canada by Penguin Books Ltd.
+
+Penguin Books Ltd., Harmondsworth, Middlesex, England
+Penguin Books Australia Ltd., Ringwood, Victoria, Australia
+Penguin Books N.Z. Ltd., 182-190 Wairau Road, Auckland 10, New Zealand
+
+British Cataloging in Publication Data available
+
+
+Acquisitions Editor: Claudette Moore
+Technical Editor: Jeff Hinsch
+
+
+IBM(R) is a registered trademark and PC/AT(TM), PC-DOS(TM), PC/XT(TM), and
+PS/2(TM) are trademarks of International Business Machines Corporation.
+Microsoft(R) and MS-DOS(R) are registered trademarks of Microsoft
+Corporation.
+
+
+
+     Contents
+
+
+
+     Acknowledgments
+
+     Introduction
+
+
+      1     IBM Video Hardware and Firmware
+
+      2     Programming the Hardware
+
+      3     Alphanumeric Modes
+
+      4     Graphics Modes
+
+      5     Pixel Programming
+
+      6     Lines
+
+      7     Circles and Ellipses
+
+      8     Region Fill
+
+      9     Graphics Text
+
+     10     Alphanumeric Character Sets
+
+     11     Bit Blocks and Animation
+
+     12     Some Advanced Video Programming Techniques
+
+     13     Graphics Subroutines in High-Level Languages
+
+     Appendix A: Video BIOS Summary
+
+     Appendix B: Printing the Screen
+
+     Appendix C: Identifying Video Subsystems
+
+     Glossary
+
+     Index
+
+
+
+Acknowledgments
+
+
+
+     The material in Chapters 6, 7, and 8 owes a great deal to the orig-
+     inal efforts of several respected workers in the field of computer
+     graphics. In each of these chapters I have included references to some
+     of their best-known publications. If you are intrigued by the
+     algorithms described in these chapters, by all means obtain the
+     original publications and explore them yourself.
+
+     This book could not have been written without the encouragement of my
+     family, friends, and colleagues, who deserve great thanks for their
+     patience and support. My gratitude also to Andy Fischer and to Charles
+     Petzold, both of whom graciously reviewed portions of this book and
+     offered accurate criticism and suggestions.
+
+     And, of course, my special thanks to the enthusiastic people at
+     Microsoft Press--Claudette Moore, Jeff Hinsch, and many others--who
+     painstakingly transformed the raw material of this book into the
+     finished product.
+
+
+
+Introduction
+
+
+
+     I clearly remember the day I first plugged a new IBM Enhanced Graphics
+     Adapter (EGA) into an IBM PC. It was good to have IBM's new "enhanced"
+     video hardware, with its better resolution and control over colors, as
+     well as features not found in any of IBM's earlier PC video hardware.
+     Now I was ready to write some really sharp graphics applications.
+
+     Or so I thought. The problem was, I couldn't figure out how to program
+     the contraption. I had no technical documentation at all. (It arrived
+     in the mail six months and $125 later.) I tried disassembling the
+     EGA's ROM BIOS, but studying 6000 uncommented machine instructions
+     soon raised more questions than it answered. I desperately tried the
+     shotgun approach--changing the contents of memory locations and
+     machine registers just to see what would happen--but this was like
+     chopping out random pieces of an automobile just to see what would
+     stop working.
+
+     What I lacked was the details--conceptual descriptions of the hardware
+     design, tables describing the programming interface, and, above all,
+     source code examples for some typical programming techniques. A few
+     well-chosen source code examples would have saved many hours of
+     experimentation and frustration when I was trying to understand how to
+     program that video adapter.
+
+     This book was inspired by the painful memory of that experience. It is
+     filled with source code examples. Its text describes the source code,
+     and vice versa. This book also has many tables and summary
+     descriptions of the hardware programming interface. In short, this
+     book is what I wish I'd had when I started to program PC video
+     hardware.
+
+
+What This Book Is About
+
+     The first chapter of this book is a general overview of the video
+     display environment. It describes the commonly used PC and PS/2 video
+     hardware the rest of the book deals with. It also introduces you (if
+     you aren't already on speaking terms) to the well-known ROM BIOS video
+     support routines.
+
+     The next 10 chapters contain the nuts and bolts of IBM video
+     programming. The earlier chapters cover the fundamentals, including
+     hardware architecture, video display modes, and the nature of the
+     interface between your programs and the hardware. The later chapters
+     build upon the fundamentals to demonstrate a number of techniques for
+     producing text and graphics output.
+
+     The last two chapters of this book take you to the low and high levels
+     of video graphics programming. Chapter 12 is the hardware tinkerer's
+     chapter--if you want to work with vertical interrupts or play with bit
+     planes, this one's for you. Finally, Chapter 13 tells how to link
+     your video hardware drivers to high-level programs and introduces you
+     to several commercial video output packages.
+
+
+What You Need to Use This Book
+
+     This book is not really meant for beginners. That's not to say that a
+     programmer who is just learning how to write working code will not
+     benefit from this material. On the contrary, the many working examples
+     of useful source code should be valuable to anyone who plans to do
+     serious programming for PCs or PS/2s. Nevertheless, the broader your
+     programming background, the more tools you will have for solving the
+     diverse and exacting problems involved in video programming.
+
+Languages
+
+     I use assembly language and C for most of the programming examples in 
+     this book, although I intentionally avoid some of C's more cryptic
+     syntactic constructs. If you are comfortable with assembly language
+     and with a high-level language such as C, Pascal, FORTRAN, PL/1, or
+     structured BASIC, you should have no problem reading the source code
+     examples.
+
+     Moreover, Chapter 13 discusses interfaces for several high-level
+     languages using different memory models and subroutine-calling
+     protocols. You can follow the guidelines there to convert any of the
+     C-callable source code examples to the subroutine-calling protocol
+     used by your favorite language translator.
+
+     You might want to use some other programming tools if you plan to
+     experiment with the source code examples that follow. For example, a
+     good assembly-language debugger can be extremely helpful. You will
+     probably need an object linker if you plan to call the assembly-
+     language routines in this book from high-level-language programs.
+     Also, as source files and object modules proliferate, you might find a
+     UNIX-like make utility quite useful in keeping things straight.
+
+Operating System
+
+     Everything in this book is intended to run under MS-DOS, or PC-DOS,
+     version 2.0 or later. However, there is nothing in any of the source
+     code that verifies which operating system is in use, so be careful if
+     you transport the code to earlier versions of MS-DOS or to another
+     operating system.
+
+Hardware
+
+     Having a PC or PS/2 with a video display attached is essential. Video
+     programming is like swimming: It's one thing to read about it, but
+     it's quite another experience to try it yourself. In fact, if you plan
+     to do a great deal of video programming, you should consider
+     installing two different video subsystems and displays in your PC.
+     With two separate sets of video hardware in the same computer, you can
+     run a debugger on one screen while a test program produces output on
+     the other screen. This dual-display hardware configuration is a real
+     timesaver, particularly when you're developing video graphics routines
+     such as those described in Chapters 5 through 9.
+
+     Here is a list of the various computers and video adapters I used to
+     develop the techniques discussed in this book:
+
+     Computers
+       IBM PC/XT
+       IBM PC/AT
+       IBM PS/2 Model 30
+       IBM PS/2 Model 60
+
+     Adapters
+       IBM Monochrome Display Adapter
+       IBM Color Graphics Adapter
+       IBM Enhanced Graphics Adapter
+       IBM PS/2 Display Adapter
+       Hercules Graphics Card
+       Hercules Graphics Card Plus
+       Hercules Color Card
+       Hercules InColor Card
+
+     If you are using one of these computers or adapters, or a hardware-
+     compatible clone, then you should be able to run the source code
+     examples.
+
+Manuals
+
+     To program IBM PC video hardware effectively, you need to know what
+     the hardware is designed to do and how software and the system BIOS
+     are expected to interact with it. This basic information is found in
+     IBM's Technical Reference manuals for the PC, PC/XT, PC/AT, and PS/2s
+     and in its Options and Adapters Technical Reference manuals. Most
+     second-source manufacturers of IBM PC video equipment also provide
+     detailed technical information on their hardware.
+
+     The material in this book is intended to complement the discussions in
+     the manufacturers' technical documentation. I tried to follow the
+     manufacturers' terminology and hardware descriptions wherever
+     possible. However, the manufacturers' documentation goes somewhat awry
+     at times. If you find a discrepancy between the official documentation
+     and this book, you can (I hope) rely on this book to contain the right
+     information.
+
+     Still, in a book this size, I have certainly made some mistakes. I
+     welcome your comments, criticisms, and suggestions.
+
+     I have found that writing good video software is challenging, but the
+     rewards are particularly satisfying. I hope to share some of the
+     challenges--and some of the satisfaction--with you in this book.
+
+
+
+                    1  IBM Video Hardware and Firmware
+
+
+                      IBM PC and PS/2 Video Hardware
+         IBM Monochrome Display Adapter and Color Graphics Adapter
+           Hercules Graphics Card ş Hercules Graphics Card Plus
+           IBM Enhanced Graphics Adapter ş Hercules InColor Card
+             Multi-Color Graphics Array ş Video Graphics Array
+
+                  Introduction to the ROM BIOS Interface
+                  Interrupt 10H ş Video Display Data Area
+            Accessing the Video BIOS from a High-Level Language
+
+
+
+     Microcomputer video systems keep getting better. Since the
+     introduction of the IBM PC in 1981, engineering technology has
+     improved, and the market for more powerful video hardware has widened.
+     Both IBM and its competitors have responded by developing increasingly
+     sophisticated video adapters and displays, as well as the software to
+     accompany them.
+
+     This chapter provides an overview of the evolution of IBM PC and PS/2
+     video hardware. This overview is by no means comprehensive, but it
+     covers the most widely used video equipment that IBM and Hercules
+     offer. The chapter concludes with an introduction to IBM's video BIOS,
+     a set of drivers built into ROM in all IBM PCs and PS/2s, which
+     provides a basic programming interface for video applications.
+
+
+IBM PC and PS/2 Video Hardware
+
+
+     A "plain vanilla" IBM PC/XT or PC/AT contains no built-in video
+     hardware, so you must select and install the video hardware yourself.
+     In a typical configuration, a video display (monitor) is attached with
+     a 9-wire cable to a video adapter installed inside the PC. A typical
+     video adapter is a printed circuit board with a 9-pin connector that
+     attaches to the monitor's cable and a 2-by-31-connection card-edge tab
+     that inserts into one of the slots on the PC's motherboard. Figure
+     1-1 shows these connectors, as well as some of the integrated
+     circuits common to many IBM video adapters. The circuitry in the video
+     adapter generates the signals that control what is displayed on the
+     monitor's screen.
+
+     When you purchase an IBM PC, you must decide which video adapter and
+     monitor to use. The most widely used video adapters with the most
+     software written for them are IBM's Monochrome Display Adapter, Color
+     Graphics Adapter, and Enhanced Graphics Adapter, and the monochrome
+     Graphics Card made by Hercules.
+
+     In contrast, all IBM PS/2 series computers are equipped with a built-
+     in video subsystem, so purchasing a separate video adapter is
+     unnecessary. The video subsystem in the PS/2 Models 25 and 30 is
+     called the Multi-Color Graphics Array. In Models 50, 60, and 80, the
+     integrated video subsystem is commonly known as the Video Graphics
+     Array. The Video Graphics Array subsystem also is available as an
+     adapter for the PC/XT, PC/AT, and PS/2 Model 30. This adapter has
+     essentially the same hardware features as the integrated  PS/2
+     subsystem.
+
+
+IBM Monochrome Display Adapter and Color Graphics Adapter
+
+     When the PC was introduced in 1981, IBM offered two video adapters:
+     the Monochrome Display Adapter (MDA) and the Color Graphics Adapter
+     (CGA). The MDA is designed for use with a monochrome monitor (the IBM
+     Monochrome Display) that displays 80 columns and 25 rows of
+     alphanumeric text. The CGA supports either an RGB display (a monitor
+     with separate input signals for red, green, and blue) or a home
+     television set (which uses a composite video signal). The CGA, of
+     course, can display graphics information on a dot-by-dot basis as well
+     as alphanumeric text.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 1-1 is found on page 3         º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+           Figure 1-1.  A typical IBM PC video adapter.
+
+
+     Even though both the MDA and the CGA can display 25 rows of 80-column
+     text, most people find the MDA's green monochrome display easier on
+     the eyes. This is because the monochrome display used with an MDA has
+     significantly higher resolution than that of any monitor you can use
+     with the CGA. Its resolution is 720 dots wide and 350 dots high; the
+     maximum resolution of a CGA-driven display is 640 dots wide and 200
+     dots high.
+
+     Both adapters display characters in a rectangular matrix of dots. A
+     simple calculation shows that each character is 9 dots wide and 14
+     dots high on a Monochrome Display but only 8-by-8 dots on a CGA
+     display. The MDA's higher resolution produces more crisply defined
+     characters that are easier to read. For this reason, most PC users who
+     need to read text prefer an MDA to a CGA.
+
+     On the other hand, many computer users need to display charts,
+     diagrams, and other graphics information in addition to alphanumeric
+     text. Also, displaying colors on the screen is essential to many
+     computer applications. Because the MDA can display only monochrome
+     text, PC users who need graphics output can compromise by using the
+     CGA, with its dot-by-dot color graphics capability but less-readable
+     text.
+
+     Why not just attach the higher-resolution monochrome display to a
+     Color Graphics Adapter and get the best of both worlds? Unfortunately,
+     the video signals generated by an MDA are incompatible with those
+     required to drive a CGA monitor, and vice versa. Mismatching the
+     monitor and the adapter leads to a malfunctioning monitor instead of a
+     higher-resolution display.
+
+     If you need sharp, readable text as well as color graphics, and you
+     can afford the extra equipment, you can install both an MDA and a CGA
+     in the same PC. You can then use the monochrome display (attached to
+     the MDA) for text processing and an RGB color display (driven by the
+     CGA) for color graphics.
+
+
+Hercules Graphics Card
+
+     Hercules' solution to the problem of displaying readable text and dot-
+     by-dot graphics on the same monitor was to add graphics capability to
+     a monochrome display adapter. The monochrome Hercules Graphics Card
+     (HGC), introduced in 1982, can display graphics and alphanumeric text
+     on the same green monochrome display that is used with an IBM MDA. (In
+     addition to its graphics capabilities, the HGC exactly duplicates the
+     function of IBM's original MDA.) The ability to display a combination
+     of readable text and monochrome graphics is sufficient for many
+     applications, so many PC users find the HGC an economical option.
+     Because it has received support from major software vendors, the HGC
+     has become firmly established in the marketplace.
+
+
+Hercules Graphics Card Plus
+
+     The HGC+ was released in June 1986. The big difference in this upgrade
+     of the original HGC is that it can display customized, RAM-based
+     alphanumeric character sets, whereas the MDA and HGC can display only
+     one, predefined, ROM-based alphanumeric character set. Because
+     alphanumeric characters can be displayed much more rapidly than dot-
+     by-dot graphics characters, using the HGC+ can double or triple the
+     speed of some text-oriented applications.
+
+
+IBM Enhanced Graphics Adapter
+
+     A different response to the demand for better text and graphics
+     resolution is IBM's Enhanced Graphics Adapter (EGA), released in early
+     1985. The EGA can be configured to emulate either an MDA or a CGA;
+     what makes the EGA "enhanced" is that it can also do things its
+     predecessors cannot. Unlike the MDA, the EGA can produce dot-by-dot
+     graphics on a monochrome display. Furthermore, the EGA improves on the
+     CGA with the ability to generate 16-color alphanumeric or graphics
+     images with 640-by-350 resolution.
+
+     Although the resolution and color capabilities of the EGA are not that
+     much greater than those of the CGA, both text and graphics appear much
+     sharper on the EGA than on the CGA. The availability of low-priced EGA
+     clones and of high-quality software applications that exploit the
+     adapter's capabilities have made the EGA a de facto hardware standard
+     in the marketplace.
+
+
+Hercules InColor Card
+
+     The Hercules InColor Card, introduced in April 1987, is essentially a
+     16-color version of the HGC+. The InColor hardware fully emulates the
+     HGC+, so programs that run properly on the HGC+ can run without change
+     on the InColor Card. The InColor Card's resolution is the same as that
+     of the HGC and HGC+: 720 horizontal by 348 vertical pixels. The
+     adapter's color capabilities equal those of the EGA. It can display 16
+     colors at once from a palette of 64 colors. The adapter must be used
+     with an EGA-compatible color display that has 350-line vertical
+     resolution.
+
+       ÉÍÍÍ»     Don't confuse the InColor Card with the Hercules Color
+       º T º     Card, an augmented CGA clone designed for use in the same
+       º I º     computer with an HGC or HGC+.
+       º P º
+       ÈÍÍÍ¼
+
+
+Multi-Color Graphics Array
+
+     The Multi-Color Graphics Array (MCGA) is the video subsystem
+     integrated into the PS/2 Models 25 and 30. From a programmer's
+     perspective, the MCGA resembles the CGA in many ways, yet the MCGA has
+     much better resolution (a maximum of 640 horizontal by 480 vertical
+     dots) and improved color-display capabilities.
+
+     A significant difference between the MCGA and the above video adapters
+     is that the MCGA generates analog RGB video signals, whereas the
+     others produce digital RGB signals. The difference between digital and
+     analog RGB is something like the difference between an on-off wall
+     switch and a dimmer switch. With digital RGB signals, the video
+     display must recognize only whether the signal for a particular color
+     (red, green, or blue) is on or off. On the other hand, a video display
+     that uses analog RGB signals translates the voltage of each signal
+     into a wide range of corresponding color intensities. Only an analog
+     video display can be used with the MCGA.
+
+       ÉÍÍÍ»     Some video monitors can be configured for either analog or
+       º T º     digital video signals. If you use the right cable, these
+       º I º     monitors can be connected to an MCGA if they are
+       º P º     configured for analog video.
+       ÈÍÍÍ¼
+
+     The justification for using analog video is that it can display a
+     wider range of colors. The MCGA has a video Digital to Analog
+     Converter (DAC) that enables the subsystem to display as many as 256
+     different colors at once from a palette of 262,144 (256 K or 2^18)
+     colors. In addition to an analog color display, IBM supplies an analog
+     monochrome display for use with the MCGA. With a monochrome monitor,
+     the MCGA can display as many as 64 shades of gray.
+
+
+Video Graphics Array
+
+     The term Video Graphics Array (VGA) refers specifically to part of the
+     circuitry of the video subsystem in PS/2 Models 50, 60, and 80. The
+     VGA is actually a single chip that integrates the same set of
+     functions performed by several chips on the EGA. Nevertheless, people
+     generally use the abbreviation VGA to describe the entire video
+     subsystem.
+
+     The VGA's programming interface is similar to the EGA's, so many
+     programs written for the EGA will run unchanged on the VGA. The VGA is
+     capable of somewhat higher display resolution (as much as 720-by-400
+     in text modes, or 640-by-480 in graphics modes). Like the MCGA,
+     however, the VGA contains a video DAC that can generate 256 colors at
+     a time from a possible 262,144. Because the VGA generates the same
+     analog RGB signals as the MCGA, it must be used with the same analog
+     monochrome or color monitors.
+
+
+Introduction to the ROM BIOS Interface
+
+
+     A set of BIOS (Basic Input/Output System) routines in ROM is built
+     into every IBM PC and PS/2. The ROM BIOS routines provide an interface
+     to standard hardware features, including the time-of-day clock, the
+     keyboard, floppy and hard disks, and of course the video subsystem.
+     The video BIOS routines comprise a set of simple tools for performing
+     basic video programming tasks such as writing strings of characters to
+     the screen, erasing the screen, changing colors, and so on.
+
+     Although the ROM BIOS video routines are sometimes slow and relatively
+     unsophisticated, programs that use them are portable among different
+     video subsystems in IBM PCs and PS/2s. Furthermore, most manufacturers
+     of IBM PC clones have duplicated the functions of IBM's BIOS in their
+     machines. Thus, a program that uses BIOS routines to access the video
+     hardware is likely to be more portable than one that does not.
+
+
+Interrupt 10H
+
+     The BIOS routines are written in assembly language, so accessing them
+     is easiest when you program in assembly language. All BIOS video
+     routines are accessed by executing 80x86 software interrupt 10H. (The
+     term 80x86 refers to the microprocessors in the Intel 8086 family:
+     8086, 8088, 80286, and 80386.) For this reason, the ROM BIOS video
+     interface is widely known as the INT 10H interface. The ROM BIOS
+     supports a number of video input/output functions, each accessed by
+     executing interrupt 10H. The functions are numbered; before executing
+     interrupt 10H, you place the number of the desired function in 80x86
+     register AH.
+
+     At the time the interrupt is executed, the remaining 80x86 registers
+     usually contain parameters to be passed to the BIOS routines. If the
+     INT 10H function returns data to your program, it does so by leaving
+     the data in one or more of the 80x86 registers. This register-based
+     parameter-passing protocol is intended for use in assembly-language
+     programs.
+
+     To see how the INT 10H interface is typically used, examine the
+     assembly-language routine SetVmode() in Listing 1-1. This routine can
+     be linked with a program written in Microsoft C. (The underscore
+     preceding the procedure name, the near keyword in the PROC
+     declaration, and the use of the stack to pass parameters all follow
+     Microsoft C conventions.) The heart of the routine is its call to the
+     ROM BIOS to configure the video hardware for a particular video mode.
+     (The details of this operation are discussed in Chapter 2 and in
+     Appendix A.)
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 1-1.  SetVmode().
+
+                TITLE   'Listing 1-1'
+                NAME    SetVmode
+                PAGE    55,132
+
+;
+; Name:         SetVmode
+;
+; Function:     Call IBM PC ROM BIOS to set a video display mode.
+;
+; Caller:       Microsoft C:
+;
+;                       void SetVmode(n);
+;
+;                       int n;                  /* video mode */
+;
+
+ARGn            EQU     byte ptr [bp+4] ; stack frame addressing
+
+EQUIP_FLAG      EQU     byte ptr ds:[10h] ; (in Video Display Data Area)
+
+CGAbits         EQU     00100000b       ; bits for EQUIP_FLAG
+MDAbits         EQU     00110000b
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _SetVmode
+_SetVmode       PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    ds
+
+                mov     ax,40h
+                mov     ds,ax           ; DS -> Video Display Data Area
+
+                mov     bl,CGAbits      ; BL := bits indicating presence of CGA
+
+                mov     al,ARGn         ; AL := desired video mode number
+
+                mov     ah,al           ; test if desired mode is monochrome
+                and     ah,7
+                cmp     ah,7
+                jne     L01             ; jump if desired mode not 7 or 0Fh
+
+                mov     bl,MDAbits      ; BL := bits indicating presence of MDA
+
+L01:            and     EQUIP_FLAG,11001111b
+                or      EQUIP_FLAG,bl   ; set bits in EQUIP_FLAG
+
+                xor     ah,ah           ; AH := 0 (INT 10h function number)
+
+                push    bp
+                int     10h             ; call ROM BIOS to set the video mode
+                pop     bp
+
+                pop     ds              ; restore caller registers and return
+                mov     sp,bp
+                pop     bp
+                ret
+
+_SetVmode       ENDP
+
+_TEXT           ENDS
+
+                END
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The actual call to the video BIOS is simple. First, the desired
+     function number is placed into register AH (XOR AH,AH). Then, after
+     preserving the contents of register BP on the stack (PUSH BP), the
+     routine invokes the ROM BIOS function by executing interrupt 10H
+     (INT 10H).
+
+     In Listing 1-2, a complementary routine called GetVmode() interrogates
+     the BIOS for the number of the current video mode. The routine obtains
+     this number by executing interrupt 10H function 0FH. The ROM BIOS
+     function leaves the mode number in register AL. GetVmode() then
+     returns the number to the calling program.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 1-2.  GetVmode().
+
+                TITLE   'Listing 1-2'
+                NAME    GetVmode
+                PAGE    55,132
+
+;
+; Name:         GetVmode
+;
+; Function:     Call IBM PC ROM BIOS to set a video display mode.
+;
+; Caller:       Microsoft C:
+;
+;                       int     GetVmode();
+;
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _GetVmode
+_GetVmode       PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ah,0Fh          ; AH := 0Fh (INT 10h function number)
+
+                push    bp
+                int     10h             ; call ROM BIOS to get video mode number
+                pop     bp
+
+                xor     ah,ah           ; AX := video mode number
+
+                mov     sp,bp
+                pop     bp
+                ret
+
+_GetVmode       ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Video Display Data Area
+
+     The code that precedes the actual call to the ROM BIOS in Listing 1-1 
+     modifies one of several global variables that reflect the status of
+     the PC's video subsystem. These variables are updated and referenced
+     by all ROM BIOS video routines. They are collected in a block of RAM
+     called, in IBM's technical documentation, the Video Display Data Area
+     (or Video Control Data Area). The Video Display Data Area consists of
+     two blocks of RAM. The first block is found between memory locations
+     0040:0049 and 0040:0066, the second between 0040:0084 and 0040:008A.
+
+     Some video BIOS routines also reference a 2-bit field in a global
+     variable at 0040:0010 (called EQUIP_FLAG in IBM's technical
+     documentation). Bits 4 and 5 of this variable indicate a default video
+     mode to be used when the computer is first booted. The code in
+     SetVmode() updates this bit field to conform with the video mode being
+     selected. For example, if a Monochrome Display Adapter (MDA) is
+     required for the desired video mode, the bit field in EQUIP_FLAG is
+     updated accordingly. (Again, details on ROM BIOS video modes are found
+     in Chapter 2 and in Appendix A.)
+
+       ÉÍÍÍ»     Throughout this book are references to the INT 10H
+       º T º     interface, the BIOS's Video Display Data Area, and the
+       º I º     symbolic names of specific locations in the Video Display
+       º P º     Data Area that are of particular interest. If you aren't
+       ÈÍÍÍ¼     already familiar with the available INT 10H functions and
+                 the contents of the Video Display Data Area, a perusal of
+                 Appendix A might be very helpful.
+
+
+Accessing the Video BIOS from a High-Level Language
+
+     You can make ROM BIOS routines accessible in high-level language
+     programs with an assembly-language routine such as SetVmode() or
+     GetVmode(). Listings 1-3 and 1-4 are short C programs that can be
+     executed as MS-DOS commands. The program in Listing 1-3 calls
+     SetVmode() to select a video mode. This program may be executed
+     interactively or from a batch file. The program in Listing 1-4 calls
+     GetVmode() and returns the video mode number in a way that can be used
+     in a batch file (that is, with IF ERRORLEVEL == commands).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 1-3.  A C program based on SetVmode().
+
+/* Listing 1-3 */
+
+main( argc, argv )
+int     argc;
+char    **argv;
+{
+        int     ModeNumber;
+        void    SetVmode();
+
+
+        if (argc != 2)                  /* verify command line syntax */
+        {
+          printf( "\nSyntax:  SETVMODE n\n" );
+          exit( 1 );
+        }
+
+        sscanf( argv[1], "%x", &ModeNumber );   /* get desired mode number */
+
+        SetVmode( ModeNumber );                 /* call ROM BIOS via INT 10h */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 1-4.  A C program based on GetVmode().
+
+/* Listing 1-4 */
+
+main()
+{
+        int     GetVmode();
+
+        return( GetVmode() );
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The overall process of generating an executable file for one of these
+     programs consists of compiling the C code to produce an object module,
+     assembling the assembly-language code to produce another object
+     module, and linking the object modules to create the executable file.
+     If the C source code in Listing 1-3 is contained in a file named SM.C
+     and the assembly code in Listing 1-1 is saved in SETVMODE.ASM, you
+     can build the executable file SM.EXE as follows:
+
+
+msc       sm;          (compile the C code)
+masm      setvmode;    (assemble the subroutine)
+link      sm+setvmode; (link the object modules)
+
+
+       ÉÍÍÍ»     Some high-level language compilers can generate
+       º T º     appropriate object code for loading the 80x86 registers,
+       º I º     executing interrupt 10H, and copying the results from the
+       º P º     registers to the calling program. If your compiler has
+       ÈÍÍÍ¼     this capability, you might prefer to access the INT 10H
+                 interface directly, instead of linking an assembly-
+                 language subroutine to your high-level program. For
+                 example, Listing 1-5 uses Microsoft C's int86() function
+                 to implement GetVmode().
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 1-5.  Microsoft C's int86() function.
+
+/* Listing 1-5 */
+
+#include        "dos.h"
+
+main()
+{
+        struct  BYTEREGS regs;          /* BYTEREGS defined in dos.h */
+
+
+        regs.ah = 0x0F;                 /* AH=0x0F (ROM BIOS function number) */
+
+        int86( 0x10, &regs, &regs );    /* perform interrupt 10h */
+
+        return( (int)regs.al );
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Many other INT 10H functions are available in the ROM BIOS. Your
+     application program accesses them by loading the appropriate registers
+     and executing interrupt 10H. Although the INT 10H support for video
+     input/output admittedly is less than perfect, it is widely used in
+     operating-system software (including MS-DOS) as well as in countless
+     applications. If you want to write effective video and graphics
+     programs, become familiar with the capabilities and the limitations of
+     the INT 10H interface.
+

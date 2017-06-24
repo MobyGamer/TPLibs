@@ -1,0 +1,944 @@
+
+
+                      7  Circles and Ellipses
+
+                      Circles and Pixel Scaling
+
+                    An Ellipse-drawing Algorithm
+                     Scan-converting an Ellipse
+                      An Incremental Algorithm
+                      A Typical Implementation
+                        Problems and Pitfalls
+                              Accuracy
+
+                            Optimization
+
+                              Clipping
+
+                            True Circles
+
+
+
+     Circles and ellipses are probably the most common graphics elements
+     other than straight lines. This chapter describes techniques for
+     displaying circles, ellipses, and arcs with IBM video hardware. These
+     techniques are similar to the algorithms and programming examples for
+     displaying straight lines (described in Chapter 6). Although an
+     ellipse-drawing routine is somewhat more complicated than a routine
+     for drawing straight lines, the algorithmic design and programming
+     techniques are similar.
+
+
+Circles and Pixel Scaling
+
+
+     The only way to draw a circle on the IBM video subsystems discussed in
+     this book is to calculate and draw an ellipse. The reason is that the
+     horizontal scale in which pixels are displayed differs from the
+     vertical scale in most graphics modes (Chapter 4). If you display a
+     "circle" whose pixels are computed without scaling, what you see on
+     the screen is an ellipse. For example, Figure 7-1a shows a "circle"
+     with a radius of 100 pixels in both horizontal and vertical directions
+     as displayed in a 640-by-200 graphics mode.
+
+     Because of this problem of pixel scaling, drawing a circle on the
+     screen requires that you compute the pixels that correspond to a
+     mathematical ellipse. In other words, to draw a circle that really
+     looks like a circle, you must compute an ellipse whose major and
+     minor axes are in the same ratio as the pixel coordinate scaling
+     factor. On the screen, such an ellipse appears circular (see Figure
+     7-1b). For this reason, this chapter concentrates on a practical
+     algorithm for drawing ellipses.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 7-1 is found on page 222       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 7-1.  In Figure 7-1a, a mathematical circle with a 100-pixel
+     radius appears elliptical in 640-by-200 2-color mode. In Figure 7-1b,
+     an ellipse whose axes have been properly scaled appears circular when
+     displayed in this mode.
+
+
+An Ellipse-drawing Algorithm
+
+
+Scan-converting an Ellipse
+
+     You can use the algebraic formula for an ellipse to compute x- and y-
+     coordinates for all of the pixels that represent a given ellipse. As
+     in the case of scan-converting a straight line, many of these pixel
+     coordinates will necessarily approximate the actual values, and the
+     resulting figure will be jagged. This effect is especially noticeable
+     when displaying a very thin ellipse (see Figure 7-2), but in most
+     cases this side effect is acceptable.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 7-2 is found on page 223       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 7-2.  A thin ellipse can appear jagged when it is scan-
+     converted.
+
+
+     You can use the equation of the ellipse
+
+     (x - xc)^2  +  (y - yc)^2 = 1
+        a^2            b^2
+
+     to scan-convert and display an ellipse. This equation describes an
+     ellipse centered at (xc,yc) with major and minor axes a and b parallel
+     to the x- and y-axes. However, the computational overhead of drawing
+     ellipses by solving this equation, as in Listing 7-1, is very large.
+     The multiplication, division, and square-root operations to determine
+     each pixel's coordinates are very time-consuming. A better approach is
+     to compute pixel coordinates incrementally in a manner similar to that
+     used in the line-drawing algorithm in Chapter 6.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 7-1.  Drawing an ellipse using the equation of the
+     ellipse.
+
+/* Listing 7-1 */
+
+Ellipse( xc, yc, a0, b0 )               /* using equation of ellipse */
+int     xc,yc;                  /* center of ellipse */
+int     a0,b0;                  /* major and minor axes */
+{
+
+        double  x = 0;
+        double  y = b0;
+        double  Bsquared = (double)b0 * (double)b0;
+        double  Asquared = (double)a0 * (double)a0;
+        double  sqrt();
+
+
+        do                              /* do while dy/dx >= -1 */
+        {
+          y = sqrt( Bsquared - ((Bsquared/Asquared) * x*x) );
+          Set4Pixels( (int)x, (int)y, xc, yc, PixelValue );
+          ++x;
+        }
+        while ( (x <= a0) && (Bsquared*x < Asquared*y) );
+
+
+        while (y >= 0)                  /* do while dy/dx < -1 */
+        {
+          x = sqrt( Asquared - ((Asquared/Bsquared) * y*y) );
+          Set4Pixels( (int)x, (int)y, xc, yc, PixelValue );
+          --y;
+        }       
+}
+
+
+Set4Pixels( x, y, xc, yc, n )   /* set pixels in 4 quadrants by symmetry */
+int     x,y;
+int     xc,yc;
+int     n;
+{
+        SPFunc(xc+x,yc+y,n);
+        SPFunc(xc-x,yc+y,n);
+        SPFunc(xc+x,yc-y,n);
+        SPFunc(xc-x,yc-y,n);
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+An Incremental Algorithm
+
+     The derivation of an incremental algorithm for drawing ellipses
+     resembles the derivation of Bresenham's line algorithm. The ellipse-
+     drawing algorithm draws an ellipse pixel by pixel. After drawing each
+     pixel, the algorithm selects the next pixel by determining which of
+     the current pixel's two neighbors is closer to the actual ellipse.
+
+     Creating an ellipse-drawing algorithm is easiest for an ellipse
+     centered at the origin of the coordinate system, with major and minor
+     axes congruent with the x- and y-axes (see Figure 7-3). The equation
+     of such an ellipse is
+
+     b^2x^2 + a^2y^2 - a^2b^2 = 0
+
+     Because the ellipse is symmetric in relation to both the x- and y-
+     axes, you only need derive an algorithm to draw one of its quadrants.
+     Your routine can then determine the pixel coordinates in the other
+     three quadrants by symmetry.
+
+       ÉÍÍÍ»     If you need an algorithm to draw ellipses with axes that
+       º T º     are not parallel to the video buffer's x- and y-axes,
+       º I º     refer to M. L. V. Pitteway, "Algorithm for Drawing
+       º P º     Ellipses or Hyperbolae with a Digital Plotter," Computer
+       ÈÍÍÍ¼     Journal vol. 11 no. 3 (November 1967), p. 282.
+
+     The algorithm presented here is known as the "midpoint algorithm." It
+     draws an ellipse iteratively, pixel by pixel. For each pixel it draws,
+     the algorithm selects which of the pixel's neighbors is closer to the
+     ellipse by computing whether the point halfway between the pixels lies
+     inside or outside the ellipse (see Figure 7-4). (This algorithm was
+     described by J. R. Van Aken in "An Efficient Ellipse-Drawing
+     Algorithm," IEEE Computer Graphics and Applications, September 1984,
+     p. 24, and improved by M. R. Kappel in "An Ellipse-Drawing Algorithm
+     for Raster Displays," Fundamental Algorithms for Computer Graphics,
+     R. A. Earnshaw [editor], Springer-Verlag 1985, p. 257.)
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 7-3 is found on page 225       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 7-3.  An ellipse centered at the origin of the coordinate
+     system.
+
+
+     To determine which pixel lies closer to the ellipse, the algorithm
+     uses the value of the equation of the ellipse at the midpoint between
+     the pixels. If the value is 0, the midpoint lies on the ellipse. If
+     the value is negative, then the midpoint lies inside the ellipse; if
+     the value is positive, the midpoint is outside the ellipse. Thus, the
+     algorithm can choose which of the two pixels lies closer to the
+     ellipse by examining the value's sign.
+
+     One complication lies in determining which pair of neighboring pixels
+     to investigate at each step in the iteration. This depends on dy/dx,
+     the slope of the tangent to the ellipse (see Figure 7-5). When dy/dx
+     is greater than -1, the algorithm chooses between two vertically
+     oriented pixels (see Figure 7-6a). When dy/dx is less than -1, the
+     choice is between two horizontally oriented pixels (see Figure 7-6b).
+
+     While dy/dx is greater than -1, the algorithm iteratively determines,
+     for each pixel it draws, whether neighboring pixel A or B is
+     closer to the ellipse. This is done by deciding whether the mid-
+     point between A and B lies inside or outside the exact ellipse. In
+     Figure 7-6a, the pixel selected in the previous iteration is at
+     (x(sub i-1),y(sub i-1)). The midpoint between A and B is therefore
+     (x(sub i-1)+1,y(sub i-1)-1/2).
+
+     The algorithm chooses between pixel A and pixel B by examining the
+     sign of the value of the ellipse equation evaluated at the midpoint:
+
+     d = b^2(x(sub i-1)+1)^2 + a^2(y(sub i-1)-1/2)^2 - a^2b^2
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 7-4 is found on page 226       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 7-2.  A high-level implementation of the midpoint
+     algorithm.
+
+/* Listing 7-2 */
+
+Ellipse( xc, yc, a0, b0 )
+int     xc,yc;                  /* center of ellipse */
+int     a0,b0;                  /* semiaxes */
+{
+        int     x = 0;
+        int     y = b0;
+
+        long    a = a0;                         /* use 32-bit precision */
+        long    b = b0;
+
+        long    Asquared = a * a;               /* initialize values outside */
+        long    TwoAsquared = 2 * Asquared;     /*  of loops */
+        long    Bsquared = b * b;
+        long    TwoBsquared = 2 * Bsquared;
+
+        long    d;
+        long    dx,dy;
+
+
+        d = Bsquared - Asquared*b + Asquared/4L;
+        dx = 0;
+        dy = TwoAsquared * b;
+
+        while (dx<dy)
+        {
+          Set4Pixels( x, y, xc, yc, PixelValue );
+
+          if (d > 0L)
+          {
+            --y;
+            dy -= TwoAsquared;
+            d -= dy;
+          }
+
+          ++x;
+          dx += TwoBsquared;
+          d += Bsquared + dx;
+        }
+
+
+        d += (3L*(Asquared-Bsquared)/2L - (dx+dy)) / 2L;
+
+        while (y>=0)
+        {
+          Set4Pixels( x, y, xc, yc, PixelValue );
+
+          if (d < 0L)
+          {
+            ++x;
+            dx += TwoBsquared;
+            d += dx;
+          }
+
+          --y;
+          dy -= TwoAsquared;
+          d += Asquared - dy;
+        }
+}
+
+
+Set4Pixels( x, y, xc, yc, n )       /* set pixels by symmetry in 4 quadrants */
+int     x,y;
+int     xc,yc;
+int     n;
+{
+        SetPixel( xc+x, yc+y, n );
+        SetPixel( xc-x, yc+y, n );
+        SetPixel( xc+x, yc-y, n );
+        SetPixel( xc-x, yc-y, n );
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Problems and Pitfalls
+
+     One difficult problem you'll encounter is that tiny ellipses appear
+     somewhat angular rather than elliptical when they are scan-converted.
+     When an ellipse is small and comparatively few pixels are used to
+     display it, the best approximation generated by the algorithm can
+     appear polygonal.
+
+     Although it is possible to redesign the ellipse-drawing algorithm to
+     draw "fatter" or "thinner" ellipses in this situation, a better
+     solution is to display the ellipses with higher resolution. Tiny
+     ellipses look much better with 640-by-480 resolution than they do with
+     320-by-200 resolution.
+
+     A related problem is that very eccentric ellipses may be drawn
+     inaccurately at the points where they curve most sharply. This
+     happens when the point where  dy/dx = -1 lies nearly adjacent to
+     either the x-axis or the y-axis. Again, you can modify the algorithm
+     to accommodate this situation, but if your application requires
+     accurate representations of very thin ellipses, a better solution is
+     to display them at higher resolution.
+
+     A further consideration involves "degenerate" ellipses for which the
+     length of either the major or minor axis is 0 (that is, a = 0 or b =
+     0). Because either dy or  dx is 0 in this situation, the iterative
+     routines do not terminate correctly. In these cases, either test for
+     the special condition before executing the loops (and draw the
+     appropriate straight line) or modify the termination conditions of the
+     loops.
+
+
+Accuracy
+
+     As does Bresenham's line algorithm, the midpoint algorithm attempts to
+     minimize the vertical or horizontal distance to the ellipse from the
+     pixels it selects. This is faster than minimizing the distance between
+     each pixel and the nearest point to it on the ellipse, but if you
+     examine its performance closely, you may find rare occasions when the
+     pixel that the midpoint algorithm selects is not the one closest to
+     the ellipse. Nevertheless, the accuracy of the midpoint algorithm in
+     selecting the best pixels to represent the ellipse is sufficient for
+     nearly all applications. (For more discussion of this topic, see Van
+     Aken and Novak, "Curve-Drawing Algorithms for Raster Displays," ACM
+     Transactions on Graphics, April 1985, p. 147, or Kappel, "An Ellipse-
+     Drawing Algorithm for Raster Displays," Fundamental Algorithms for
+     Computer Graphics, p. 257.)
+
+     Although the source code in Listing 7-2 is a straightforward
+     implementation of the algorithm, you need to remember a few details if
+     you plan to modify the code or translate it into another language. It
+     is important to compute all decision variables as 32-bit integers.
+     Because these values involve the squaring of pixel coordinates, 16
+     bits are inadequate to maintain precision.
+
+     Another detail to remember is that this routine can draw the same
+     pixels twice. This is an artifact of the ellipse's four-way symmetry.
+     For example, the pixels at (ña,0) and (0,ñb) are updated twice by
+     Set4Pixels() in Listing 7-2. This becomes a problem when you use the
+     routine to XOR pixels into the video buffer. If you perform a XOR on
+     these pixels twice, they disappear. To avoid this, either test for
+     these special cases in Set4Pixels() (Listing 7-3) or modify Ellipse()
+     to draw these pixels separately.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 7-3.  A modified version of Set4Pixels that avoids updating
+     the same pixel twice.
+
+/* Listing 7-3 */
+
+Set4Pixels( x, y, xc, yc, n )   /* avoids setting the same pixel twice */
+int     x,y;
+int     xc,yc;
+int     n;
+{
+        if (x!=0)
+        {
+          SetPixel( xc+x, yc+y, n );
+          SetPixel( xc-x, yc+y, n );
+          if (y!=0)
+          {
+            SetPixel( xc+x, yc-y, n );
+            SetPixel( xc-x, yc-y, n );
+          }
+        }
+        else
+        {
+          SetPixel( xc, yc+y, n );
+          if (y!=0)
+            SetPixel( xc, yc-y, n );
+        }
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Optimization
+
+
+     For many applications, a high-level language implementation such as
+     the one in Listing 7-2 is fast enough. The slowest part of the high-
+     level version of Ellipse() is its repeated calls to the pixel-setting
+     routine, which recomputes pixel addresses with every iteration. By
+     writing Ellipse() in assembly language, you can calculate the pixel
+     addresses much more efficiently. The resulting assembly-language
+     routine is about three times faster than the equivalent high-level
+     version.
+
+     Listing 7-4 is a typical assembly-language implementation, in this
+     case for the EGA. Note how the routine Set4Pixels maintains a set of
+     four buffer offsets and bit masks instead of (x,y) coordinates for the
+     four pixels it updates. When  Set4Pixels increments a pixel x-
+     coordinate, it rotates a bit mask in the proper direction. The y-
+     coordinates are incremented by adding the number of bytes in each line
+     of pixels to the buffer offset. (This is the same technique used in
+     the line routines in Chapter 6.) This method of video buffer
+     addressing is much faster than making a call to a SetPixel() function
+     for every pixel in the ellipse.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 7-4.  An assembly-language implementation of the midpoint
+     algorithm.
+
+                TITLE   'Listing 7-4'
+                NAME    Ellipse10
+                PAGE    55,132
+
+;
+; Name:         Ellipse10
+;
+; Function:     Draw an ellipse in native EGA/VGA graphics modes.
+;
+; Caller:       Microsoft C:
+;
+;                       void Ellipse10(xc,yc,a,b,n);
+;
+;                       int xc,yc;              /* center of ellipse */
+;
+;                       int a,b;                /* major and minor axes */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGxc           EQU     word ptr [bp+4] ; stack frame addressing
+ARGyc           EQU     word ptr [bp+6]
+ARGa            EQU     word ptr [bp+8]
+ARGb            EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+
+ULAddr          EQU     word ptr [bp-2]
+URAddr          EQU     word ptr [bp-4]
+LLAddr          EQU     word ptr [bp-6]
+LRAddr          EQU     word ptr [bp-8]
+LMask           EQU     byte ptr [bp-10]
+RMask           EQU     byte ptr [bp-12]
+
+VARd            EQU     word ptr [bp-16]
+VARdx           EQU     word ptr [bp-20]
+VARdy           EQU     word ptr [bp-24]
+Asquared        EQU     word ptr [bp-28]
+Bsquared        EQU     word ptr [bp-32]
+TwoAsquared     EQU     word ptr [bp-36]
+TwoBsquared     EQU     word ptr [bp-40]
+
+RMWbits         EQU     0               ; read-modify-write bits
+BytesPerLine    EQU     80
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _Ellipse10
+_Ellipse10      PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,40           ; establish stack frame
+                push    si
+                push    di
+
+; set Graphics Controller Mode register
+
+                mov     dx,3CEh         ; DX := Graphics Controller I/O port
+                mov     ax,0005h        ; AL := Mode register number
+                                        ; AH := Write Mode 0 (bits 0,1)
+                out     dx,ax           ;       Read Mode 0 (bit 4)
+
+; set Data Rotate/Function Select register
+
+                mov     ah,RMWbits      ; AH := Read-Modify-Write bits
+                mov     al,3            ; AL := Data Rotate/Function Select reg
+                out     dx,ax
+
+; set Set/Reset and Enable Set/Reset registers
+
+                mov     ah,ARGn         ; AH := pixel value
+                mov     al,0            ; AL := Set/Reset reg number
+                out     dx,ax
+
+                mov     ax,0F01h        ; AH := value for Enable Set/Reset (all
+                                        ;  bit planes enabled)
+                out     dx,ax           ; AL := Enable Set/Reset reg number
+
+; initial constants
+
+                mov     ax,ARGa
+                mul     ax
+                mov     Asquared,ax
+                mov     Asquared+2,dx   ; a^2
+                shl     ax,1
+                rcl     dx,1
+                mov     TwoAsquared,ax
+                mov     TwoAsquared+2,dx ; 2*a^2
+
+                mov     ax,ARGb
+                mul     ax
+                mov     Bsquared,ax
+                mov     Bsquared+2,dx   ; b^2
+                shl     ax,1
+                rcl     dx,1
+                mov     TwoBsquared,ax
+                mov     TwoBsquared+2,dx ; 2*b^2
+;
+; plot pixels from (0,b) until dy/dx = -1
+;
+
+; initial buffer address and bit mask
+
+                mov     ax,BytesPerLine ; AX := video buffer line length
+                mul     ARGb            ; AX := relative byte offset of b
+                mov     si,ax
+                mov     di,ax
+
+                mov     ax,ARGyc        ; AX := yc
+                mov     bx,ARGxc        ; BX := xc
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+                mov     ah,1
+                shl     ah,cl           ; AH := bit mask for first pixel
+                mov     LMask,ah
+                mov     RMask,ah
+
+                add     si,bx           ; SI := offset of (0,b)
+                mov     ULAddr,si
+                mov     URAddr,si
+                sub     bx,di           ; AX := offset of (0,-b)
+                mov     LLAddr,bx
+                mov     LRAddr,bx
+
+; initial decision variables
+
+                xor     ax,ax
+                mov     VARdx,ax
+                mov     VARdx+2,ax      ; dx = 0
+
+                mov     ax,TwoAsquared
+                mov     dx,TwoAsquared+2
+                mov     cx,ARGb
+                call    LongMultiply    ; perform 32-bit by 16-bit mulitply
+                mov     VARdy,ax
+                mov     VARdy+2,dx      ; dy = TwoAsquared * b
+
+                mov     ax,Asquared
+                mov     dx,Asquared+2   ; DX:AX = Asquared
+                sar     dx,1
+                rcr     ax,1
+                sar     dx,1
+                rcr     ax,1            ; DX:AX = Asquared/4
+
+                add     ax,Bsquared
+                adc     dx,Bsquared+2   ; DX:AX = Bsquared + Asquared/4
+                mov     VARd,ax
+                mov     VARd+2,dx
+
+                mov     ax,Asquared
+                mov     dx,Asquared+2
+                mov     cx,ARGb
+                call    LongMultiply    ; DX:AX = Asquared*b
+                sub     VARd,ax
+                sbb     VARd+2,dx       ; d = Bsquared - Asquared*b + Asquared/4
+
+; loop until dy/dx >= -1
+
+                mov     bx,ARGb         ; BX := initial y-coordinate
+
+                xor     cx,cx           ; CH := 0 (initial y-increment)
+                                        ; CL := 0 (initial x-increment)
+L10:            mov     ax,VARdx
+                mov     dx,VARdx+2
+                sub     ax,VARdy
+                sbb     dx,VARdy+2
+                jns     L20             ; jump if dx>=dy
+
+                call    Set4Pixels
+
+                mov     cx,1            ; CH := 0 (y-increment)
+                                        ; CL := 1 (x-increment)
+                cmp     VARd+2,0
+                js      L11             ; jump if d < 0
+
+                mov     ch,1            ; increment in y direction
+                dec     bx              ; decrement current y-coordinate
+
+                mov     ax,VARdy
+                mov     dx,VARdy+2
+                sub     ax,TwoAsquared
+                sbb     dx,TwoAsquared+2 ; DX:AX := dy - TwoAsquared
+                mov     VARdy,ax
+                mov     VARdy+2,dx      ; dy -= TwoAsquared
+
+                sub     VARd,ax
+                sbb     VARd+2,dx       ; d -= dy
+
+L11:            mov     ax,VARdx
+                mov     dx,VARdx+2
+                add     ax,TwoBsquared
+                adc     dx,TwoBsquared+2 ; DX:AX := dx + TwoBsquared
+                mov     VARdx,ax
+                mov     VARdx+2,dx      ; dx += TwoBsquared
+
+                add     ax,Bsquared
+                adc     dx,Bsquared+2   ; DX:AX := dx + Bsquared
+                add     VARd,ax
+                adc     VARd+2,dx       ; d += dx + Bsquared
+
+                jmp     L10
+;
+; plot pixels from current (x,y) until y < 0
+;
+
+; initial buffer address and bit mask
+
+L20:            push    bx              ; preserve current y-coordinate
+                push    cx              ; preserve x- and y-increments
+
+                mov     ax,Asquared
+                mov     dx,Asquared+2
+                sub     ax,Bsquared
+                sbb     dx,Bsquared+2   ; DX:AX := Asquared-Bsquared
+
+                mov     bx,ax
+                mov     cx,dx           ; CX:BX := (Asquared-Bsquared)
+
+                sar     dx,1
+                rcr     ax,1            ; DX:AX := (Asquared-Bsquared)/2
+                add     ax,bx
+                adc     dx,cx           ; DX:AX := 3*(Asquared-Bsquared)/2
+
+                sub     ax,VARdx
+                sbb     dx,VARdx+2
+                sub     ax,VARdy
+                sbb     dx,VARdy+2      ; DX:AX := 3*(Asquared-Bsquared)/2 - (dx+dy)
+
+                sar     dx,1
+                rcr     ax,1            ; DX:AX :=
+                                        ;  ( 3*(Asquared-Bsquared)/2 - (dx+dy) )/2
+                add     VARd,ax
+                adc     VARd+2,dx       ; update d
+
+; loop until y < 0
+
+                pop     cx              ; CH,CL := y- and x-increments
+                pop     bx              ; BX := y
+
+L21:            call    Set4Pixels
+
+                mov     cx,100h         ; CH := 1 (y-increment)
+                                        ; CL := 0 (x-increment)
+
+                cmp     VARd+2,0
+                jns     L22             ; jump if d >= 0
+
+                mov     cl,1            ; increment in x direction
+
+                mov     ax,VARdx
+                mov     dx,VARdx+2
+                add     ax,TwoBsquared
+                adc     dx,TwoBsquared+2 ; DX:AX := dx + TwoBsquared
+                mov     VARdx,ax
+                mov     VARdx+2,dx      ; dx += TwoBsquared
+
+                add     VARd,ax
+                adc     VARd+2,dx       ; d += dx
+
+L22:            mov     ax,VARdy
+                mov     dx,VARdy+2
+                sub     ax,TwoAsquared
+                sbb     dx,TwoAsquared+2 ; DX:AX := dy - TwoAsquared
+                mov     VARdy,ax
+                mov     VARdy+2,dx      ; dy -= TwoAsquared
+
+                sub     ax,Asquared
+                sbb     dx,Asquared+2   ; DX:AX := dy - Asquared
+                sub     VARd,ax
+                sbb     VARd+2,dx       ; d += Asquared - dy
+
+                dec     bx              ; decrement y
+                jns     L21             ; loop if y >= 0
+
+
+; restore default Graphics Controller registers
+
+Lexit:          mov     ax,0FF08h       ; default Bit Mask
+                mov     dx,3CEh
+                out     dx,ax
+
+                mov     ax,0003         ; default Function Select
+                out     dx,ax
+
+                mov     ax,0001         ; default Enable Set/Reset
+                out     dx,ax
+
+                pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Ellipse10      ENDP
+
+
+Set4Pixels      PROC    near            ; Call with:  CH := y-increment (0, -1)
+                                        ;             CL := x-increment (0, 1)
+
+                push    ax              ; preserve these regs
+                push    bx
+                push    dx
+
+                mov     dx,3CEh         ; DX := Graphics Controller port
+
+                xor     bx,bx           ; BX := 0
+                test    ch,ch
+                jz      L30             ; jump if y-increment = 0
+
+                mov     bx,BytesPerLine ; BX := positive increment
+                neg     bx              ; BX := negative increment
+
+L30:            mov     al,8            ; AL := Bit Mask reg number
+
+; pixels at (xc-x,yc+y) and (xc-x,yc-y)
+
+                xor     si,si           ; SI := 0
+                mov     ah,LMask
+
+                rol     ah,cl           ; AH := bit mask rotated horizontally
+                rcl     si,1            ; SI := 1 if bit mask rotated around
+                neg     si              ; SI := 0 or -1
+
+                mov     di,si           ; SI,DI := left horizontal increment
+
+                add     si,ULAddr       ; SI := upper left addr + horiz incr
+                add     si,bx           ; SI := new upper left addr
+                add     di,LLAddr
+                sub     di,bx           ; DI := new lower left addr
+
+                mov     LMask,ah        ; update these variables
+                mov     ULAddr,si
+                mov     LLAddr,di
+
+                out     dx,ax           ; update Bit Mask register
+
+                mov     ch,es:[si]      ; update upper left pixel
+                mov     es:[si],ch
+                mov     ch,es:[di]      ; update lower left pixel
+                mov     es:[di],ch
+
+
+; pixels at (xc+x,yc+y) and (xc+x,yc-y)
+
+                xor     si,si           ; SI := 0
+                mov     ah,RMask
+
+                ror     ah,cl           ; AH := bit mask rotated horizontally
+                rcl     si,1            ; SI := 1 if bit mask rotated around
+
+                mov     di,si           ; SI,DI := right horizontal increment
+
+                add     si,URAddr       ; SI := upper right addr + horiz incr
+                add     si,bx           ; SI := new upper right addr
+                add     di,LRAddr
+                sub     di,bx           ; DI := new lower right addr
+
+                mov     RMask,ah        ; update these variables
+                mov     URAddr,si
+                mov     LRAddr,di
+
+                out     dx,ax           ; update Bit Mask register
+
+                mov     ch,es:[si]      ; update upper right pixel
+                mov     es:[si],ch
+                mov     ch,es:[di]      ; update lower right pixel
+                mov     es:[di],ch
+
+                pop     dx              ; restore these regs
+                pop     bx
+                pop     ax
+                ret
+
+Set4Pixels      ENDP
+
+
+LongMultiply    PROC    near            ; Caller:       DX = u1 (hi-order word
+                                        ;                of 32-bit number)
+                                        ;               AX = u2 (lo-order word)
+                                        ;               CX = v1 (16-bit number)
+                                        ; Returns:      DX:AX = 32-bit result)
+
+                push    ax              ; preserve u2
+                mov     ax,dx           ; AX := 
+                mul     cx              ; AX := high-order word of result
+                xchg    ax,cx           ; AX := v1, CX := high-order word
+                pop     dx              ; DX := u2
+                mul     dx              ; AX := low-order word of result
+                                        ; DX := carry
+                add     dx,cx           ; CX := high-order word of result
+                ret
+
+LongMultiply    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     One optimization technique used in Chapter 6 is omitted here. In
+     practice, minimizing video buffer accesses by setting more than one
+     pixel at a time in each byte of the buffer is not worthwhile. The
+     overhead involved in keeping track of which bytes contain more than
+     one updated pixel is greater than the time saved in reducing video
+     buffer accesses. Besides, the code is complicated enough already.
+
+
+Clipping
+
+
+     If you clip an ellipse within a rectangular window, the result is an
+     arc (see Figure 7-8). The place to perform the clipping is in the
+     Set4Pixels() routine. You can clip each pixel's (x,y) coordinates
+     against the window boundary before you call SetPixel() to update the
+     video buffer.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 7-8 is found on page 241       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 7-8.  Clipping an ellipse produces an arc.
+
+
+     Implementing clipping in this way slows the ellipse-drawing routine
+     somewhat. If your application rarely requires clipping, consider
+     implementing two different versions of Set4Pixels(), one that performs
+     clipping and one that omits it. Before calling Ellipse(), you can
+     compare the maximum and minimum coordinate values of the pixels in the
+     ellipse (xc ñ a,yc ñ b) with the clipping boundaries to determine
+     whether it can be drawn without clipping. Only if clipping is required
+     do you need to use the slower, clipping version of Set4Pixels().
+
+
+True Circles
+
+
+     After you implement the ellipse routine, you can draw true circles in
+     all graphics modes on PC and PS/2 video subsystems. To display a
+     circle, draw an ellipse with its major and minor axes scaled in
+     proportion to your video display's horizontal and vertical
+     resolutions. Listing 7-5 shows how you might do this in a 640-by-350
+     graphics mode on an EGA.
+
+     Because the scaling varies with the video mode, the same routine
+     cannot draw circles in different video modes unless it accommodates
+     the pixel coordinate scaling in each mode. Figure 4-9 in Chapter 4
+     is a table of pixel scaling factors for all graphics modes.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 7-5.  Using pixel coordinate scaling to display a circle in
+     640-by-350 16-color mode.
+
+/* Listing 7-5 */
+
+Circle10( xc, yc, xr, yr, n)            /* circles in 640x350 16-color mode */
+int     xc,yc;          /* center of circle */
+int     xr,yr;          /* point on circumference */
+int     n;              /* pixel value */
+{
+        double  x,y;
+        double  sqrt();
+        double  Scale10 = 1.37;         /* pixel scaling factor */
+        int     a,b;
+
+        x = xr - xc;                    /* translate center of ellipse */
+        y = (yr - yc) * Scale10;        /*  to origin */
+
+        
+        a = sqrt( x*x + y*y );          /* compute major and minor axes */
+        b = a / Scale10;
+
+        Ellipse10( xc, yc, a, b, n);    /* draw it */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+

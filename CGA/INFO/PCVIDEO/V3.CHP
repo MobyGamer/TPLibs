@@ -1,0 +1,2053 @@
+
+
+                         3  Alphanumeric Modes
+
+
+                        Using Alphanumeric Modes
+                    BIOS and Operating-System Support
+                          Speed ş Compatibility
+
+                   Representation of Alphanumeric Data
+
+                               Attributes
+                          MDA ş HGC ş CGA ş EGA
+                        InColor Card ş MCGA ş VGA
+
+                           Gray-Scale Summing
+
+                              Border Color
+                            CGA ş EGA and VGA
+
+                            Avoiding CGA Snow
+                          Blanking the Display
+                  Using the Vertical Blanking Interval
+                 Using the Horizontal Blanking Interval
+
+                       Using All the Video Buffer
+                             CGA Video Pages
+                     EGA, MCGA, and VGA Video Pages
+
+                             Cursor Control
+                     Cursor Size on the MDA and CGA
+                   Cursor Location on the MDA and CGA
+            MCGA Cursor Control ş EGA and VGA Cursor Control
+                        ROM BIOS Cursor Emulation
+                           An Invisible Cursor
+
+
+
+     All IBM PC and PS/2 video subsystems except the MDA can be programmed
+     to display characters in either alphanumeric or graphics modes. This
+     chapter discusses what you need to know to use alphanumeric modes--the
+     advantages and disadvantages of programming in alphanumeric modes; the
+     basics of colors, blinking, and other character display attributes;
+     and special techniques that exploit the capabilities of the hardware
+     to improve the on-screen appearance and performance of your programs.
+
+
+Using Alphanumeric Modes
+
+
+
+     The video BIOS on all IBM PCs and PS/2s always selects an alphanumeric
+     video display mode when you boot the computer. In the IBM PC family,
+     switches on the motherboard, the video adapter, or both determine
+     whether a 40-column or 80-column mode is selected and whether a color
+     or monochrome display is used. In the PS/2 series, the initial video
+     mode is always an 80-column alphanumeric mode. Furthermore, the video
+     mode set by the ROM BIOS is the one the operating system initially
+     uses. Until you run a program that changes the video mode, all video
+     output appears in the default mode--which is alphanumeric.
+
+     For this reason, the simplest way to write a program is to assume that
+     it runs in an alphanumeric mode and to program the video interface
+     accordingly. This assumption minimizes the coding required to send
+     output to the screen. Not only are alphanumeric video output routines
+     simpler than equivalent routines for graphics modes, but in most cases
+     the ROM BIOS or the operating system provides character output
+     routines that can be used in any alphanumeric mode.
+
+
+BIOS and Operating-System Support
+
+     In the IBM PC, operating-system output routines are usually based on
+     the set of primitive routines in the ROM BIOS that are called with
+     software interrupt 10H. You can send characters to the video display
+     either by using operating-system calls or by calling the INT 10H
+     routines directly. In either case, use of these routines obviates the
+     need for writing your own character output routines.
+
+     An additional advantage to using BIOS or operating-system character
+     output functions is that programs using only such functions are more
+     likely to run on different video hardware. For example, a program
+     using only MS-DOS function calls for video output will run in almost
+     any MS-DOS environment, regardless of the video hardware, including
+     (but not limited to) the entire IBM PC and PS/2 family.
+
+     Of course, routing video output through an operating system is
+     relatively slow compared with writing directly to the hardware. The
+     use of operating-system character output routines introduces a certain
+     amount of unavoidable overhead,particularly when such features as
+     input/output redirection and multiprocessing are supported. Never-
+     theless, this overhead may be acceptable in many applications. You
+     should always consider whether the extra programming and decreased
+     portability required to improve video output performance are
+     worthwhile in your application.
+
+
+Speed
+
+     This is not to say that alphanumeric video output is inherently slow.
+     When compared with character output in graphics modes, alphanumeric
+     output is significantly faster, simply because much less data must be
+     stored in the video buffer to display characters. In alphanumeric
+     modes, each character is represented by a single 16-bit word; the
+     video hardware takes care of displaying the pixels that make up the
+     character. In graphics modes, every pixel in every character is
+     represented explicitly in a bit field in the video buffer. For this
+     reason, graphics-mode output is much more costly than equivalent
+     character output in alphanumeric modes, both in terms of display
+     memory used and processing required.
+
+     For example, in a 16-color graphics mode, each character drawn on the
+     screen in an 8-by-8 dot matrix is represented by 32 bytes of data in
+     the video buffer (8 * 8 * 4 bits per pixel). The memory overhead
+     increases rapidly, in direct relationship to increasing resolution and
+     the addition of more colors, as does the amount of time the CPU spends
+     in manipulating data in the video buffer. On newer video adapters,
+     dedicated graphics coprocessors such as the Intel 82786 or the TI
+     34010 may assume much of the computational burden of graphics-mode
+     text display, thereby improving the speed of graphics-mode text
+     output. Without a coprocessor, however, output in graphics modes is
+     much slower than in alphanumeric modes.
+
+
+Compatibility
+
+     Writing a program that is compatible with different IBM video
+     subsystems is easier if you use only alphanumeric video display modes.
+     The reason is simple: All commonly used IBM video subsystems support
+     an 80-column by 25-row alphanumeric mode with the same video buffer
+     format. If you design your video interface with an 80-by-25
+     alphanumeric display in mind, your program will run on a majority of
+     PCs and compatibles with little or no modification.
+
+     Unfortunately, high compatibility is generally achieved only by
+     sacrificing speed. Fast video output routines usually take advantage
+     of hardware idiosyncrasies, so they are less likely to be portable to
+     different video hardware than routines that rely on slower but more
+     universal BIOS or operating-system calls. This trade-off will be
+     implicit in almost every video output routine you write.
+
+
+Representation of Alphanumeric Data
+
+
+     All IBM PC and PS/2 video subsystems use the same format for storing
+     alphanumeric data in the video buffer. Each character is represented
+     by a simple 2-byte data structure (see Figure 3-1). Characters are
+     stored in the buffer in a linear sequence that maps across and down
+     the screen (see Figure 3-2).
+
+
+        Low-order byte      High-order byte
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³  ASCII character  ³     Attribute     ³
+     ³        code       ³                   ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 3-1.  Alphanumeric character and attribute mapping in a 16-bit
+     word.
+
+
+                                                      Display
+               Video buffer                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     0000H ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                     ³°°°°°°°°°
+           ³                   ÃÄÄÄ Character row O ³ÛÛÛÛÛÛÛÛÛ
+     00A0H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´                     ³°°°°°°°°°
+           ³                   ÃÄÄÄ Character row 1 ³ÛÛÛÛÛÛÛÛÛ
+     0140H ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´                     ³°°°°°°°°°
+           ³                   ÃÄÄÄ Character row 2 ³ÛÛÛÛÛÛÛÛÛ
+     01E0H ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ                     ³°°°°°°°°°
+           ³                   ³                     ³°°°°°°°°°
+            Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä                      ³°°°°°°°°°
+           ³                   ³                     ³°°°°°°°°°
+            Ä Ä Ä Ä Ä Ä Ä Ä Ä Ä                      ³°°°°°°°°°
+           ³                   ³                     ³°°°°°°°°°
+           À Ä Ä Ä Ä Ä Ä Ä Ä Ä Ù                     ³
+
+     Figure 3-2.  Video buffer map in 80-by-25 alphanumeric modes.
+
+
+     A hardware character generator converts each character code into the
+     proper dot pattern on the display. At the same time, attribute decoder
+     circuitry generates the appropriate attribute--color, intensity
+     (brightness), blinking, and so on--for each character. Since each
+     character code in the video buffer is accompanied by an attribute
+     byte, you can independently control the displayed attributes of each
+     character on the screen.
+
+     The hardware character generator displays each alphanumeric character
+     within a rectangular matrix of pixels. Within this character matrix,
+     the character itself is composed of a set of foreground pixels. The
+     colors of the character's foreground and background pixels are
+     specified by the low and high nibbles of the corresponding attribute
+     byte.
+
+     To display a character, you store its ASCII code and attribute in the
+     proper location in the video buffer. Because of the linear mapping
+     scheme, you can easily calculate the buffer address of a particular
+     screen location. The general formula is
+     offset = ((row * width) + column) * 2
+
+     In this formula, width is the number of characters in each row. The
+     factor of 2 is included because each character requires 2 bytes (one
+     16-bit word) of storage in the video buffer. The values for row and
+     column are zero-based, starting in the upper left corner of the
+     screen. (The character in the upper left corner is located at row 0,
+     column 0.)
+
+     If you examine the contents of the video buffer, you can see how this
+     data corresponds to characters on the screen (see Figure 3-3). Note
+     how each character code is followed by its attribute byte. (All of the
+     attribute bytes in the portion of the video buffer shown in Figure 3-3
+     have the value 07H.)
+
+
+           0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F  0123456789ABCDEF
+B000:0000  43 07 68 07 61 07 72 07 61 07 63 07 74 07 65 07 C.h.a.r.a.c.t.e.
+B000:0010  72 07 20 07 72 07 6F 07 77 07 20 07 30 07 30 07 r. .r.o.w. .0.0.
+B000:0020  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0030  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0040  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0050  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0060  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0070  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0080  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0090  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:00A0  43 07 68 07 61 07 72 07 61 07 63 07 74 07 65 07 C.h.a.r.a.c.t.e.
+B000:00B0  72 07 20 07 72 07 6F 07 77 07 20 07 30 07 31 07 r. .r.o.w. .0.1.
+B000:00C0  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:00D0  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:00E0  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:00F0  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0100  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0110  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0120  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+B000:0130  00 07 00 07 00 07 00 07 00 07 00 07 00 07 00 07 ................
+
+
+     Figure 3-3.  Hexadecimal dump of an alphanumeric video buffer.
+
+
+Attributes
+
+
+     Although all IBM PC and PS/2 video subsystems use the same pattern 
+     of alternating character codes and attribute bytes to represent
+     alphanumeric data, the way the attribute byte is interpreted varies.
+     In general, the attribute byte is formatted as two 4-bit nibbles.
+     The low-order nibble (bits 0 through 3) determines the character's
+     foreground attribute; that is, the color and intensity of the
+     character itself. The high-order nibble (bits 4 through 7) indicates
+     the character's background attribute, although bit 7 may also control
+     blinking in some situations.
+
+     The 4-bit foreground and background attributes are ultimately decoded
+     into a set of signals that drive the video monitor. In the simplest
+     case, on the CGA, the four bits correspond directly to the three color
+     signals and the intensity signal. The decoding scheme on other video
+     subsystems can be complex, as on the EGA, MCGA, VGA, and InColor Card,
+     or comparatively simple, as on the MDA.
+
+
+MDA
+
+     Although you may specify any of 16 (2^4) attributes for both
+     foreground and background attributes, the MDA only recognizes certain
+     combinations (see Figure 3-4). Nevertheless, you can generate a
+     useful variety of character attributes by creatively combining
+     intensity, blinking, and underlining. You can also exchange the usual
+     foreground and background attributes to obtain "reverse video"--black
+     characters on a normal-intensity background.
+
+
+                           Not Underlined
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                              Foreground
+               Black     Dim1    Normal Intensity    High Intensity
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Background 
+Black          00        2        07                  0F
+Dim1          2        88        87                  8F
+Normal         70        78        2                  2
+High           F0        F8        2                  2
+
+                             Underlined
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                             Foreground
+               Normal Intensity       High Intensity
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Background
+Black          01                     09 
+Dim1          81                     89 
+
+     Figure 3-4.  MDA foreground-background attribute combinations (values
+     in hex). Attribute values not in this table always map to one of the
+     combinations shown.
+
+
+     On the MDA, as well as on all other IBM video hardware, bit 7 of each
+     character's attribute byte can serve two purposes. By default, this
+     bit controls whether a character blinks when displayed; setting the
+     bit to 1 causes the associated character to blink. Bit 7 controls
+     blinking because bit 5 (the Enable Blink bit) of the MDA's CRT Mode
+     Control register (3B8H) is set to 1 by the video BIOS when the
+     computer is powered up.
+
+     If the Enable Blink bit is 0, however, bit 7 of the attribute byte no
+     longer controls blinking (see Listing 3-1). Instead, bit 7 is
+     interpreted as an intensity bit for the background attribute. When bit
+     7 is set in a character's attribute byte, the character's background
+     attribute is intensified; that is, normal green becomes intense green
+     and black becomes dim green. Thus, to obtain all possible combinations
+     of monochrome attributes listed in Figure 3-4, you must zero the
+     Enable Blink bit.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-1.  Resetting the Enable Blink bit on the MDA or CGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The value of the Mode Control register's Enable Blink bit affects the
+     interpretation of bit 7 of all attribute bytes, so you can't display
+     both blinking characters and characters with intensified background at
+     the same time. You must decide which attribute is more useful in your
+     program and set the Enable Blink bit accordingly.
+
+     All IBM PC and PS/2 video subsystems, including the MDA, blink
+     alphanumeric characters by substituting the background attribute for
+     the foreground attribute about twice a second. The effect is that each
+     blinking character alternates with a blank character.
+
+
+     If you fill the display with blinking characters, the overall effect
+     can be disconcerting, because the screen is blanked and restored twice
+     each second. But if your purpose is to attract attention to the
+     display, using the blink attribute can be very effective.
+
+       ÉÍÍÍ»     If you use the underline attribute (foreground attribute 1
+       º T º     or 9) on a Compaq portable, you won't see underlined
+       º I º     characters. This is because the Compaq portable decodes
+       º P º     attribute values into 16 progressively brighter shades
+       ÈÍÍÍ¼     of green; the underline attribute values of 1 and 9
+                 therefore appear as shades of green.
+
+       ÉÍÍÍ»     Surprisingly, a few IBM MDAs generate color as well as
+       º T º     monochrome output. Of course, the MDA's green monochrome
+       º I º     display uses only two signals to control attributes (video
+       º P º     on/off and intensity on/off); it ignores any color video
+       ÈÍÍÍ¼     signals. However, a color display that can use the MDA's
+                 16.257 MHz horizontal sync and 50 Hz vertical sync signals
+                 will display eight colors (with and without intensity)
+                 when attached to some (but not all) MDAs. Unfortunately,
+                 you can never be certain which MDA will turn out to be a
+                 color adapter in disguise.
+
+
+HGC
+
+     The HGC and HGC+ exactly emulate the MDA's monochrome alphanumeric
+     mode. Programs written for the MDA run unchanged on either of these
+     adapters.
+
+
+CGA
+
+     The CGA uses the same foreground-background attribute scheme as does
+     the MDA. However, the CGA's attribute decoder circuitry recognizes all
+     16 possible combinations of the four bits in each nibble of the
+     attribute byte. For each character on the screen, you can
+     independently specify any of 16 colors for foreground and background.
+
+     The available colors are simple combinations of the primary colors
+     red, green, and blue. Each bit in each nibble of the attribute byte
+     corresponds to a signal that the CGA supplies to the video monitor
+     (see Figure 3-5). The low-order three bits of each nibble correspond
+     to the red (R), green (G), and blue (B) signals. The eight possible
+     combinations produce a gamut of red, green, blue, and their
+     intermediate colors (see Figure 3-6).
+
+
+     Bit   3     2     1     0
+        ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+        ³  I  ³  R  ³  G  ³  B  ³
+        ÀÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+           ³     ³     ³     ³
+           ³     ³     ³     ³
+           ³     ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄPin 5
+           ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 4
+           ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 3
+           ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 6
+
+     Figure 3-5.  CGA attributes and monitor color drive signals. Pin
+     numbers refer to the CGA's 9-pin connector.
+
+Color               Binary (IRGB)  Hexadecimal
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Black               0000           00
+Blue                0001           01
+Green               0010           02
+Cyan                0011           03
+Red                 0100           04
+Violet              0101           05
+Yellow (brown)      0110           06
+White               0111           07
+Black (gray)        1000           08
+Intense blue        1001           09
+Intense green       1010           0A
+Intense cyan        1011           0B
+Intense red         1100           0C
+Intense violet      1101           0D
+Intense yellow      1110           0E
+Intense white       1111           0F
+     Figure 3-6.  CGA display attributes.
+
+
+     Setting bit 3 of the attribute byte (the intensity bit in the
+     foreground nibble) displays the color designated in the R, G, and B
+     bits (bits 0 through 2) with higher intensity. However, as on the MDA,
+     the high-order bit (bit 7) of each attribute byte controls either
+     background intensity or blinking. Again, the attribute displayed
+     depends upon the state of a bit in a control register.
+
+     Bit 5 of the CGA's Mode Control register (I/O port 3D8H) is an Enable
+     Blink bit analogous to bit 5 of the MDA's CRT Control register. When
+     you set the Enable Blink bit to 0, bit 7 of a character's attribute
+     byte signifies that the background color specified in bits 4 through
+     6 should be intensified. When you set the Enable Blink bit to 1, only
+     nonintensified background colors are displayed, but characters whose
+     attribute bytes have bit 7 set to 1 will blink.
+
+     The Enable Blink bit is set to 1 whenever you call the ROM BIOS to
+     select an alphanumeric video mode. By default, therefore, bit 7 of
+     each character's attribute byte controls blinking rather than
+     background intensity. You must reset the Enable Blink bit to display
+     characters with intensified background colors.
+
+     Many CGA-compatible displays squeeze a bit more out of the 16
+     available colors (8 nonintensified, 8 intensified) by displaying low-
+     intensity yellow as brown and high-intensity black as gray.
+     Unfortunately, a program cannot determine whether a particular display
+     can do this. Be careful about displaying, for example, gray characters
+     on a black background with a CGA, because such color combinations are
+     invisible on some color displays.
+
+
+EGA
+
+     In 16-color alphanumeric modes, the EGA uses the same attribute byte
+     format as the CGA. However, the 4-bit foreground and background values
+     do not correspond directly to the colors displayed. Instead, each 4-
+     bit value is masked with the four low-order bits of the Attribute
+     Controller's Color Plane Enable register (12H); the resulting 4-bit
+     value designates one of the EGA's 16 palette registers (see Figure 3-
+     7). Each bit of the 6-bit color value contained in the designated
+     palette register corresponds to one of the six RGB signals that drive
+     the monitor (see Figure 3-8).
+
+     An EGA-compatible color monitor is driven by six color signals--three
+     primary (higher intensity) and three secondary (lower intensity). All
+     64 combinations of these six signals appear as different colors and/or
+     intensities. With a 200-line color monitor--or in 200-line modes on an
+     EGA-compatible monitor--bits 0, 1, and 2 control the color signals,
+     while bit 4 controls the intensity signal.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³                 ³    Logical AND    ³   Color Plane    ³
+     ³ 4-bit attribute ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄ´ Enable register  ³
+     ³                 ³         ³         ³                  ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ         ³         ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                 ³
+                     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                     ³Palette register 0-0FH ³
+                     ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+                                 ³
+                                 
+               6-bit digital output to video display
+                (2-bits each for red, green, blue)
+
+     Figure 3-7.  Attributes and colors on the EGA.
+
+
+     200-line monitors (CGA-compatible):
+
+     Bit   7     6     5     4     3     2     1     0
+        ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+        ³     ³     ³     ³  I  ³     ³  R  ³  G  ³  B  ³ Palette register
+        ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÂÄÄÁÄÄÄÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+                             ³           ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄPin 5
+                             ³           ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 4
+                             ³           ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 3
+                             ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 6
+
+     350-line color monitors (EGA-compatible):
+
+     Bit   7     6     5     4     3     2     1     0
+        ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+        ³     ³     ³  r  ³  g  ³  b  ³  R  ³  G  ³  B  ³ Palette register
+        ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÂÄÄÙ
+                       ³     ³     ³     ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄPin 5
+                       ³     ³     ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 4
+                       ³     ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 3
+                       ³     ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 7
+                       ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 6
+                       ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 2
+
+     350-line monochrome monitors (MDA-compatible)
+
+     Bit   7     6     5     4     3    2     1     0
+        ÚÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄ¿
+        ³     ³     ³     ³  I  ³  V  ³     ³     ³     ³ Palette register
+        ÀÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÂÄÄÁÄÄÂÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÙ
+                             ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 7
+                             ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 6
+
+     R,G,B = primary red, green, blue (higher intensity)
+     r,g,b = secondary red, green, blue (lower intensity)
+     I = intensity
+     V = monochrome video
+
+     Figure 3-8.  EGA palette register values and corresponding monitor
+     color drive signals. Pin numbers refer to the EGA's 9-pin connector.
+
+
+     The EGA's method of generating colors indirectly through palette
+     registers is more complex than the CGA's direct scheme, but the EGA is
+     more flexible. You can select the foreground and background colors for
+     each character individually, yet you can produce global color changes
+     by updating the value in a particular palette register.
+
+     The high-order bit of each character's attribute byte can control
+     either blinking or background intensity, just as on the MDA and the
+     CGA. Bit 3 of the EGA's Attribute Controller Mode Control register
+     (register 10H at I/O port 3C0H) is the Enable Blink bit. Setting it to
+     1 enables blinking, so only the low-order 3 bits of the background
+     nibble (bits 4 through 6 of the attribute byte) designate palette
+     registers. Thus, when blinking is enabled, you can reference only
+     the first eight palette registers to select the background color for
+     a character. Setting the Enable Blink bit to 0 disables blinking,
+     making all 16 palette registers available for background colors
+     (see Listing 3-2).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-2.  Setting and resetting the Enable Blink bit on the MCGA,
+     EGA, or VGA.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     When you select an alphanumeric video mode using the EGA BIOS, the
+     palette registers are loaded with default values that correspond to
+     the colors available on the CGA. The color values in the second eight
+     palette registers are intensified versions of those in the first
+     eight. Thus, if you simply treat bit 7 of the attribute byte as a
+     "background intensity or blink" bit, your program will run on both an
+     EGA and a CGA.
+
+     You can update the contents of any palette register either directly or
+     with INT 10H function 10H (see Listing 3-3). Using the BIOS routine
+     is more convenient and avoids the need to write hardware-dependent
+     code. Moreover, the BIOS routine can also load all 16 palette
+     registers at once, given a table of color values (see Appendix A).
+     Nevertheless, you may still need to program the palette registers
+     directly to produce very rapid color changes such as might be required
+     in some types of animation.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-3.  Palette register programming on the EGA or VGA.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     In monochrome alphanumeric mode, the EGA emulates the MDA monochrome
+     display attributes. The video BIOS initializes the palette registers
+     with values that correspond to MDA attributes (see Figure 3-9). Bit 3
+     determines whether pixels are on or off, and bit 4 (if set in addition
+     to bit 3) causes a higher-intensity display. The underline attribute
+     is generated whenever a character's foreground attribute is 1 or 9,
+     regardless of the value in the corresponding palette register.
+
+Value       Attribute
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0           Black
+8           Normal intensity
+10H         Dim
+18H         High intensity
+     Figure 3-9.  Monochrome alphanumeric attribute values for the EGA
+     palette registers.
+
+
+       ÉÍÍÍ»     The EGA also generates an underline attribute in 16-color
+       º T º     alphanumeric modes when the foreground attribute is 1 or 9
+       º I º     and the background attribute is 0 or 8. However, you do
+       º P º     not normally see an underline in 16-color modes because
+       ÈÍÍÍ¼     the video BIOS default value for the CRTC Underline
+                 Location register (14H) is 1FH. This value is greater than
+                 the number of scan lines normally displayed for
+                 alphanumeric characters, so the underline does not appear.
+
+                 You can generate underlined characters in 16-color modes
+                 by storing a displayable value in the Underline Location
+                 register. Of course, only characters with attributes of 1,
+                 9, 81H, or 89H will appear underlined, but you can change
+                 the values in the corresponding palette registers to
+                 produce underlined characters of any desired color.
+
+
+InColor Card
+
+     The InColor Card can decode alphanumeric attributes in several
+     different ways. The card has a set of 16 palette registers whose
+     function is analogous to the EGA's Attribute Controller palette
+     registers, but the InColor Card can be configured by your program to
+     bypass the palette registers and decode each character's 4-bit
+     foreground and background attributes in an MDA- or CGA-compatible
+     manner. Bits 4 and 5 of the Exception register (17H) control how the
+     InColor Card interprets alphanumeric attributes (see Figure 3-10).
+     Bit 5 determines whether the InColor Card displays monochrome
+     attributes (as on the MDA) or color attributes (as on the CGA or EGA).
+     Bit 4 enables attribute mapping through the palette registers.
+
+     When the InColor Card is powered up, Exception register bit 5 has the
+     value 1 and bit 4 has the value 0. Thus, by default, the card
+     interprets attributes as an MDA would. However, if you set both bits 5
+     and 4 to 0 (see Listing 3-4), alphanumeric attributes specify the
+     same set of 16 colors as on a CGA (refer to Figure 3-6).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-4.  InColor Exception register programming.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Bit 5     Bit 4     Attribute Emulation
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0         0         CGA
+0         1         EGA
+1         0         MDA
+1         1         MDA mapped through palette registers.
+     Figure 3-10.  Exception register control of attributes on the Hercules
+     InColor Card.
+
+
+     Setting bit 4 to 1 causes attributes to map to the card's palette
+     registers, regardless of the value of bit 5. Thus, if bit 4 is 1 and
+     bit 5 is 0, the InColor Card interprets attributes as does the EGA. If
+     bit 4 is 1 and bit 5 is 1, however, the card maps each character's
+     foreground and background attributes only to the palette registers
+     that correspond to valid monochrome attribute values. In this case,
+     the "black," "dim," "normal intensity," and "high intensity"
+     attributes select palette registers 00H, 08H, 07H, and 0FH
+     respectively.
+
+     Bit 5 of the CRT Mode Control register at 3B8H is the Enable Blink
+     bit. This bit controls background intensity regardless of the values
+     of Exception register bits 4 and 5. However, characters are blinked
+     only when Exception register bit 5 is 1 (MDA-compatible attributes);
+     characters do not blink when bit 5 of the Exception register is 0
+     (CGA-compatible attributes), regardless of the Enable Blink bit's
+     setting.
+
+     No video BIOS support is provided for the InColor Card's palette
+     registers. Your program must therefore update the palette by directly
+     storing values in the palette registers. Listing 3-5 is an example of
+     how you might do this. The initial I/O read (IN AL,DX) of the palette
+     register (1CH) resets an internal index which points to the first of
+     the 16 internal palette registers. Each subsequent I/O write
+     (OUT DX,AL) updates one internal palette register and increments the
+     internal index to point to the next palette register, so all 16
+     registers can be loaded by executing a simple loop.
+
+       ÉÍÍÍ»     Because monochrome attributes can be mapped through
+       º T º     palette registers, you can assign as many as four
+       º I º     different colors to monochrome programs that run on the
+       º P º     InColor Card. Do this by setting Exception register bits 4
+       ÈÍÍÍ¼     and 5 to 1 and updating palette registers 00H, 08H, 07H,
+                 and 0FH with the desired colors.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-5.  InColorpalette register programming.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     On the InColor Card, the colors of both the cursor and the underscore
+     are independent of the foreground colors of the characters in the
+     video buffer. The cursor color is specified in bits 0 through 3 of the
+     Exception register, and the underscore color value is specified in
+     bits 4 through 7 of the Underscore register (CRTC register 15H). When
+     the InColor Card is displaying MDA attributes (that is, when bit 5 of
+     the Exception register is set to 1), you can specify only the three
+     low-order bits of the cursor and underscore colors; the high-order bit
+     of these color values is derived from the foreground attribute of the
+     character where the cursor or underscore is displayed.
+
+     When palette mapping is enabled (Exception register bit 4 is set to
+     1), both the cursor and underscore color values select palette
+     registers. When palette mapping is disabled, the cursor and underscore
+     color values are displayed using the usual CGA colors. Also, if you
+     specify a value of 0 for either the underscore color or the cursor
+     color, the InColor Card uses the value 7 instead.
+
+
+MCGA
+
+     The components of the PS/2 Model 30's video subsystem that transform
+     attribute data into color video signals are the Video Formatter and
+     the video Digital-to- Analog Converter (DAC). The Video Formatter gate
+     array decodes attributes and generates an 8-bit digital output which
+     is passed to the video DAC; from this, the DAC generates analog red,
+     green, and blue signals for the video display. The DAC converts the 8-
+     bit output from the Video Formatter to the three analog color signals
+     by using the 8 bits to select one of the DAC's 256 color registers.
+     Each DAC color register is 18 bits wide, comprising three 6-bit values
+     for red, green, and blue (see Figure 3-12). The DAC converts each
+     6-bit value into an analog signal with the highest value (3FH)
+     corresponding to the highest-intensity signal.
+
+     In alphanumeric modes, the four low-order bits of the Video
+     Formatter's 8-bit digital output are derived from attribute bytes,
+     while the four high-order bits are always 0 (see Figure 3-11). Thus,
+     only the first 16 of the video DAC's color registers are used in MCGA
+     alphanumeric modes. The remaining 240 registers can be accessed only
+     in 320-by-200 256-color graphics mode (see Chapter 4). When an MCGA
+     is attached to a color display, the video BIOS initializes the first
+     16 video DAC color registers with the same colors found on the CGA.
+
+       ÉÍÍÍ»     The value in the video DAC Mask register (I/O port 3C6H)
+       º T º     masks the 8-bit value passed to the video DAC. The Mask
+       º I º     register value is set to 0FFH by the video BIOS
+       º P º     initialization routines so that all 256 video DAC color
+       ÈÍÍÍ¼     registers can be accessed. IBM technical documentation
+                 recommends that this value not be modified.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³   4-bit attribute    ³   Logical AND    ³  Video DAC Mask register ³
+     ³                      ÃÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄ´                          ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ         ³        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                      
+                        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                        ³        Video DAC         ³
+                        ³   color register 0-0FH   ³
+                        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                      ³
+                                      
+                    18-bit analog output to video display
+                     (6 bits each for red, green, blue)
+
+     Figure 3-11.  Attributes and colors on the MCGA. (The value in the
+     video DAC Mask register should normally be 0FFH.)
+
+
+           6 bits           6 bits          6 bits
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³      Red       ³      Green     ³      Blue      ³
+     ÀÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÙ
+              ³                ³                ÀÄÄÄÄÄÄÄÄÄÄPin 3
+              ³                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 2
+              ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄPin 1
+
+     Figure 3-12.  Video DAC color register values and monitor color drive
+     signals. Pin numbers refer to the MCGA's 15-pin connector.
+
+     Unlike the EGA, an MCGA with a monochrome display does not emulate the
+     MDA's attributes. Instead, the 16 default video DAC color register
+     values consist of four groups of four shades of gray. Each group is
+     displayed with higher intensity than the preceding group. Within each
+     group, the intensity increases from lower to higher attribute values.
+     Thus, attribute values 0 through 3 make up a range of four shades of
+     gray, values 4 through 7 a second range of somewhat higher intensity,
+     and values 8 through 0BH and 0CH through 0FH a third and fourth range
+     of still higher intensity.
+
+       ÉÍÍÍ»     Instead of this default MCGA monochrome gray-scale
+       º T º     configuration, you might prefer to use gray-scale values
+       º I º     that increase uniformly with increasing attribute values.
+       º P º     The code in Listing 3-6 loads the video DAC registers
+       ÈÍÍÍ¼     with appropriate values for this gray-scale gamut.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-6.  Loading an alternative MCGA monochrome gray-scale
+     palette.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+VGA
+
+     In general, the VGA exactly emulates EGA alphanumeric attribute
+     decoding. However, the VGA has both a video DAC and a set of 16
+     Attribute Controller palette registers. Each palette register value
+     selects one of 256 video DAC color registers. The value in the
+     selected video DAC color register determines the color displayed.
+
+     Depending on the value of bit 7 in the Attribute Controller's Mode
+     Control register, you can use the palette register value to select a
+     video DAC color register in one of two ways. When bit 7 is set to 0,
+     the Attribute Controller combines the 6-bit palette-register value
+     with bits 2 and 3 of its Color Select register (14H) to produce an 8-
+     bit value that selects a video DAC color register (see Figure 3-13).
+     Alternatively, when bit 7 is set to 1, only the four low-order bits of
+     each palette register are meaningful. The Attribute Controller derives
+     the other four bits of the 8-bit value from bits 0 through 3 of the
+     Color Select register (see Figure 3-14).
+
+     In the first case (when bit 7 of the Mode Control register is set to
+     0), the 6-bit palette registers are used to select one of four groups
+     of 64 video DAC color registers, and bits 2 and 3 of the Color Select
+     register determine which group of color registers is used. In the
+     second case (when bit 7 of the Mode Control register is set to 1),
+     each palette register value selects one of 16 groups of 16 video DAC
+     color registers, and bits 0 through 3 of the Color Select register
+     specify one of the 16 groups of DAC color registers.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³ 4-bit attribute ³ Logical AND  ³   Color Plane   ³
+     ³                 ÃÄÄÄÄÄÄÄÂÄÄÄÄÄÄ´ Enable register ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³      ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                               
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                   ³Palette register 0-0FH³  ³Color Select register ³
+                   ³                      ³  ³     (bits 2-3)       ³
+                   ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+                               ³Bits 0-5 of              ³ Bits 6-7 of
+                               ³color register           ³ color register
+                               ³number                   ³ number
+                               ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                            ³
+                                            ³     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                            ³     ³    Video DAC Mask     ³
+                                            ³     ³       register        ³
+                                            ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+                                            ³   Logical AND    ³
+                                            ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                   ³
+                                                   
+                                        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                        ³      Video DAC       ³
+                                        ³color register 0-0FFH ³
+                                        ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                   ³
+                                                   
+                                 18-bit analog output to video display
+                                   (6 bits each for red, green, blue)
+     
+     Figure 3-13.  Attributes and colors on the VGA (when bit 7 of the
+     Attribute Controller's Mode Control register is set to 0).
+
+
+     This added level of indirection, afforded by the combined use of
+     palette registers and video DAC color registers, makes switching
+     between palettes easy, since you can select any of 16 different 16-
+     color palettes just by changing the value in the Attribute
+     Controller's Color Select register. If you store 16 palettes of
+     gradually increasing intensity in the DAC color registers, you can
+     accentuate characters on the screen by cyclically increasing and
+     decreasing their intensity. This effect is more subtle than simply
+     blinking the characters on and off, particularly when applied to a
+     large area of the display.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³ 4-bit attribute ³ Logical AND  ³   Color Plane   ³
+     ³                 ÃÄÄÄÄÄÄÄÂÄÄÄÄÄÄ´ Enable register ³
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³      ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                               
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                   ³Palette register 0-0FH³  ³Color Select register ³
+                   ³                      ³  ³     (bits 0-3)       ³
+                   ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+                               ³Bits 0-3 of              ³ Bits 4-7 of
+                               ³color register           ³ color register
+                               ³number                   ³ number
+                               ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                            ³
+                                            ³     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                            ³     ³    Video DAC Mask     ³
+                                            ³     ³       register        ³
+                                            ³     ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÙ
+                                            ³   Logical AND    ³
+                                            ÀÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                   ³
+                                                    
+                                        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                        ³      Video DAC       ³
+                                        ³color register 0-0FFH ³
+                                        ÀÄÄÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                   ³
+                                                   
+                                 18-bit analog output to video display
+                                   (6 bits each for red, green, blue)
+
+     Figure 3-14.  Attributes and colors on the VGA (when bit 7 of the
+     Attribute Controller's Mode Control register is set to 1).
+
+
+       ÉÍÍÍ»     When the VGA emulates 80-by-25 16-color alphanumeric mode
+       º T º     on a monochrome display, the palette consists of the same
+       º I º     four groups of four gray-scaled values as does the
+       º P º     corresponding palette on the MCGA. As on the MCGA, you can
+       ÈÍÍÍ¼     create a gray-scale palette with gradually increasing
+                 intensities. Listing 3-7 illustrates how you might do
+                 this. Note how the appropriate video DAC registers are
+                 selected by examining the values in the Attribute
+                 Controller's palette registers.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-7.  Loading an alternative VGA monochrome gray-scale
+     palette.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The VGA emulates the MDA's monochrome alphanumeric mode (video BIOS
+     mode 7) on either a color or a monochrome display. The Attribute
+     Controller palette register values and the control of blinking and
+     underlining are the same as on the EGA. In this mode, the video DAC
+     registers corresponding to the palette values 00H, 07H, 08H, and 18H
+     are initialized with the appropriate gray-scale values. The palette
+     and video DAC register values are the same in this mode regardless of
+     whether a color or monochrome display is attached.
+
+
+Gray-Scale Summing
+
+
+     Both the MCGA and the VGA BIOS contain logic which can transform the
+     red-green-blue values in the video DAC registers into corresponding
+     gray-scale values. This transformation is performed by taking a
+     weighted average of the red, green, and blue components. To compute
+     the gray-scaled equivalent value, the BIOS sums 30 percent of the red
+     value, 59 percent of the green, and 11 percent of the blue. (These
+     percentages approximate the displayed intensities of pure red, green,
+     and blue.) For example, the default color for video DAC Color Register
+     02H (cyan) is made up of three 6-bit components. The value of the red
+     component is 0, the green component 2AH, and the blue component 2AH.
+     The gray-scale value is therefore 1DH, the sum of
+
+     (.30 x 0) + (.59 x 2AH) + (.11 x 2AH)
+
+     INT 10H function 10H includes a subfunction (AL = 1BH) that reads a
+     set of video DAC color registers and updates them with equivalent
+     gray-scale values. Appendix A contains an example of the use of this
+     video BIOS function.
+ 
+     On both the MCGA and the VGA, INT 10H function 0 uses gray-scale
+     summing by default when a monochrome display is attached. With a color
+     display, gray-scale summing is disabled by default. You can
+     selectively enable or disable default gray-scale summing by executing
+     INT 10H function 12H with BL = 33H.
+
+
+Border Color
+
+     On the CGA, EGA, MCGA, and VGA, you can specify a color to be
+     displayed during the vertical and horizontal overscan intervals. This
+     overscan or border color is not represented by any data in the video
+     buffer. Instead, a special control register contains the value of the
+     color displayed.
+
+
+
+CGA
+
+     On the CGA, you select the border color with the four low-order bits
+     of the Color Select register at I/O port 3D9H (see Listing 3-8). The
+     color values parallel those available for character attributes: bits
+     0, 1, and 2 select the blue, green, and red primaries, and bit 3 is
+     interpreted as an intensity bit.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-8.  Setting a border color.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Using INT 10H function 0BH to update the border color is probably more
+     convenient than programming the Color Select register directly. The
+     code is more portable, and the BIOS routine saves the most recently
+     written value of the Color Select register in its Video Display Data
+     Area in the byte at 0040:0066 (CRT_PALETTE). If you do write directly
+     to the Color Select register, you should update CRT_PALETTE as in the
+     example in Listing 3-8.
+
+       ÉÍÍÍ»     The MCGA does not generate a colored border, regardless of
+       º T º     the value in its Color Select register.
+       º I º
+       º P º
+       ÈÍÍÍ¼
+
+
+EGA and VGA
+
+     On the EGA and VGA, the overscan color is specified by the contents of
+     register 11H of the Attribute Controller (I/O port 3C0H). You could
+     write directly to the  I/O port, but doing the job with an INT 10H
+     call is usually easier. You can use the EGA BIOS to update the
+     overscan color in two ways. You can use function 0BH of INT 10H or you
+     can include the border color as the 17th and last entry in the table
+     of palette register colors you pass to INT 10H function 10H (see
+     Appendix A).
+
+       ÉÍÍÍ»     On the VGA with a monochrome display, the only useful
+       º T º     border attributes are 0 (black), 8 (normal), and 18H
+       º I º     (intense).
+       º P º
+       ÈÍÍÍ¼
+
+     The 350-line video modes on the EGA have relatively short vertical and 
+     horizontal overscan intervals. The displayed border may be only 1 or 2
+     mm wide, or it may bleed across the screen during the horizontal
+     retrace interval. For this reason you should avoid setting the border
+     color in any 350-line mode on the EGA.
+
+
+       ÉÍÍÍ»     You can increase the EGA's horizontal and vertical
+       º T º     overscan intervals in 350-line modes by modifying the CRTC
+       º I º     horizontal and vertical timing parameters. A reasonable
+       º P º     border, about as wide as that displayed with the VGA, can
+       ÈÍÍÍ¼     be achieved by adding one or two characters to the
+                 Horizontal Total value and eight or ten scan lines to the
+                 Vertical Total value. The corresponding timing values for
+                 the Horizontal and Vertical Retrace and Blanking registers
+                 must be adjusted accordingly (see  Figure 3-15).
+
+                 The problem with reprogramming the CRTC in this way is
+                 that the horizontal and vertical frequencies that drive
+                 the video display are somewhat lower than nominal. For
+                 example, with the CRTC values shown in Figure 3-15,
+                 the horizontal scan rate becomes 16.257 MHz / (94
+                 chars/line x 8/char), or 21.62 KHz, which is about 1
+                 percent lower than the nominal horizontal scan frequency
+                 of 21.85 KHz. Similarly, the vertical scan rate becomes
+                 21.62 KHz / 374 lines, or 58 Hz, almost 4 percent lower
+                 than the usual 60 Hz frame rate. Still, these scan rates
+                 are usually within the tolerances of an EGA-compatible
+                 video display.
+
+
+               80-by-25 16-Color Alphanumeric Mode:
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CRTC register  Function                      Setting (default)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0              Horizontal Total              5CH (5BH)
+2              Horizontal Blanking Start     54H (53H)
+3              Horizontal Blanking End       3CH (37H)
+4              Horizontal Retrace Start      52H (51H)
+5              Horizontal Retrace End        5CH (5BH)
+6              Vertical Total                76H (6CH)
+10H            Vertical Retrace Start        64H (5EH)
+11H            Vertical Retrace End          25H (2BH)
+15H            Vertical Blank Start          64H (5EH)
+16H            Vertical Blank End            11H (0AH)
+
+
+               640-by-350 16-Color Graphics Mode:
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+CRTC register  Function                      Setting (default)
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0              Horizontal Total              5CH (5BH)
+2              Horizontal Blanking Start     53H (53H)
+3              Horizontal Blanking End       3CH (37H)
+4              Horizontal Retrace Start      53H (52H)
+5              Horizontal Retrace End        00H (00H)
+6              Vertical Total                76H (6CH)
+10H            Vertical Retrace Start        64H (5EH)
+11H            Vertical Retrace End          25H (2BH)
+15H            Vertical Blank Start          64H (5EH)
+16H            Vertical Blank End            11H (0AH)
+
+     Figure 3-15.  CRTC parameters for increased border width in 350-line
+     EGA video modes. (Default register values are listed in parentheses.)
+
+
+Avoiding CGA Snow
+
+
+     On the CGA, alphanumeric video display modes present a particular
+     programming challenge whenever you are concerned about the speed of
+     video display output. You must program carefully in alphanumeric modes
+     to prevent interference with the display when you read or write data
+     in the CGA's video buffer.
+
+     Directly accessing the contents of the CGA's video buffer from 
+     your program has its pros and cons. On the positive side, it enables
+     your program to completely control the buffer's contents, and thus
+     what is displayed. The negative side is that when both the CPU and
+     the display-refresh circuitry access the buffer at the same time,
+     interference, or "snow," can appear on the display. The snow can be
+     barely noticeable or greatly distracting, depending on the amount of
+     data transferred to or from the video buffer.
+
+     In general, to avoid snow you must limit CPU accesses to the video
+     buffer to intervals when data is not being fetched from the buffer to
+     refresh the screen. In practice, this means that your program must
+     transfer data to and from the video buffer only when the electron
+     beam in the video display is moving through an overscan or retrace
+     interval.
+
+     This synchronization can be achieved in several ways, but,
+     unfortunately, all of them introduce a certain amount of hardware
+     dependency into your program. As a general rule, the more hardware-
+     dependent tricks you play, the faster your program runs on a CGA but
+     the less likely it is to run on another video adapter.
+
+
+Blanking the Display
+
+     One technique for preventing display interference on the CGA is to
+     turn off the electron beam whenever you access the display buffer. You
+     then leave the beam off while data is transferred to or from the video
+     buffer. This method is used in the ROM BIOS routines which scroll the
+     display.
+
+     The best time to blank the display is when it's blank anyway, at the
+     start of a vertical blanking interval. If you do not take care to turn
+     the electron beam off during the vertical blanking interval, you will
+     instead blank the screen while it is being refreshed. This can produce
+     an annoying flicker or interference stripes.
+
+     The technique is straightforward (see Listing 3-9). The trick is to
+     synchronize buffer access with the start of a vertical blanking
+     interval. Do this by detecting an interval when vertical blanking is
+     not occurring. Then wait for the next subsequent vertical blanking
+     interval to begin.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-9.  Display alphanumeric text on the CGA by blanking the
+     display.
+
+                TITLE   'Listing 3-9'
+                NAME    DisplayText
+                PAGE    55,132
+
+;
+; Name:         DisplayText
+;
+; Function:     Display an alphanumeric string without interference on the CGA
+;
+; Caller:       Microsoft C:
+;
+;                       int DisplayText1(buf,n,offset);
+;
+;                       char *buf;              /* buffer containing text in
+;                                                  CGA alphanumeric format
+;                                                  (alternating character codes
+;                                                  and attribute bytes
+;                                               */
+;
+;                       int n;                  /* buffer length in bytes */
+;
+;                       unsigned int offset;    /* offset into video buffer */
+;
+
+Set80X25        EQU     (1 SHL 0)       ; bit masks for Mode Control Register
+Set320X200      EQU     (1 SHL 1)
+BlackAndWhite   EQU     (1 SHL 2)
+EnableVideo     EQU     (1 SHL 3)
+Set640X200      EQU     (1 SHL 4)
+EnableBlink     EQU     (1 SHL 5)
+
+ARGbuf          EQU     word ptr [bp+4] ; stack frame addressing
+ARGn            EQU     word ptr [bp+6]
+ARGoffset       EQU     word ptr [bp+8]
+TIMEOUT         EQU     5               ; Horizontal Retrace timeout loop limit
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _DisplayText
+_DisplayText    PROC    near
+
+                push    bp              ; usual C prologue to establish
+                mov     bp,sp           ;  stack frame and preserve registers
+                push    si
+                push    di
+
+                mov     ax,0B800h
+                mov     es,ax
+                mov     di,ARGoffset    ; ES:DI -> destination in video buffer
+                mov     si,ARGbuf       ; DS:SI -> source buffer
+                mov     bx,ARGn
+                shr     bx,1            ; BX := buffer length in words
+
+                mov     dx,3DAh         ; DX := CGA Status Port
+
+; wait for start of vertical blanking period
+
+L01:            mov     cx,TIMEOUT      ; CX := loop counter (timeout value)
+
+L02:            in      al,dx           ; AL := video status
+                test    al,8
+                jnz     L02             ; loop if in vertical retrace
+                test    al,1
+                jz      L02             ; loop if not in horizontal retrace
+
+                cli                     ; disable interrupts during horiz retrace
+
+L03:            in      al,dx
+                test    al,1
+                loopnz  L03             ; loop until end of retrace or timeout
+
+                sti                     ; re-enable interrupts
+
+                jz      L01             ; loop if no timeout
+
+; blank the display
+
+                mov     dl,0D8h         ; DX := 3D8h (Mode Control register)
+                mov     al,(Set80X25 OR EnableBlink)
+                out     dx,al           ; turn video off
+
+; copy the data to the video buffer
+
+                mov     cx,bx           ; CX := buffer length in words
+                rep     movsw
+
+; re-enable the display
+
+                or      al,EnableVideo
+                out     dx,al
+
+                pop     di              ; usual C epilogue to restore registers
+                pop     si              ;  and discard stack frame
+                mov     sp,bp
+                pop     bp
+                ret
+
+_DisplayText    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The procedure for detecting the start of a vertical blanking interval
+     requires you to first determine a timeout value for the horizontal
+     retrace interval (see Listing 2-2). This value is then used to wait
+     for the last horizontal scan in the current frame. When the last
+     horizontal blanking interval times out, the vertical blanking interval
+     has begun.
+
+     At this point, your program should explicitly disable the electron
+     beam by resetting bit 3 of the CGA's Mode Control register (port
+     3D8H). When this bit is zeroed, the electron beam is disabled and the
+     display remains dark. While the display is dark, you can move data to
+     or from the video buffer without causing snow. When the data transfer
+     is complete, restore the display by setting bit 3 of the Mode Control
+     register to 1.
+
+     It is not necessarily desirable to wait for another vertical blanking
+     interval before reenabling the electron beam. If the period during
+     which you transferred data left the screen dark long enough to cause
+     noticeable flicker, waiting until the next vertical retrace will only
+     prolong the duration of the flicker. If you reenable the display
+     somewhere in the middle of a refresh cycle, the flicker will be worse
+     in the top part of the screen but better in the bottom part. Neither
+     situation is ideal; it's up to you to decide which alternative is
+     preferable.
+
+     The amount of time it takes to access the video buffer determines how
+     long your program must keep the screen dark. Obviously, the longer the
+     screen is dark, the more flicker you perceive. If your program is
+     executed on one of the slower members of the IBM PC family (PC or
+     PC/XT), the flicker effect can become annoying.
+
+     Consider what might happen whenever you scroll an entire 80-by-25
+     screen up one line. Within the video buffer, 4000 bytes of data must
+     be moved. On a vintage IBM PC, with its 4.77 MHz 8088, this data
+     transfer takes about 21 milliseconds. Since each video frame lasts
+     about 16.7 milliseconds (1/60 second), the screen remains dark for
+     about 1-1/3 frames. The resulting flicker is very noticeable,
+     particularly if the background color is not black. On the other hand,
+     on a PC with a faster CPU, the data transfer takes less time, so the
+     flicker is less apparent.
+
+
+Using the Vertical Blanking Interval
+
+     A technique that avoids the flicker problem is to access the video
+     buffer only for the duration of the vertical blanking interval.
+     However, this slows data transfer, because you can move only a limited
+     number of bytes of data during a single vertical blanking interval.
+
+     The limitations here are the duration of the vertical blanking
+     interval (about 4 milliseconds) and the rate at which the CPU can move
+     data in the video buffer. A 4.77 MHz 8088 in a PC or PC/XT can move
+     about 450 words (900 bytes) of data before the vertical blanking
+     interval ends and snow becomes visible. Obviously, a PC with a higher
+     clock speed or with an 80286 or 80386 can move more data during a
+     single vertical blanking interval.
+
+
+Using the Horizontal Blanking Interval
+
+     If your video output routine synchronizes with the start of horizontal
+     blanking intervals, you have about 7 microseconds in which to access
+     the video buffer at the end of each raster scan line without causing
+     snow (see Listing 3-10). Although 7 microseconds may not seem like
+     much time, it is long enough to move 2 bytes into or out of the video
+     buffer without causing display interference. Since each frame contains
+     200 horizontal blanking intervals, you can significantly increase
+     performance by taking advantage of them.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-10.  Display alphanumeric text on the CGA during horizontal
+     and vertical blanking intervals.
+
+                TITLE   'Listing 3-10'
+                NAME    DisplayText
+                PAGE    55,132
+
+;
+; Name:         DisplayText
+;
+; Function:     Display an alphanumeric string without interference on the CGA
+;
+; Caller:       Microsoft C:
+;
+;                       int DisplayText(buf,n,offset);
+;
+;                       char *buf;              /* buffer containing text in
+;                                                  CGA alphanumeric format
+;                                                  (alternating character codes
+;                                                  and attribute bytes)
+;                                               */
+;
+;                       int n;                  /* buffer length in bytes */
+;
+;                       unsigned int offset;    /* offset into video buffer */
+;
+
+ARGbuf          EQU     word ptr [bp+4]
+ARGn            EQU     word ptr [bp+6]
+ARGoffset       EQU     word ptr [bp+8]
+TIMEOUT         EQU     6               ; horizontal timeout loop limit
+VBcount         EQU     250             ; number of words to write during
+                                        ;  vertical blanking interval
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                PUBLIC  _DisplayText
+_DisplayText    PROC    near
+
+                push    bp              ; usual C prologue to establish
+                mov     bp,sp           ;  stack frame and preserve registers
+                push    si
+                push    di
+
+                mov     ax,0B800h
+                mov     es,ax
+                mov     di,ARGoffset    ; ES:DI -> destination in video buffer
+                mov     si,ARGbuf       ; DS:SI -> source buffer
+                mov     cx,ARGn
+                shr     cx,1            ; CX := buffer length in words
+
+                mov     dx,3DAh         ; DX := CGA Status Port
+
+; write during remaining vertical blanking interval
+
+L01:            mov     bx,cx           ; preserve buffer length in BX
+                mov     cx,TIMEOUT      ; CX := horizontal timeout
+                cli                     ; disable interrupts during loop
+
+L02:            in      al,dx           ; AL := video status
+                test    al,1
+                loopnz  L02             ; loop while Display Enable inactive
+                jz      L03             ; jump if loop did not time out
+
+                movsw                   ; copy one word
+                sti
+                mov     cx,bx           ; CX := buffer length
+                loop    L01
+
+                jmp     short L10       ; exit (entire string copied)
+
+; write during horizontal blanking intervals
+
+L03:            sti
+                mov     cx,bx           ; restore CX
+
+L04:            lodsw                   ; AL := character code
+                                        ; AH := attribute
+                mov     bx,ax           ; BX := character and attribute
+                push    cx              ; preserve word loop counter
+                mov     cx,TIMEOUT      ; CX := timeout loop limit
+
+                cli                     ; clear interrupts during one scan line
+L05:            in      al,dx
+                test    al,1
+                loopnz  L05             ; loop during horizontal blanking
+                                        ;  until timeout occurs
+                jnz     L07             ; jump if timed out (vertical
+                                        ;  blanking has started)
+L06:            in      al,dx
+                test    al,1
+                jz      L06             ; loop while Display Enable is active
+
+                xchg    ax,bx           ; AX := character & attribute
+                stosw                   ; copy 2 bytes to display buffer
+
+                sti                     ; restore interrupts
+                pop     cx              ; CX := word loop counter
+                loop    L04
+
+                jmp     short L10       ; exit (entire string copied)
+
+; write during entire vertical blanking interval
+
+L07:            pop     bx              ; BX := word loop counter
+                dec     si
+                dec     si              ; DS:SI -> word to copy from buffer
+
+                mov     cx,VBcount      ; CX := # of words to copy
+                cmp     bx,cx
+                jnb     L08             ; jump if more than VBcount words remain
+                                        ;  in buffer
+                mov     cx,bx           ; CX := # of remaining words in buffer
+                xor     bx,bx           ; BX := 0
+                jmp     short L09
+
+L08:            sub     bx,cx           ; BX := (# of remaining words) - VBcount
+
+L09:            rep     movsw           ; copy to video buffer
+
+                mov     cx,bx           ; CX := # of remaining words
+                test    cx,cx
+                jnz     L01             ; loop until buffer is displayed
+
+L10:            pop     di              ; usual C epilogue to restore registers
+                pop     si              ;  and discard stack frame
+                mov     sp,bp
+                pop     bp
+                ret
+
+_DisplayText    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Because the horizontal blanking interval is so short, synchronization
+     is critical. The technique is parallel to that used for synchronizing
+     with the vertical retrace interval. In this case, you determine the
+     status of the Display Enable signal by testing bit 0 of the CRT Status
+     register (3DAH). When this bit has a value of 1, the Display Enable
+     signal is off and a horizontal blanking interval is in progress.
+
+     Keep in mind two considerations if you take the trouble to use the
+     horizontal blanking intervals. First, you might as well use the
+     vertical blanking intervals as well, since they're there. Second, you
+     should use MOVS or STOS instructions to do the actual data transfers.
+     The slower MOV mem/reg instruction can take longer than the horizontal
+     blanking interval lasts, so snow isn't eliminated.
+
+     The IBM ROM BIOS routines that write to the video buffer during
+     horizontal retrace use the sequence
+
+        mov    ax,bx
+        stosw
+
+     to move a character and attribute into the buffer without snow.
+     Nevertheless, if you use the same two instructions in a RAM-based
+     program, you see snow on a CGA running on a 4.77 MHz PC. The reason is
+     that, at the point where these instructions are executed, the 4-byte
+     instruction prefetch queue in the 8088 has room for only two more
+     bytes. This means that the STOSW opcode cannot be prefetched. Instead,
+     the 8088 must fetch the opcode from memory before it can  be executed.
+
+     That last memory access to fetch the STOSW instruction makes the
+     difference. Because accesses to ROM are faster than accesses to RAM,
+     the instruction fetch is slightly faster out of ROM, so no snow is
+     visible because the STOSW can run before the horizontal blanking
+     interval ends. The routine in Listing 3-10 sidesteps the problem by
+     using XCHG AX,BX (a 1-byte opcode) instead of MOV AX,BX (a 2-byte
+     opcode). This avoids the extra instruction fetch, so the code executes
+     fast enough to prevent display interference.
+
+     Note how the interrupts are disabled in the loop that waits for the
+     start of the horizontal blanking interval. Had an interrupt occurred
+     between the JNZ L06 and the following XCHG AX,BX instructions, the
+     horizontal blanking interval would have ended long before control
+     returned from the interrupt handler. Disabling interrupts while each
+     word is transferred into the video buffer avoids this possible loss of
+     synchronization.
+
+       ÉÍÍÍ»     The routine in Listing 3-10 never explicitly detects the
+       º T º     end of the vertical blanking interval, nor does it count
+       º I º     the 200 horizontal scans in each display refresh cycle.
+       º P º     Instead, the number of bytes that can be transferred
+       ÈÍÍÍ¼     during each vertical blanking interval (VBcount) is
+                 determined empirically for a "worst case" situation (for
+                 example, for a 4.77 MHz IBM PC).
+
+                 The most important reason for this imprecision about the
+                 number of bytes to transfer during vertical blanking
+                 intervals is that interrupts can occur anywhere in a video
+                 output routine except where they are explicitly disabled.
+                 For example, clock-tick interrupts and keyboard interrupts
+                 can occur at any time. Because you can't simply disable
+                 all interrupts for the duration, you must design video
+                 output routines to accommodate the unpredictable time
+                 spent in interrupt handlers.
+
+     The problem of snow is avoided in the hardware design of every other
+     IBM PC and PS/2 video subsystem, including the MDA, EGA, MCGA, and VGA
+     (and even the PCjr). Also, many second-source manufacturers of CGA-
+     compatible adapters design their hardware to eliminate the problem.
+     This means that retrace synchronization loops may not be needed in
+     many applications.
+
+     If you run a program either on a CGA (with snow) or on a CGA-
+     compatible (without snow), the program should try to determine what
+     type of hardware it is running on (see Appendix C). If the program is
+     running on a machine without snow, it can skip over any vertical and
+     horizontal synchronization loops. The slight extra overhead of
+     detecting the presence of a CGA is repaid in greatly improved
+     performance on video subsystems that have no snow problem.
+
+
+Using All the Video Buffer
+
+
+     In alphanumeric video modes, the CGA, EGA, MCGA, and VGA have much
+     more RAM available in their video buffers than is required to display
+     one screen of text. In other words, you can display only a portion of
+     the data in the video buffer at a time. In effect, what you see on the
+     screen is a "window" on the video buffer.
+
+     For example, in 80-by-25-character alphanumeric modes, only 4000 bytes
+     (80 x 25 x 2 bytes per character) are displayed at any one time.
+     However, the CGA has 16 KB of video RAM, so you can actually store
+     four 80-by-25 screens of data in the buffer. You can then program the
+     CGA's CRT Controller to display any 2000 consecutive characters (4000
+     bytes) in the buffer.
+
+
+CGA Video Pages
+
+     To program the CGA to display different portions of the buffer, you
+     update two CRT Controller registers. When you call the ROM BIOS to
+     select a video display mode, the BIOS initializes the CRTC to display
+     the first 4000 bytes of the video buffer. It does this by storing 0,
+     the offset of the first character to be displayed, in the CRTC Start
+     Address registers (0CH and 0DH).
+
+     You can display any arbitrary portion of the CGA's video buffer by
+     storing a video buffer offset in words (not bytes) in the CRTC Start
+     Address registers. The high-order byte of the offset belongs in
+     register 0CH, the low-order byte in register 0DH. For example, loading
+     the Start Address registers with the word offset of the second row
+     (50H) causes the display to begin there (see Listing 3-11).
+
+     Loading the Start Address registers is a much faster operation than
+     transferring characters into the video buffer. Thus, you might regard
+     the 16 KB video buffer as a 102-line "virtual" screen of which only 25
+     lines can be displayed at a time. When the video buffer is filled with
+     text, you can rapidly display any 25 consecutive lines simply by
+     changing the value in the CRTC Start Address registers.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-11.  Setting the CRTC Start Address registers.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Whenever you update the Start Address registers, also update the BIOS
+     Video Display Data Area word at 0040:004E (CRT_START). This helps to
+     maintain functionality across video BIOS calls and with MS-DOS.
+
+     Instead of deciding for yourself which portions of the video buffer to
+     display, you might find it more convenient to adopt the conceptual
+     model of the ROM BIOS, which supports four 80-by-25 (or eight 40-by-
+     25) virtual "pages" in the CGA's video buffer. To simplify addressing,
+     each page starts on a 1 KB (1024-byte) boundary. The four 80-by-25
+     pages thus start at B800:0000, B800:1000, B800:2000, and B800:3000.
+     You can selectively display any video page by calling INT 10H function
+     05H (see Listing 3-12).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-12.  Video page selection using the ROM BIOS.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     A technique that can improve CGA performance is to display
+       º T º     one video page while you fill another (nondisplayed) video
+       º I º     page with data. Then you display the newly filled video
+       º P º     page and make the previous page available for more data
+       ÈÍÍÍ¼     transfers. Design your user interface so that while the
+                 user reads the display, a nondisplayed video page is
+                 filled with the next screen of information. Careful use of
+                 the video pages can make screen updates appear
+                 "instantaneous."
+
+                 You must still avoid display interference by using one of
+                 the techniques for synchronizing the update with vertical
+                 or horizontal blanking intervals, even if you write to a
+                 nondisplayed portion of the buffer.
+
+
+EGA, MCGA, and VGA Video Pages
+
+     With the EGA, MCGA, and VGA, the techniques for using video RAM are
+     similar to those used on the CGA. The Start Address registers in the
+     CRT Controller are mapped to the same I/O port addresses as they are
+     on the CGA's CRTC. Furthermore, the video BIOS supports video pages
+     with the same interface used for the CGA. This simplifies writing a
+     program to run on all of these video subsystems.
+
+       ÉÍÍÍ»     One handy feature of the CRTC on the EGA, the MCGA, the
+       º T º     VGA, and some but not all CGA look-alikes is that the
+       º I º     Start Address registers can be read as well as written.
+       º P º     This feature can be useful in programming these registers
+       ÈÍÍÍ¼     directly, because you can determine their contents at any
+                 time simply by inspecting them.
+
+
+Cursor Control
+
+
+     The CRT Controller also controls the size and screen location of the
+     hardware cursor in alphanumeric modes. You specify the cursor's size
+     by loading a CRTC register with values that indicate its top and
+     bottom lines. The top line is 0; the value for the bottom line depends
+     on the size of the displayed character matrix--7 for an 8-by-8 matrix
+     and 0DH for a 9-by-14 matrix. The cursor's location is specified with
+     a word offset into the video buffer, exactly as you specify the CRT
+     Controller's start address.
+
+
+Cursor Size on the MDA and CGA
+
+     CRTC registers 0AH and 0BH control the cursor size on all IBM PC and
+     PS/2 video subsystems. On the MDA and the CGA, the low-order five bits
+     of register 0AH (Cursor Start) indicate the top line of the displayed
+     cursor. The low-order five bits of register 0BH (Cursor End) specify
+     the bottom line.
+
+     Changing the size of the hardware cursor is a matter of programming
+     these two registers. For example, to display a "block" cursor, which
+     is a rectangle filling an entire character space, set the Cursor Start
+     register to 0 and the Cursor End register to one less than the height
+     of the character matrix. To display the ROM BIOS's default cursor, set
+     the Cursor Start and Cursor End registers to the values for the last
+     two lines of the character matrix, as is done in Listing 3-13.
+
+     In most applications, however, you can use INT 10H function 1 (Set
+     Cursor Type) to change the cursor's size. Using this function ensures
+     compatibility with the video BIOS on all IBM PC and PS/2 video
+     subsystems. Although performing the software interrupt and executing
+     the BIOS routine is slower than programming the CRTC directly, in
+     general you modify the cursor size so infrequently that you'll never
+     notice the slight slowing of your program.
+
+     Also, the BIOS routine maintains the current cursor size in two bytes
+     in the Video Display Data Area at 0040:0060 (CURSOR_MODE). On the MDA
+     and CGA, the CRTC's Cursor Start and Cursor End registers are read-
+     only registers, so you might as well use the BIOS to keep track of the
+     current state of the cursor. The byte at 0040:0060 represents the
+     value in 6845 register 0AH (Cursor Start), and the following byte, at
+     0040:0061, represents register 0BH (Cursor End). If you do bypass the
+     BIOS routine and program the 6845 directly, keep the values in
+     CURSOR_MODE up to date.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-13.  Setting the cursor size.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Cursor Location on the MDA and CGA
+
+     To control the cursor's location, load a buffer offset into the CRTC's
+     Cursor Location High (0EH) and Cursor Location Low (0FH) registers
+     (see Listing 3-14). The Cursor Location offset is relative to the
+     start of the video buffer. If you have changed the CRTC Start Address
+     registers, you must adjust for the new Start Address offset in
+     calculating the Cursor Location offset.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-14.  Setting the cursor location.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+MCGA Cursor Control
+
+     The MCGA's CRTC doubles the values you store in the Cursor Start and
+     Cursor End registers and doubles the number of scan lines in the
+     displayed cursor. Thus, the size of the MCGA's alphanumeric cursor is
+     a multiple of two scan lines.
+
+     This doubling of the Cursor Start and Cursor End values allows you to
+     specify default alphanumeric cursor sizes with the same values you
+     would use on a CGA. For example, in the MCGA's default alphanumeric
+     modes, the character matrix is 16 lines high. If you set Cursor Start
+     to 6 and Cursor End to 7, as you would in a CGA alphanumeric mode, you
+     see the MCGA's cursor at the bottom of the character matrix in lines
+     0CH through 0FH. In this way the MCGA's Cursor Start and End registers
+     emulate the CGA's despite the MCGA's taller character matrix.
+
+     However, there are several differences in the way the MCGA interprets
+     the Cursor Start and Cursor End values (see Figure 3-16). On the
+     MCGA, only the four low-order bits of the Cursor Start and Cursor End
+     values are significant. Furthermore, since the character matrix can be
+     at most 16 scan lines high, Cursor Start and Cursor End values are
+     usually limited to the range 0 through 7. Values greater than 7 can
+     produce a cursor that wraps around to the top of the character matrix
+     (see Figure 3-16e).
+
+
+EGA and VGA Cursor Control
+
+     On the EGA and the VGA, the Cursor Start, Cursor End, Cursor Location
+     High, and Cursor Location Low registers are mapped to the same CRTC
+     register numbers as on the MDA and CGA. This can lead to trouble if
+     you're concerned about portability and need to write to the CRTC
+     registers directly. This is because the EGA and VGA Cursor Start and
+     Cursor End registers do not function exactly as do those on the MDA,
+     CGA, or MCGA.
+
+     On the EGA, the value you specify for the Cursor End register must be
+     1 greater than the bottom line of the cursor (see Figure 3-17). The
+     EGA's CRT Controller displays the alphanumeric cursor from the
+     character scan line specified in the Cursor Start register to the line
+     specified by the Cursor End register minus 1.
+
+     If the Cursor End value is less than the Cursor Start value, the
+     cursor wraps around the character matrix. If the low-order four bits
+     of the Cursor Start and Cursor End values are equal, the cursor
+     appears only on the single line specified in the Cursor Start
+     register. Finally, the Cursor End value must be less than the number
+     of scan lines in the character matrix. Otherwise, the CRT Controller
+     displays a full-height cursor regardless of the Cursor Start
+     register's value.
+
+
+     Cursor Start = 2                   Cursor Start = 2
+     Cursor End = 2                     Cursor End = 4
+                      ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0-1   ³ º º º º º º º ³  Scan line 0-1   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2-3   ³ º º º º º º º ³  Scan line 2-3   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4-5   ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 4-5   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6-7   ³ º º º º º º º ³  Scan line 6-7   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 8-9   ³ º º º º º º º ³  Scan line 8-9   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 10-11 ³ º º º º º º º ³  Scan line 10-11 ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 12-13 ³ º º º º º º º ³  Scan line 12-13 ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 14-15 ³ º º º º º º º ³  Scan line 14-15 ³ º º º º º º º ³
+                      ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     a.                                 b.
+
+
+     Cursor Start = 3                   Cursor Start = 4
+     Cursor End = 7                     Cursor End = 2
+                      ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0-1   ³ º º º º º º º ³  Scan line 0-1   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2-3   ³ º º º º º º º ³  Scan line 2-3   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4-5   ³ º º º º º º º ³  Scan line 4-5   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6-7   ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 6-7   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 8-9   ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 8-9   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 10-11 ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 10-11 ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 12-13 ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 12-13 ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 14-15 ³ÛºÛºÛºÛºÛºÛºÛºÛ³  Scan line 14-15 ³ º º º º º º º ³
+                      ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     c.                                 d.
+
+
+     Cursor Start = 3
+     Cursor End = 8
+                      ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0-1   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2-3   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4-5   ³ º º º º º º º ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6-7   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 8-9   ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 10-11 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 12-13 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 14-15 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                      ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     e.
+
+     Figure 3-16.  Sample MCGA alphanumeric cursor settings for an 8-by-16
+     character matrix.
+
+
+     The VGA's Cursor Start and Cursor End values (see Figure 3-18) work
+     slightly differently than do the EGA's. The VGA's Cursor End value
+     indicates the last line of the displayed cursor (not the last line
+     plus 1), and the displayed cursor does not wrap around to the top of
+     the character matrix if the Cursor End value is less than the Cursor
+     Start value. (Compare Figures 3-17 and 3-18.)
+
+
+     Cursor Start = 4                     Cursor Start = 4
+     Cursor End = 4                       Cursor End = 8
+                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                    ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0 ³ º º º º º º º ³        Scan line 0 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 1 ³ º º º º º º º ³        Scan line 1 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2 ³ º º º º º º º ³        Scan line 2 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 3 ³ º º º º º º º ³        Scan line 3 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 5 ³ º º º º º º º ³        Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6 ³ º º º º º º º ³        Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 7 ³ º º º º º º º ³        Scan line 7 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                    ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     a.                                   b.
+
+
+     Cursor Start = 4                     Cursor Start = 4
+     Cursor End = 7                       Cursor End = 2
+                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                    ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0 ³ º º º º º º º ³        Scan line 0 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 1 ³ º º º º º º º ³        Scan line 1 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2 ³ º º º º º º º ³        Scan line 2 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 3 ³ º º º º º º º ³        Scan line 3 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 7 ³ º º º º º º º ³        Scan line 7 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                    ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     c.                                   d.
+
+
+     Cursor Start = 4
+     Cursor End = 0
+                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 1 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 3 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 7 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     e.
+
+     Figure 3-17.  Sample EGA alphanumeric cursor settings for an 8-by-8
+     character matrix.
+
+
+       ÉÍÍÍ»     Bits 5 and 6 of the Cursor End register (0BH) on the EGA
+       º T º     and VGA control the rightward skew of the cursor. If bits
+       º I º     5 and 6 are not 0, the cursor appears one, two, or three
+       º P º     characters to the right of the location that the Cursor
+       ÈÍÍÍ¼     Location registers specify. For most applications, the
+                 cursor skew should be 0.
+
+
+     Cursor Start = 4                     Cursor Start = 4
+     Cursor End = 4                       Cursor End = 8
+                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                    ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0 ³ º º º º º º º ³        Scan line 0 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 1 ³ º º º º º º º ³        Scan line 1 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2 ³ º º º º º º º ³        Scan line 2 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 3 ³ º º º º º º º ³        Scan line 3 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 5 ³ º º º º º º º ³        Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6 ³ º º º º º º º ³        Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 7 ³ º º º º º º º ³        Scan line 7 ³ÛºÛºÛºÛºÛºÛºÛºÛ³
+                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                    ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+     a.                                   b.
+
+
+     Cursor Start = 4                     Cursor Start = 4
+     Cursor End = 7                       Cursor End = 2
+                  ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿                    ÚÄÒÄÒÄÒÄÒÄÒÄÒÄÒÄ¿
+      Scan line 0 ³ º º º º º º º ³        Scan line 0 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 1 ³ º º º º º º º ³        Scan line 1 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 2 ³ º º º º º º º ³        Scan line 2 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 3 ³ º º º º º º º ³        Scan line 3 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 4 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 4 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 5 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 5 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 6 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 6 ³ º º º º º º º ³
+                  ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ                    ÆÍÎÍÎÍÎÍÎÍÎÍÎÍÎÍµ
+      Scan line 7 ³ÛºÛºÛºÛºÛºÛºÛºÛ³        Scan line 7 ³ º º º º º º º ³
+                  ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ                    ÀÄĞÄĞÄĞÄĞÄĞÄĞÄĞÄÙ
+      c.                                  d.
+
+     Figure 3-18.  Sample VGA alphanumeric cursor settings for an 8-by-8
+     character matrix.
+
+
+ROM BIOS Cursor Emulation
+
+     The ROM BIOS routine for INT 10H function 01H uses the values in 80x86
+     registers CH and CL to program the CRTC Cursor Start and Cursor End
+     registers (see Listing 3-13). On an MDA or CGA, these values are
+     simply copied into the CRTC registers. On an EGA or VGA, however, the
+     BIOS can scale these values relative to an 8-line character matrix and
+     program the CRTC with the scaled results. This scaling is called
+     "cursor emulation" in IBM's technical manuals.
+
+     When ROM BIOS cursor emulation is in effect, the values you specify to
+     INT 10H function 01H represent the position of the start and end of
+     the displayed cursor relative to an 8-line character matrix. When the
+     actual character matrix is larger than 8 lines, the BIOS routine
+     adjusts the Cursor Start and Cursor End values to maintain the
+     cursor's relative location in the matrix.
+
+     Consider what happens, for example, when you call INT 10H function 01H
+     with CH = 6 and CL = 7. If the character matrix is 8 lines high, the
+     cursor appears on the bottom two lines. (This is the usual cursor in
+     200-line video modes.) If the character matrix is 14 lines high,
+     however, the BIOS routine adjusts the Cursor Start and Cursor End
+     values so that the cursor appears near the bottom of the matrix; that
+     is, on lines 0BH and 0CH. Thus, cursor emulation allows programs that
+     change the cursor size with INT 10H function 01H to run unchanged
+     regardless of the size of the character matrix.
+
+
+     The BIOS carries out cursor emulation in INT 10H functions whenever
+     bit 0 of the Video Display Data Area INFO byte (0040:0087) is set to
+     0. (This is the power-on default for both the EGA and the VGA.) You
+     can disable cursor emulation by setting this bit to 1 before calling
+     INT 10H function 01H. On the EGA, you must set and reset the bit
+     directly, but on the VGA, you should use INT 10H function 12H to set
+     the bit's value.
+
+       ÉÍÍÍ»     On the EGA, cursor emulation is implemented by adding 5 to
+       º T º     any Cursor Start or Cursor End value greater than 4. This
+       º I º     works well when the character matrix is the default 14
+       º P º     lines high. For character matrices of other heights,
+       ÈÍÍÍ¼     however, this simple algorithm breaks down and computes
+                 the Cursor Start and Cursor End values incorrectly. You
+                 should therefore disable cursor emulation when you program
+                 the EGA's character generator to change the size of its
+                 character matrix (see Chapter 10).
+
+                 On the VGA, the cursor-emulation computation takes into
+                 account the height of the character matrix, so the
+                 emulated cursor is displayed correctly regardless of
+                 character matrix dimensions.
+
+
+An Invisible Cursor
+
+     You can make the cursor "invisible" by programming the CRT Controller
+     to display it at an offscreen location. Do this by setting the Cursor
+     High and Cursor Low registers to a non-displayed buffer offset.
+     Another way to make the cursor vanish is to load the Cursor Start and
+     Cursor End registers with values below the displayed character matrix.
+     On the MDA, CGA, and VGA, load the Cursor Start register with the
+     value 20H to make the cursor disappear. On the EGA, set Cursor Start
+     to a value greater than or equal to the number of lines in the
+     character matrix and set Cursor End to 0 (see Listing 3-15).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 3-15.  An invisible alphanumeric cursor for IBM video
+     subsystems.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+

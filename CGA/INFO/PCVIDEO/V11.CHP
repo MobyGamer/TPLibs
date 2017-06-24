@@ -1,0 +1,1590 @@
+
+
+
+                    11  Bit Blocks and Animation
+
+
+                           Bit Block Move
+           CGA and MCGA ş EGA and VGA ş HGC ş InColor Card
+
+                      Bitwise Pixel Operations
+                        XOR ş NOT ş AND ş OR
+
+
+                          Bit Block Tiling
+
+                              Animation
+                            XOR Animation
+                     Overlapping Bit Block Moves
+
+                       A Graphics-Mode Cursor
+                        XOR ş Bit Block Move
+
+
+
+     This chapter is about moving things around in the video buffer and on
+     the screen. Some of the most useful and entertaining graphics-mode
+     programs create the appearance of on-screen motion. Objects as mundane
+     as a cursor or as unusual as an alien spaceship can appear to move
+     across the screen if you erase them and then immediately redraw them
+     in successive locations. PC and PS/2 video subsystems are not
+     particularly well equipped to support this kind of real-time
+     animation, but the techniques in this chapter should help you fully
+     exploit their capabilities.
+
+     You might think of video animation in the same context as video games,
+     but animation has other uses in computer graphics. For instance, all
+     interactive graphics programs require a moving cursor that allows the
+     user to point to screen locations. Many drawing or design programs let
+     the user move shapes and images around the screen. Robotic control
+     programs indicate the status of a robot arm with an animated
+     representation of its position. You can create such animation effects
+     using the techniques in this chapter.
+
+
+Bit Block Move
+
+
+     The basic software tool for many animation techniques is the bit block
+     move--a routine that copies a rectangular block of pixels into, out
+     of, or within the video buffer. The name "bit block move" describes
+     this routine well. After all, a rectangle of pixels is in essence
+     nothing more than a block of bits. Still, a bit block move routine can
+     do more than simply copy pixel values. As can other video graphics
+     drawing routines, a bit block move routine can update pixel values
+     using the bitwise logical operations AND, OR, and XOR. These
+     operations can create attractive effects when used as part of bit
+     block moves.
+
+     To copy a bit block from one location to another within the video
+     buffer in PC and PS/2 video subsystems, it is usually more efficient
+     to use an intermediate buffer in system RAM. You first copy pixel
+     values from the video buffer into the intermediate buffer, then copy
+     the values from this buffer to the desired position in the video
+     buffer.
+
+     Creating an intermediate copy of the pixels in a bit block might seem
+     superfluous, but in most situations it is preferable to trying to move
+     the bit block entirely within the video buffer. For example, neither
+     the EGA nor the InColor Card supports direct logical operations (AND,
+     OR, and XOR) between pixels in the bit planes. Also, CPU accesses to
+     video RAM are slower than equivalent accesses to system RAM. Thus,
+     when multiple copies of the same bit block are to be stored in the
+     video buffer, making a single copy in system RAM and then making
+     multiple copies from system RAM to video RAM is more efficient.
+
+
+CGA and MCGA
+
+     Listing 11-1 is a bit block move routine for the CGA. The routine
+     GetBitBlock() copies a block of pixels from the video buffer to a
+     buffer in system RAM. The complementary routine StoreBitBlock(), in
+     Listing 11-2, copies pixels from system RAM to the video buffer.
+     StoreBitBlock()contains subroutines to perform AND, OR, or XOR
+     operations on the pixels in system RAM using the previous contents of
+     the video buffer.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-1.  A routine to copy a block of pixels from the CGA video
+     buffer to system RAM.
+
+                TITLE   'Listing 11-1'
+                NAME    GetBitBlock06
+                PAGE    55,132
+
+;
+; Name:         GetBitBlock06
+;
+; Function:     Copy bit block from video buffer to system RAM
+;                in 640x200 2-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       int GetBitBlock06(x0,y0,x1,y1,buf);
+;
+;                            int x0,y0;    /* upper left corner of bit block */
+;                            int x1,y1;       /* lower right corner */
+;                            char far *buf;   /* buffer */
+;
+; Notes:        Returns size of bit block in system RAM.
+;
+
+
+ARGx0           EQU     word ptr [bp+4]
+ARGy0           EQU     word ptr [bp+6]
+ARGx1           EQU     word ptr [bp+8]
+ARGy1           EQU     word ptr [bp+10]
+ADDRbuf         EQU              [bp+12]
+
+VARPixelRows    EQU     word ptr [bp-2]
+VARPixelRowLen  EQU     word ptr [bp-4]
+VARincr         EQU     word ptr [bp-6]
+
+ByteOffsetShift EQU     3               ; reflects number of pixels per byte
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr06:near
+
+                PUBLIC  _GetBitBlock06
+_GetBitBlock06  PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,6            ; establish stack frame
+                push    ds
+                push    si
+                push    di
+
+; compute dimensions of bit block
+
+                mov     ax,ARGx1
+                sub     ax,ARGx0
+                mov     cx,0FF07h       ; CH := unshifted bit mask
+                                        ; CL := AND mask for AL
+                and     cl,al           ; CL := number of pixels in last
+                                        ;  byte of row
+                xor     cl,7            ; CL := number of bits to shift
+                shl     ch,cl           ; CH := bit mask for last byte of row
+                mov     cl,ch
+                push    cx              ; save on stack
+
+                mov     cl,ByteOffsetShift
+                shr     ax,cl
+                inc     ax              ; AX := number of bytes per row
+                push    ax              ; save on stack
+
+                mov     ax,ARGy1
+                sub     ax,ARGy0
+                inc     ax              ; AX := number of pixel rows
+                push    ax              ; save on stack
+
+; establish addressing
+
+                mov     ax,ARGy0
+                mov     bx,ARGx0
+                call    PixelAddr06     ; ES:BX -> x0,y0 in video buffer
+                xor     cl,7            ; CL := number of bits to shift left
+                push    es
+                pop     ds
+                mov     si,bx           ; DS:SI -> video buffer
+
+                mov     bx,2000h        ; BX := increment from 1st to 2nd
+                                        ;  interleave in CGA video buffer
+                test    si,2000h
+                jz      L01             ; jump if x0,y0 is in 1st interleave
+
+                mov     bx,80-2000h     ; increment from 2nd to 1st interleave
+
+L01:            mov     VARincr,bx      ; initialize this variable
+
+                les     di,ADDRbuf      ; ES:DI -> buffer in system RAM
+
+; build 5-byte bit block header
+
+                pop     ax
+                mov     VARPixelRows,ax
+                stosw                   ; byte 0-1 := number of pixel rows
+                pop     ax
+                mov     VARPixelRowLen,ax
+                stosw                   ; byte 2-3 := bytes per pixel row
+                pop     ax
+                mov     ch,al           ; CH := bit mask for last byte
+                stosb                   ; byte 4 := bit mask for last byte
+
+; copy from video buffer to system RAM
+
+L02:            mov     bx,VARPixelRowLen
+                push    si              ; preserve SI at start of pixel row
+
+L03:            lodsw                   ; AL := next byte in video buffer
+                                        ; AH := (next byte) + 1
+                dec     si              ; DS:SI -> (next byte) + 1
+                rol     ax,cl           ; AL := next 4 pixels in row
+                stosb                   ; copy to system RAM
+                dec     bx              ; loop across row
+                jnz     L03
+
+                and     es:[di-1],ch    ; mask last byte of row         
+                pop     si              ; DS:SI -> start of row
+                add     si,VARincr      ; DS:SI -> start of next row
+                xor     VARincr,2000h XOR (80-2000H)  ; update increment
+
+                dec     VARPixelRows
+                jnz     L02             ; loop down rows
+
+                mov     ax,di
+                sub     ax,ADDRbuf      ; AX := return value (size of bit block
+                                        ;  in system RAM)
+
+                pop     di              ; restore registers and exit
+                pop     si
+                pop     ds
+                mov     sp,bp
+                pop     bp
+                ret
+
+_GetBitBlock06  ENDP
+
+_TEXT           ENDS
+
+                END
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-2.  A routine to copy a block of pixels from system RAM to
+     the CGA video buffer.
+
+                TITLE   'Listing 11-2'
+                NAME    StoreBitBlock06
+                PAGE    55,132
+
+;
+; Name:         StoreBitBlock06
+;
+; Function:     Copy bit block from video buffer to system RAM
+;                in 640x200 2-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void StoreBitBlock06(buf,x,y);
+;
+;                            char far *buf;   /* buffer */
+;                            int x,y;    /* upper left corner of bit block */
+;
+
+
+ADDRbuf         EQU     dword ptr [bp+4]
+ARGx            EQU     word ptr [bp+8]
+ARGy            EQU     word ptr [bp+10]
+
+VARPixelRows    EQU     word ptr [bp-2]
+VARPixelRowLen  EQU     word ptr [bp-4]
+VARincr         EQU     word ptr [bp-6]
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr06:near
+
+                PUBLIC  _StoreBitBlock06
+_StoreBitBlock06 PROC   near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,6            ; establish stack frame
+                push    ds
+                push    si
+                push    di
+
+; establish addressing
+
+                mov     ax,ARGy
+                mov     bx,ARGx
+                call    PixelAddr06     ; ES:BX -> byte offset of x,y
+                xor     cl,7            ; CL := number of bits to shift right
+
+                mov     di,bx           ; ES:DI -> x,y in video buffer
+                
+                mov     bx,2000h        ; BX := increment from 1st to 2nd
+                                        ;  interleave in CGA video buffer
+                test    di,2000h
+                jz      L01             ; jump if x,y is in 1st interleave
+
+                mov     bx,80-2000h     ; increment from 2nd to 1st interleave
+
+L01:            mov     VARincr,bx      ; initialize this variable
+
+                mov     bx,StoreBitBlockOp  ; BX := subroutine address
+
+                lds     si,ADDRbuf      ; ES:DI -> buffer in system RAM
+
+; obtain dimensions of bit block from header
+
+                lodsw                   ; AX := number of pixel rows
+                mov     VARPixelRows,ax
+                lodsw                   ; AX := bytes per pixel row
+                mov     VARPixelRowLen,ax
+                lodsb                   ; AL := bit mask for last byte in row
+                mov     ch,al
+
+                jmp     bx              ; jump to subroutine
+
+
+ReplaceBitBlock:
+                cmp     cx,0FF00h       ; if mask <> 0FFH or bits to shift <> 0
+                jne     L15             ;  jump if not byte-aligned
+
+; routine for byte-aligned bit blocks
+
+                mov     cx,VARPixelRowLen
+
+L10:            push    di              ; preserve DI and CX
+                push    cx
+                rep     movsb           ; copy one pixel row into video buffer
+                pop     cx              ; restore DI and CX
+                pop     di      
+                add     di,VARincr      ; ES:DI -> next pixel row in buffer
+                xor     VARincr,2000h XOR (80-2000h) ; update increment
+                dec     VARPixelRows
+                jnz     L10             ; loop down pixel rows
+
+                jmp     Lexit
+
+; routine for all other bit blocks
+
+L15:            not     ch              ; CH := mask for end of row
+                mov     dx,0FF00h
+                ror     dx,cl           ; DX := rotated mask for each byte
+
+                mov     bx,VARPixelRowLen
+                dec     bx              ; BX := bytes per row - 1
+
+L16:            push    di
+                test    bx,bx
+                jz      L18             ; jump if only one byte per row
+
+                push    bx
+
+L17:            and     es:[di],dx      ; mask next 8 pixels in video buffer
+                lodsb                   ; AL := pixels in bit block
+                xor     ah,ah
+                ror     ax,cl           ; AX := pixels rotated into position
+                or      es:[di],ax      ; set pixels in video buffer
+                inc     di              ; ES:DI -> next byte in bit block
+                dec     bx
+                jnz     L17
+
+                pop     bx
+
+L18:            mov     al,ch
+                mov     ah,0FFh         ; AX := mask for last pixels in row
+                ror     ax,cl           ; AX := mask rotated into position
+                and     es:[di],ax      ; mask last pixels in video buffer
+                lodsb                   ; AL := last byte in row
+                xor     ah,ah
+                ror     ax,cl           ; AX := pixels rotated into position
+                or      es:[di],ax      ; set pixels in video buffer
+
+                pop     di
+                add     di,VARincr      ; ES:DI -> next pixel row in buffer
+                xor     VARincr,2000h XOR (80-2000h)
+                dec     VARPixelRows
+                jnz     L16             ; loop down pixel rows
+
+                jmp     Lexit
+
+
+XORBitBlock:
+                mov     bx,VARPixelRowLen
+
+L20:            push    di
+                push    bx
+
+L21:            lodsb                   ; AL := pixels in bit block
+                xor     ah,ah
+                ror     ax,cl           ; AX := pixels rotated into position
+                xor     es:[di],ax      ; XOR pixels into video buffer
+                inc     di              ; ES:DI -> next byte in bit block
+                dec     bx
+                jnz     L21
+
+                pop     bx
+                pop     di
+                add     di,VARincr      ; ES:DI -> next pixel row in buffer
+                xor     VARincr,2000h XOR (80-2000h)
+                dec     VARPixelRows
+                jnz     L20             ; loop down pixel rows
+
+                jmp     Lexit
+
+ANDBitBlock:
+                not     ch              ; CH := mask for end of row
+
+                mov     bx,VARPixelRowLen
+                dec     bx              ; BX := bytes per row - 1
+
+L30:            push    di
+                test    bx,bx
+                jz      L32             ; jump if only one byte per row
+
+                push    bx
+
+L31:            lodsb                   ; AL := pixels in bit block
+                mov     ah,0FFh
+                ror     ax,cl           ; AX := pixels rotated into position
+                and     es:[di],ax      ; AND pixels into video buffer
+                inc     di              ; ES:DI -> next byte in bit block
+                dec     bx
+                jnz     L31
+
+                pop     bx
+
+L32:            lodsb                   ; AL := last byte in row
+                or      al,ch           ; mask last pixels in row
+                mov     ah,0FFh
+                ror     ax,cl           ; AX := pixels rotated into position
+                and     es:[di],ax      ; AND pixels into video buffer
+
+                pop     di
+                add     di,VARincr      ; ES:DI -> next pixel row in buffer
+                xor     VARincr,2000h XOR (80-2000h)
+                dec     VARPixelRows
+                jnz     L30             ; loop down pixel rows
+
+                jmp     Lexit
+
+
+ORBitBlock:
+                mov     bx,VARPixelRowLen
+
+L40:            push    di
+                push    bx
+
+L41:            lodsb                   ; AL := pixels in bit block
+                xor     ah,ah
+                ror     ax,cl           ; AX := pixels rotated into position
+                or      es:[di],ax      ; OR pixels into video buffer
+                inc     di              ; ES:DI -> next byte in bit block
+                dec     bx
+                jnz     L41
+
+                pop     bx
+                pop     di
+                add     di,VARincr      ; ES:DI -> next pixel row in buffer
+                xor     VARincr,2000h XOR (80-2000h)
+                dec     VARPixelRows
+                jnz     L40             ; loop down pixel rows
+
+
+Lexit:          pop     di              ; restore registers and exit
+                pop     si
+                pop     ds
+                mov     sp,bp
+                pop     bp
+                ret
+
+_StoreBitBlock06 ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+StoreBitBlockOp DW      ReplaceBitBlock ; address of selected subroutine
+                                        ;  (Replace, XOR, AND, OR)
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     In the MCGA's 640-by-480 2-color and 320-by-200 256-color modes, pixel
+     addressing is different than in the two CGA-compatible modes.
+     Otherwise, versions of GetBitBlock() and StoreBitBlock() are similar
+     in all MCGA modes.
+
+
+EGA and VGA
+
+     In native EGA and VGA graphics modes, the bit block move routine must
+     move the contents of all four bit planes to system RAM. The
+     GetBitBlock() routine in Listing 11-3 extracts bytes from each
+     bit plane using read mode 0 and selecting each bit plane in turn with
+     the Graphics Controller's Read Map Mask register. StoreBitBlock(), in
+     Listing 11-4, then uses write mode 0 to copy data into the bit
+     planes. The bit planes are isolated in write mode 0 by programming the
+     Sequencer's Map Mask register.
+
+     Do not use the routines in Listings 11-3 and 11-4 on an EGA with
+     only 64 KB of video RAM. Because the memory maps are chained together
+     to form the two bit planes used in 640-by-350 graphics modes, these
+     routines will not work properly in this situation. (Chapter 4
+     discusses this in greater detail.)
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-3.  A routine to copy a block of pixels from the EGA or VGA
+     video buffer to system RAM in native graphics modes.
+
+                TITLE   'Listing 11-3'
+                NAME    GetBitBlock10
+                PAGE    55,132
+
+;
+; Name:         GetBitBlock10
+;
+; Function:     Copy bit block from video buffer to system RAM
+;                in native EGA and VGA graphics modes
+;
+; Caller:       Microsoft C:
+;
+;                       int GetBitBlock10(x0,y0,x1,y1,buf);
+;
+;                            int x0,y0;    /* upper left corner of bit block */
+;                            int x1,y1;       /* lower right corner */
+;                            char far *buf;   /* buffer */
+;
+; Notes:        Returns size of bit block in system RAM.
+;
+
+
+ARGx0           EQU     word ptr [bp+4]
+ARGy0           EQU     word ptr [bp+6]
+ARGx1           EQU     word ptr [bp+8]
+ARGy1           EQU     word ptr [bp+10]
+ADDRbuf         EQU              [bp+12]
+
+VARPixelRows    EQU     word ptr [bp-2]
+VARPixelRowLen  EQU     word ptr [bp-4]
+
+BytesPerRow     EQU     80
+ByteOffsetShift EQU     3               ; reflects number of pixels per byte
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _GetBitBlock10
+_GetBitBlock10  PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,4            ; establish stack frame
+                push    ds
+                push    si
+                push    di
+
+; compute dimensions of bit block
+
+                mov     ax,ARGx1
+                sub     ax,ARGx0
+                mov     cx,0FF07h       ; CH := unshifted bit mask
+                                        ; CL := AND mask for AL
+                and     cl,al           ; CL := number of pixels in last
+                                        ;  byte of row
+                xor     cl,7            ; CL := number of bits to shift
+                shl     ch,cl           ; CH := bit mask for last byte of row
+                mov     cl,ch
+                push    cx              ; save on stack
+
+                mov     cl,ByteOffsetShift
+                shr     ax,cl
+                inc     ax              ; AX := number of bytes per row
+                push    ax              ; save on stack
+
+                mov     ax,ARGy1
+                sub     ax,ARGy0
+                inc     ax              ; AX := number of pixel rows
+                push    ax              ; save on stack
+
+; establish addressing
+
+                mov     ax,ARGy0
+                mov     bx,ARGx0
+                call    PixelAddr10     ; ES:BX -> x0,y0 in video buffer
+                xor     cl,7            ; CL := number of bits to shift left
+                push    es
+                pop     ds
+                mov     si,bx           ; DS:SI -> video buffer
+
+                les     di,ADDRbuf      ; ES:DI -> buffer in system RAM
+
+; build 5-byte bit block header
+
+                pop     ax
+                mov     VARPixelRows,ax
+                stosw                   ; byte 0-1 := number of pixel rows
+                pop     ax
+                mov     VARPixelRowLen,ax
+                stosw                   ; byte 2-3 := bytes per pixel row
+                pop     ax
+                mov     ch,al           ; CH := bit mask for last byte in row
+                stosb                   ; byte 4 := bit mask for last byte
+
+; set up Graphics Controller
+
+                mov     dx,3CEh         ; DX := Graphics Controller address port
+
+                mov     ax,0005         ; AH := 0 (read mode 0, write mode 0)
+                                        ; AL := 5 (Mode register number)
+                out     dx,ax           ; set up read mode 0
+ 
+                mov     ax,0304h        ; AH := 3 (first bit plane to read)
+                                        ; AL := 4 (Read Map Select reg number)
+
+; copy from video buffer to system RAM
+
+L01:            out     dx,ax           ; select next memory map to read
+                push    ax              ; preserve memory map number
+                push    VARPixelRows    ; preserve number of pixel rows
+                push    si              ; preserve offset of x0,y0
+
+L02:            mov     bx,VARPixelRowLen
+                push    si              ; preserve SI at start of pixel row
+
+L03:            lodsw                   ; AL := next byte in video buffer
+                                        ; AH := (next byte) + 1
+                dec     si              ; DS:SI -> (next byte) + 1
+                rol     ax,cl           ; AL := next 4 pixels in row
+                stosb                   ; copy to system RAM
+                dec     bx              ; loop across row
+                jnz     L03
+
+                and     es:[di-1],ch    ; mask last byte in row
+                pop     si              ; DS:SI -> start of row
+                add     si,BytesPerRow  ; DS:SI -> start of next row
+
+                dec     VARPixelRows
+                jnz     L02             ; loop down rows
+
+                pop     si              ; DS:SI -> start of bit block
+                pop     VARPixelRows    ; restore number of pixel rows
+                pop     ax              ; AH := last map read
+                                        ; AL := Read Map Select reg number
+                dec     ah
+                jns     L01             ; loop across bit planes
+
+                mov     ax,di
+                sub     ax,ADDRbuf      ; AX := return value (size of bit block
+                                        ;  in system RAM)
+
+                pop     di              ; restore registers and exit
+                pop     si
+                pop     ds
+                mov     sp,bp
+                pop     bp
+                ret
+
+_GetBitBlock10  ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-4.  A routine to copy a block of pixels from system RAM
+     to the EGA or VGA video buffer in native graphics mode.
+
+                TITLE   'Listing 11-4'
+                NAME    StoreBitBlock10
+                PAGE    55,132
+
+;
+; Name:         StoreBitBlock10
+;
+; Function:     Copy bit block from video buffer to system RAM
+;                in native EGA and VGA graphics modes
+;
+; Caller:       Microsoft C:
+;
+;                       void StoreBitBlock10(buf,x,y);
+;
+;                            char far *buf;   /* buffer */
+;                            int x,y;    /* upper left corner of bit block */
+;
+
+
+ADDRbuf         EQU     dword ptr [bp+4]
+ARGx            EQU     word ptr [bp+8]
+ARGy            EQU     word ptr [bp+10]
+
+VARPixelRows    EQU     word ptr [bp-2]
+VARPixelRowLen  EQU     word ptr [bp-4]
+VARRowCounter   EQU     word ptr [bp-6]
+VARStartMask    EQU     word ptr [bp-8]
+VAREndMaskL     EQU     word ptr [bp-10]
+VAREndMaskR     EQU     word ptr [bp-12]
+
+BytesPerRow     EQU     80              ; logical width of video buffer
+ByteOffsetShift EQU     3               ; reflects number of pixels per byte
+RMWbits         EQU     18h             ; selects replace, XOR, AND, or OR
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _StoreBitBlock10
+_StoreBitBlock10        PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,12           ; establish stack frame
+                push    ds
+                push    si
+                push    di
+
+; establish addressing
+
+                mov     ax,ARGy
+                mov     bx,ARGx
+                call    PixelAddr10     ; ES:BX -> byte offset of x,y
+                inc     cl
+                and     cl,7            ; CL := number of bits to shift left
+
+                mov     di,bx           ; ES:DI -> x,y in video buffer
+                
+                lds     si,ADDRbuf      ; ES:DI -> buffer in system RAM
+
+; obtain dimensions of bit block from header
+
+                lodsw                   ; AX := number of pixel rows
+                mov     VARPixelRows,ax
+                lodsw                   ; AX := bytes per pixel row
+                mov     VARPixelRowLen,ax
+                lodsb                   ; AL := bit mask for last byte in row
+                mov     ch,al
+
+; set up Graphics Controller
+
+                mov     dx,3CEh         ; DX := Graphics Controller I/O port
+
+                mov     ah,RMWbits      ; AH := value for Data Rotate/Function
+                mov     al,3            ;  Select register
+                out     dx,ax           ; update this register
+
+                mov     ax,0805h        ; AH := 8 (read mode 1, write mode 0)
+                                        ; AL := 5 (Mode register number)
+                out     dx,ax           ; set up read mode 0
+
+                mov     ax,0007         ; AH := 0 (don't care for all maps;
+                                        ;  CPU reads always return 0FFH)
+                                        ; AL := 7 (Color Don't Care reg number)
+                out     dx,ax           ; set up Color Don't Care reg
+
+                mov     ax,0FF08h       ; AH := 0FFH (value for Bit Mask reg)
+                out     dx,ax           ; set up Bit Mask reg
+
+                mov     dl,0C4h         ; DX := 3C4H (Sequencer I/O port)
+                mov     ax,0802h        ; AH := 1000B (value for Map Mask reg)
+                                        ; AL := 2 (Map Mask register number)
+
+                cmp     cx,0FF00h       ; if mask <> 0FFH or bits to shift <> 0
+                jne     L15             ;  jump if not byte-aligned
+
+; routine for byte-aligned bit blocks
+
+                mov     cx,VARPixelRowLen
+
+L10:            out     dx,ax           ; enable one bit plane for writes
+                push    ax              ; preserve Map Mask value
+                push    di              ; preserve video buffer offset of x,y
+                mov     bx,VARPixelRows
+
+L11:            push    di              ; preserve DI and CX
+                push    cx
+
+L12:            lodsb                   ; AL := next byte of pixels
+                and     es:[di],al      ; update bit plane
+                inc     di
+                loop    L12
+                
+                pop     cx              ; restore DI and CX
+                pop     di      
+                add     di,BytesPerRow  ; ES:DI -> next pixel row in buffer
+                dec     bx
+                jnz     L11             ; loop down pixel rows
+
+                pop     di              ; ES:DI -> video buffer offset of x,y
+                pop     ax              ; AH := current Map Mask reg value
+                shr     ah,1            ; AH := new Map Mask value
+                jnz     L10             ; loop across all bit planes
+
+                jmp     Lexit
+
+; routine for non-aligned bit blocks
+
+L15:            push    ax              ; preserve Map Mask reg values
+
+                mov     bx,0FFh         ; BH := 0 (mask for first byte in row)
+                                        ; BL := 0FFh
+                mov     al,ch           ; AL := mask for last byte in pixel row
+                cbw                     ; AH := 0FFh (mask for last-1 byte)
+
+                cmp     VARPixelRowLen,1
+                jne     L16             ; jump if more than one byte per row
+
+                mov     bl,ch
+                mov     ah,ch           ; AH := mask for last-1 byte
+                xor     al,al           ; AL := 0 (mask for last byte)
+
+L16:            shl     ax,cl           ; shift masks into position
+                shl     bx,cl
+
+                mov     bl,al           ; save masks along with ..
+                mov     al,8            ; .. Bit Mask register number
+                mov     VAREndMaskL,ax
+                mov     ah,bl
+                mov     VAREndMaskR,ax
+                mov     ah,bh           
+                mov     VARStartMask,ax
+                
+                mov     bx,VARPixelRowLen
+                pop     ax              ; restore Map Mask reg values
+
+; set pixels row by row in the bit planes
+
+L17:            out     dx,ax           ; enable one bit plane for writes
+                push    ax              ; preserve Map Mask value
+                push    di              ; preserve video buffer offset of x,y
+                mov     dl,0CEh         ; DX := 3CEH (Graphics Controller port)
+
+                mov     ax,VARPixelRows
+                mov     VARRowCounter,ax  ; initialize loop counter
+
+; set pixels at start of row in currently enabled bit plane
+
+L18:            push    di              ; preserve offset of start of pixel row
+                push    si              ; preserve offset of row in bit block 
+                push    bx              ; preserve bytes per pixel row
+
+                mov     ax,VARStartMask
+                out     dx,ax           ; set Bit Mask reg for first byte of row
+
+                lodsw                   ; AH := 2nd byte of pixels
+                                        ; AL := 1st byte of pixels
+                dec     si              ; DS:SI -> 2nd byte of pixels
+                test    cl,cl
+                jnz     L19             ; jump if not left-aligned
+
+                dec     bx              ; BX := bytes per row - 1
+                jnz     L20             ; jump if at least 2 bytes per row
+                jmp     short L22       ; jump if only one byte per row
+
+L19:            rol     ax,cl           ; AH := left part of 1st byte,
+                                        ;        right part of 2nd byte
+                                        ; AL := right part of 1st byte,
+                                        ;        left part of 2nd byte
+                and     es:[di],ah      ; set pixels for left part of first byte
+                inc     di
+                dec     bx              ; BX := bytes per row - 2
+
+L20:            push    ax              ; preserve pixels
+                mov     ax,0FF08h
+                out     dx,ax           ; set Bit Mask reg for succeeding bytes
+                pop     ax
+
+                dec     bx
+                jng     L22             ; jump if only 1 or 2 bytes in pixel row
+
+; set pixels in middle of row
+
+L21:            and     es:[di],al      ; set pixels in right part of current
+                inc     di              ;  byte and left part of next byte
+
+                lodsw                   ; AH := next+1 byte of pixels
+                dec     si              ; AL := next byte of pixels
+                rol     ax,cl           ; AH := left part of next byte, right
+                                        ;        part of next+1 byte
+                                        ; AL := right part of next byte, left
+                                        ;        part of next+1 byte
+                dec     bx
+                jnz     L21             ; loop across pixel row
+
+; set pixels at end of row
+
+L22:            mov     bx,ax           ; BH := right part of last byte, left
+                                        ;        part of last-1 byte
+                                        ; BL := left part of last byte, right
+                                        ;        part of last-1 byte
+                mov     ax,VAREndMaskL  ; AH := mask for last-1 byte
+                                        ; AL := Bit Mask reg number
+                out     dx,ax           ; set Bit Mask register
+                and     es:[di],bl      ; set pixels for last-1 byte
+
+                mov     ax,VAREndMaskR  ; mask for last byte in pixel row
+                out     dx,ax           ; .. last byte in pixel row
+                and     es:[di+1],bh    ; set pixels for last byte
+
+                pop     bx              ; BX := bytes per pixel row
+                pop     si
+                add     si,bx           ; DS:SI -> next row in bit block
+                pop     di
+                add     di,BytesPerRow  ; ES:DI -> next pixel row in buffer
+                dec     VARRowCounter
+                jnz     L18             ; loop down pixel rows
+
+                pop     di              ; ES:DI -> video buffer offset of x,y
+                pop     ax              ; AX := current Map Mask value
+                mov     dl,0C4h         ; DX := 3C4H
+                shr     ah,1            ; AH := next Map Mask value
+                jnz     L17             ; loop across bit planes
+
+; restore Graphics Controller and Sequencer to their default states
+
+Lexit:          mov     ax,0F02h        ; default Map Mask value
+                out     dx,ax
+
+                mov     dl,0CEh         ; DX := 3CEh
+                mov     ax,0003         ; default Data Rotate/Function Select
+                out     dx,ax
+
+                mov     ax,0005         ; default Mode value
+                out     dx,ax
+
+                mov     ax,0F07h        ; default Color Compare value
+                out     dx,ax
+
+                mov     ax,0FF08h       ; default Bit Mask value
+                out     dx,ax
+
+                pop     di              ; restore registers and exit
+                pop     si
+                pop     ds
+                mov     sp,bp
+                pop     bp
+                ret
+
+_StoreBitBlock10 ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC
+
+     Bit block move routines for HGC and HGC+ 720-by-348 monochrome
+     graphics mode are similar routines for CGA 640-by-200 2-color mode.
+     The differences  are in how they calculate pixel addresses and in the
+     way the video buffer is interleaved.
+
+
+InColor Card
+
+     The routines for the InColor Card's 720-by-348 16-color mode resemble
+     the EGA routines in Listings 11-3 and 11-4, because both adapters'
+     video buffers are mapped in parallel bit planes. Differences between
+     the routines lie in the way pixel addresses are computed, in how the
+     video buffer is interleaved, and in how individual bit planes are
+     accessed. On the InColor Card, you can use the same technique as
+     ReadPixelInC() (discussed in Chapter 5) to program the Read/Write
+     Control and Color registers and isolate the contents of each bit
+     plane. Similarly, a bit block store routine for the InColor Card
+     follows  StorePixelInC() in its use of the Plane Mask register and the
+     Read/Write Control and Color registers.
+
+
+Bitwise Pixel Operations
+
+
+     If you experimented with the pixel-programming and line-drawing
+     examples in previous chapters, you probably know why the bitwise
+     logical operations--XOR, AND, and OR--are useful in video graphics
+     programming. In this case, you can skip the next few paragraphs.
+     Otherwise, read on to see how video graphics programs can exploit the
+     ability to perform XOR, AND, and OR on pixel values.
+
+
+XOR
+
+
+     The XOR operation is useful because it is reversible. When you change
+     a pixel's value in the video buffer using the XOR function, you can
+     restore its original value by repeating the operation. For example, if
+     a pixel in the video buffer has the value 9, setting its value by
+     XORing it with a value of 5 results in a pixel value of 0CH. XORing
+     the resulting pixel value (0CH) with a value of 5 restores the
+     original pixel value of 9.
+
+     This implies that you can XOR objects into the video buffer and onto
+     the screen, and then erase them, without worrying about saving and
+     restoring the contents of the video buffer. The use of XOR has
+     limitations, however. One is that an image containing zero-value
+     pixels cannot be XORed into the video buffer. Because XORing a pixel
+     with 0 leaves the pixel's value unchanged, only nonzero pixels in the
+     image affect the video buffer.
+
+     Another more serious limitation is that a patterned background can
+     obscure the image you are trying to XOR into the video buffer.
+     Consider Figure 11-1, in which a text string is XORed against
+     progressively distracting backgrounds. The text is perfectly readable
+     against a solid background, but a striped background significantly
+     obscures the letters. In the worst case, XORing a single-color image
+     into a pattern of random pixels results only in another pattern of
+     random pixels.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-1 is found on page 361      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-1.  Effects of XORing a text string against various
+     backgrounds.
+
+
+NOT
+
+     A bitwise NOT operation on a pixel value toggles all 1 bits to 0 and
+     all 0 bits to 1. Obviously, two sequential NOT operations will leave
+     the pixel value unchanged. A common programming practice in monochrome
+     graphics modes is to use NOT to toggle a reverse video state. For
+     instance, a black-on-white character can be reversed to white-on-black
+     by performing NOT operations on its pixels.
+
+     The effect of NOT on multibit pixel values is less clear. In this
+     situation, the NOT operation converts one pixel value into some other
+     pixel value, but the colors corresponding to these two values may be
+     unrelated. Thus, in a color graphics mode, performing a NOT operation
+     on all pixels in a character matrix changes both the foreground and
+     background values, but the resulting color combination may not be
+     particularly attractive or even readable. In manipulating pixels in
+     color graphics, use NOT with caution.
+
+       ÉÍÍÍ»     A bitwise NOT is equivalent to performing a bitwise XOR
+       º T º     using a binary value of all 1 bits. This means you can use
+       º I º     any of the pixel XOR routines developed in this book to
+       º P º     perform NOT operations as well. Thus, little can be gained
+       ÈÍÍÍ¼     by writing special-purpose NOT routines for pixel
+                 manipulation.
+
+
+AND
+
+     The bitwise logical operation AND is also useful in manipulating
+     graphics images. Consider, for instance, how you might go about
+     drawing the striped circle in Figure 11-2b. You could do it the hard
+     way, by intersecting a set of parallel lines with the circle. This
+     procedure would be laborious, however, because of the extra
+     programming and increased computational overhead involved in
+     determining the intersection points.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-2 is found on page 362      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-2.  Using AND to draw a striped circle. The circle in Figure
+     11-2a consists of pixels of the maximum possible value. The lines are
+     drawn across the circle using a pixel AND operation to produce the
+     striped circle in Figure 11-2b.
+
+
+     It is much easier to draw a filled circle (see Figure 11-2a) with
+     pixels of the maximum possible value (that is, all bits set to 1)
+     against a background of zero-value pixels. This circle is used as a
+     mask against which you AND the pixels in the parallel lines. When
+     pixels in each line are ANDed with pixels inside the circle, their
+     original values are stored intact in the video buffer. Outside the
+     circle, the result of ANDing the line pixels with the zero background
+     always results in zero-value pixels being stored in the buffer. The
+     result: a striped circle.
+
+     You can apply this technique to any graphics form, but it is
+     particularly attractive in conjunction with a bit block move routine.
+     You can superimpose patterned images with a short sequence of bit
+     block moves using pixel AND and OR operations. In Figure 11-3, a
+     circular chunk of pattern B is superimposed on pattern A by using a
+     mask to isolate a "hole" in pattern A. The inverse of the same mask
+     extracts the congruent piece of pattern B. The two masked patterns are
+     then superimposed by a third bit block move that uses OR (or XOR) to
+     update pixels.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-3 is found on page 362      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-3.  Masking patterned images with pixel AND operations.
+
+
+OR
+
+     The bitwise OR operator is less frequently used than XOR for
+     manipulating pixel values. The OR operation, unlike XOR or NOT, is not
+     reversible. The result of ORing pixels always depends on their
+     previous values in the video buffer.
+
+     One typical use of the pixel OR operation is to accentuate
+     intersections of forms in the video buffer. Consider what happens when
+     you OR two different-colored areas into a 16-color video buffer (see
+     Figure 11-4). If one rectangle is filled with pixels of value 3 and
+     the other rectangle with pixels of value 5, the pixels at the
+     intersection points have the value 7 (3 OR 5). With the usual default
+     color palette, the upper rectangle appears cyan, the lower rectangle
+     is violet, and the intersection is white.
+
+
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿          
+     ³°°°°°°°°°°°°°°°°°°°°³          
+     ³°Cyan°°°°°°°°°°°°°°°³          
+     ³°°°°°°°°°°°°°°°°°°°°³          
+     ³°°°°°°°°°°ÚÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄ¿
+     ³°°°°°°°°°°³         ³±±±±±±±±±³
+     ³°°°°°°°°°°³ White   ³±±±±±±±±±³
+     ³°°°°°°°°°°³         ³±±±±±±±±±³
+     ÀÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÙ±±±±±±±±±³
+                ³±±±±±±±±±±±±±±±±±±±³
+                ³±±±±±±±±±±±±Violet±³
+                ³±±±±±±±±±±±±±±±±±±±³
+                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 11-4.  ORing two colored areas into a 16-bit video buffer.
+
+
+Bit Block Tiling
+
+
+     You can use bit block move routines to fill an area of the video
+     buffer with any arbitrary pattern. Do this by tiling the buffer
+     through bit block moves to adjoining rectangular areas of the buffer
+     (see Figure 11-5). Using the AND mask technique, you can fill any
+     arbitrary form, such as the circle in Figure 11-6, with a pattern
+     contained in a bit block.
+
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-5 is found on page 363      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-5.  Bit block tiling.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-6 is found on page 364      º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-6.  Tiling with AND mask.
+
+
+       ÉÍÍÍ»     You can use a variation of bit block tiling as a sort of
+       º T º     software character generator. If you define a group of bit
+       º I º     blocks, each of which represents a character in a
+
+       º P º     character set, you can tile the screen with characters.
+       ÈÍÍÍ¼     This is one technique for displaying proportionally
+                 spaced characters.
+
+
+Animation
+
+
+     PC and PS/2 video subsystems have no built-in hardware to support
+     animation. Consequently, moving images across the screen is a task
+     relegated to software. (This is a good reason to make your video
+     graphics routines as efficient as possible.) Several software
+     techniques can produce real-time video animation. Each technique is
+     best suited to a particular type of animation.
+
+
+XOR Animation
+
+     You can take advantage of the reversibility of the logical XOR
+     operation to make any pixel or set of pixels appear to move across the
+     display. To make an object appear to move, XOR it into the video
+     buffer twice. The object flickers onto the screen the first time it is
+     drawn. It immediately disappears the second time it is drawn. If you
+     repeatedly redraw the object in a slightly different position, it
+     appears to move across the screen.
+
+     Outlining
+     Consider the C fragment in Listing 11-5. This bit of code makes a
+     circle appear to grow outward from its center by repeatedly XORing it
+     into the video buffer with a gradually increasing radius.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-5.  XORing a circle into the video buffer.
+
+/* Listing 11-5 */
+
+main()
+{
+        int     xc      = 400;          /* center of circle */
+        int     yc      = 125;
+        int     a,b;                    /* semimajor and semiminor axes */
+        int     n = 12;                 /* pixel value */
+        int     i;
+        float   ScaleFactor = 1.37;     /* for 640x350 16-color mode */
+
+
+        for( i=0; i<10; i++ )
+          for( a=0; a<100; a++ )
+          {
+            b = (float) a / ScaleFactor;        /* scale semiminor axis */
+            Ellipse10( xc, yc, a, b, n );       /* draw a circle */
+            Ellipse10( xc, yc, a, b, n );       /* draw it again */
+          }
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     This technique is frequently used interactively to outline a
+     rectangular area of the display. The outline is rapidly XORed into and
+     out of the video buffer as the user moves a pointing device such as a
+     mouse. Just as the circle created by the routine in Listing 11-5
+     appears to grow, a rectangular outline can appear to move, grow, or
+     shrink in response to the user's actions.
+
+     The routine in Listing 11-6 slides a rectangle across the screen. At
+     each iteration, the rectangle is drawn and then erased using lines
+     that are XORed into the video buffer. In this example, the rectangle's
+     onscreen location is changed within an iterative loop. In practice,
+     however, the rectangle's size and location could be changed in
+     response to input from the keyboard or from a pointing device. In this
+     case, the rectangle would be erased and redrawn whenever the input
+     indicated a change in position.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-6.  XORing a rectangle into the video buffer.
+
+/* Listing 11-6 */
+
+#define Xmax    640
+
+#define TRUE    1
+#define FALSE   0
+
+main()
+{
+        int     x0      = 0;            /* corners of box at 0,0 and 150,100 */
+        int     y0      = 0;
+        int     x1      = 150;
+        int     y1      = 100;
+        int     n = 12;                 /* pixel value */
+
+
+        while( x1 < Xmax )                      /* slide box right */
+          XORBox( x0++, y0, x1++, y1, n );
+
+        while( x0 > 0 )                         /* slide box left */
+          XORBox( --x0, y0, --x1, y1, n );
+}
+
+
+XORBox ( x0, y0, x1, y1, n )
+int     x0,y0,x1,y1;            /* pixel coordinates of opposite corners */
+int     n;                      /* pixel value */
+{
+        Rectangle( x0, y0, x1, y1, n );                      /* draw the box */
+        Rectangle( x0, y0, x1, y1, n );                     /* erase the box */
+}
+
+
+Rectangle( x0, y0, x1, y1, n )
+int     x0,y0,x1,y1;
+int     n;
+{
+        Line10( x0, y0, x0, y1, n );
+        Line10( x0, y0, x1, y0, n );
+        Line10( x1, y1, x0, y1, n );
+        Line10( x1, y1, x1, y0, n );
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Rubberbanding
+     A related technique based on the XOR operation is rubberbanding, in
+     which a moving object remains attached to a stationary object by a
+     straight line. The technique is called rubberbanding because the line
+     that connects the two objects appears to stretch as it moves. Listing
+     11-7 is similar to Listing 11-6, but moves a rubberbanded line around
+     the point at (150,100).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-7.  XORing a line into the video buffer.
+
+/* Listing 11-7 */
+
+#define Xmax    640                     /* screen dimensions in 640x350 mode */
+#define Ymax    350
+
+main()
+{
+        int     x0      = 150;          /* fixed endpoint at 150,100 */
+        int     y0      = 100;
+        int     x       = 0;            /* moving endpoint at 0,0 */
+        int     y       = 0;
+        int     n       = 12;           /* pixel value */
+
+
+        for( ; x<Xmax; x++ )                    /* move right */
+          XORLine( x0, y0, x, y, n );
+
+        for( --x; y<Ymax; y++ )                 /* move down */
+          XORLine( x0, y0, x, y, n );
+
+        for( --y; x>=0; --x )                   /* move left */
+          XORLine( x0, y0, x, y, n );
+
+        for( x++; y>=0; --y )                   /* move up */
+          XORLine( x0, y0, x, y, n );
+}
+
+
+XORLine ( x0, y0, x1, y1, n )
+int     x0,y0,x1,y1;            /* endpoints */
+int     n;                      /* pixel value */
+{
+        Line10( x0, y0, x1, y1, n );                 /* the line is onscreen */
+        Line10( x0, y0, x1, y1, n );                   /* the line is erased */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Bit Block Moves
+     You can use XOR with a bit block move to animate any arbitrary group
+     of pixels. But use this technique only with a relatively small bit
+     block, since generally a bit block contains many more pixels to be
+     drawn and redrawn than does a line or a rectangle. The longer it takes
+     to maneuver the bit block around the screen, the slower your video
+     routine performs.
+
+
+     Problems with XOR Animation
+     Objects that are animated by XOR operations always flicker. The reason
+     is obvious: An object is visible only after you first XOR it into the
+     buffer. The second XOR makes it disappear. The resulting flicker draws
+     attention to the animated object, and may be desirable, particularly
+     if the object is repeatedly XORed even when you aren't moving it. On
+     the other hand, the flickering can be distracting, particularly on
+     color displays where the XORed object alternates between two garish
+     colors.
+
+     You can sometimes alleviate flickering during XOR animation by
+     inserting a software "pause" between the first and second XOR
+     operations. This pause can be an empty loop, a call to some short
+     subroutine, or perhaps a wait for the next vertical blanking interval.
+     In any case, because the XORed object remains on the screen slightly
+     longer, it may flicker less.
+
+     The animated image can disappear if the loop that performs the XOR
+     operations inadvertently becomes synchronized with the display refresh
+     cycle. In this situation, the animated object is never visible if both
+     XOR operations occur outside the relatively brief time interval when
+     the raster is displaying the relevant portion of the video buffer.
+     Solving this sort of problem is tricky because it involves both the
+     speed of your program and the size of the animated image.
+
+
+Overlapping Bit Block Moves
+
+     In some applications, you can avoid XOR animation problems by rapidly
+     redrawing a block of pixels in overlapping locations in the video
+     buffer (see Figure 11-7 and Listing 11-8). The bit block in Figure
+     11-7 has a margin of background pixels along its left edge. Each time
+     you store the bit block in the video buffer, this margin overlaps the
+     foreground pixels in the previously drawn block. Without this margin,
+     unexpected streaks of foreground pixels trail the bit block as it
+     moves to the right across the screen.
+
+     Although they are fast enough for most purposes, the bit block move
+     routines in this chapter are too slow for such performance-intensive
+     applications as arcade-style video games. You can tailor the code in
+     several ways to increase the animation speed if you're willing to
+     sacrifice their general-purpose approach.
+
+
+     ÚÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿        ÚÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄ¿
+     ³°°³                  ³        ³°°³°°³            |  ³
+     |°°³                  ³        |°°³°°³            |  ³
+     ³°°³                  ³        ³°°³°°³            |  ³
+     |°°³                  ³        |°°³°°³            |  ³
+     ³°°³                  ÃÄÄÄÄÄÄÄ³°°³°°³            |  ³
+     |°°³                  ³        |°°³°°³            |  ³
+     ³°°³                  ³        ³°°³°°³            |  ³
+     |°°³                  ³        |°°³°°³            |  ³
+     ÀÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ        ÀÄÄÁÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÙ
+                                      
+      ³                              ³  ³ Margin
+      ³ Margin of                    ³
+      ³ background pixels            ³ Previous margin
+    a.            b.
+
+     Figure 11-7.  Overlapping bit block moves. The bit block is drawn
+     (Figure 11-7a), then drawn again slightly to the right (Figure
+     11-7b). The margin of background pixels restores the background as
+     the bit block is "moved" to the right.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 11-8.  A program to move a block of pixels using the
+     overlapping technique.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     One technique is to limit the bit block routines to byte-aligned (or,
+     on the CGA and the HGC, word-aligned) blocks of pixels. This
+     eliminates much of the bit-mask logic and lets you make full use of
+     the 80x86 MOVs instruction. Another approach is to write routines that
+     handle bit blocks of a fixed, predetermined size. This lets you
+     replace some iterative loops in the routines with repetitive sequences
+     of in-line code. Unfortunately, even highly optimized CGA and EGA
+     animation routines rarely come close to the speed you can expect from
+     arcade-style video display hardware.
+
+
+A Graphics-Mode Cursor
+
+
+     In alphanumeric modes, the on-screen cursor indicates the location
+     where your program expects the user's next input. Most alphanumeric-
+     mode programs rely on the hardware-generated blinking cursor to
+     indicate the current input location. In graphics modes, on the other
+     hand, hardware does not support a cursor; your software must generate
+     one.
+
+     Implementing a cursor in a graphics mode is somewhat complicated,
+     because you must draw the form that represents the cursor directly
+     into the video buffer, while preserving the pixels that the operation
+     overwrites. You can do this in two ways: by using XOR to display the
+     cursor, or by saving and restoring the bit block that is overlaid by
+     the cursor.
+
+
+XOR
+
+     The simplest way to display a graphics cursor is to XOR it into and
+     then out of the video buffer. This technique is the same one used to
+     animate graphics images, and the same pros and cons apply.
+
+     Probably the worst side effect of XORing a graphics cursor into the
+     video buffer is that the color displayed for the XORed cursor can
+     change with the background. The cursor can all but disappear on a
+     patterned background or on a background with a displayed color near
+     that of the XORed cursor.
+
+     Palette programming can prevent this problem. For example, the EGA
+     palette in Figure 11-8 is set up assuming that all pixels in the
+     cursor shape have the value 8 (1000B) and that all preexisting pixels
+     in the video buffer have a value from 0 through 7. With this
+     arrangement, XORing the cursor into the video buffer causes it always
+     to be displayed with color value 3FH (high-intensity white). The
+     obvious drawback is that this technique halves the number of colors
+     you can display.
+
+
+Palette Register   Color Value
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+00H                0
+01H                1
+02H                2
+03H                3
+04H                4
+05H                5
+06H                6
+07H                7
+08H                3FH
+09H                3FH
+0AH                3FH
+0BH                3FH
+0CH                3FH
+0DH                3FH
+0EH                3FH
+0FH                3FH
+     Figure 11-8.  EGA palette values for a high-intensity white XOR
+     graphics cursor.
+
+
+Bit Block Move
+
+     Another approach is to make a copy of the bit block of pixels that the
+     cursor replaces. You can then erase the cursor by restoring the pixels
+     in the video buffer from the copy. This technique is attractive
+     because it lets you use any means you choose to draw the cursor.
+
+     A good way to draw the cursor, once you have made a copy of the
+     underlying pixels in the video buffer, is to copy the cursor shape
+     into the buffer with a bit block move. Obviously, this technique works
+     best with a rectangular cursor. To draw a cursor of any arbitrary
+     shape, use a two-step process (see Figure 11-9). First, zero a group
+     of pixels in the shape of the cursor in the video buffer with a bit
+     block AND operation. Then draw the cursor with a bit block OR or XOR
+     operation.
+
+       ÉÍÍÍ»     Whenever you use a graphics-mode cursor, you must ensure
+       º T º     that the cursor is erased before updating the video
+       º I º     buffer. If you do not, your program may inadvertently
+       º P º     update the portion of the video buffer that contains the
+       ÈÍÍÍ¼     cursor image. The next cursor move will restore the
+                 contents of the buffer to what they were before the cursor
+                 was drawn, leaving a "hole" where the cursor was (see
+                 Figure 11-10).
+
+
+     ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛ     ÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛ     ÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛ     ÛÛÛÛÛ           ÛÛÛ           ÛÛÛÛÛÛÛÛÛÛÛ ÛÛÛ ÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛ         ÛÛÛ           ÛÛÛ           ÛÛÛÛÛÛÛÛÛ   ÛÛÛ   ÛÛÛÛÛÛÛÛÛ
+     ÛÛÛ         ÛÛÛ         ÛÛÛÛÛÛÛ         ÛÛÛÛÛÛÛÛÛ ÛÛÛÛÛÛÛ ÛÛÛÛÛÛÛÛÛ
+     ÛÛÛ         ÛÛÛ         ÛÛÛÛÛÛÛ         ÛÛÛÛÛÛÛÛÛ ÛÛÛÛÛÛÛ ÛÛÛÛÛÛÛÛÛ
+     ÛÛÛ         ÛÛÛ           ÛÛÛ           ÛÛÛÛÛÛÛÛÛ   ÛÛÛ   ÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛ     ÛÛÛÛÛ           ÛÛÛ           ÛÛÛÛÛÛÛÛÛÛÛ ÛÛÛ ÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛ     ÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛ     ÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+     ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ                         ÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛÛ
+     a.                    b.                c.
+
+     Figure 11-9.  Drawing a graphics cursor with a 2-step mask-and-replace
+     technique: First, a mask (Figure 11-9a) is ANDed into the video
+     buffer. Then the cursor shape (Figure 11-9b) is ORed into the buffer
+     to give the result in Figure 11-9c.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 11-10 is found on page 371     º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 11-10.  If a graphics cursor is accidentally overwritten
+     (Figure 11-10a), a "hole" appears when the cursor is erased (Figure
+     11-10b).
+
+

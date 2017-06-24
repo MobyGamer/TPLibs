@@ -1,0 +1,3488 @@
+
+
+
+                             6  Lines
+
+
+                 An Efficient Line-drawing Algorithm
+       Scan-converting a Straight Line ş Bresenham's Algorithm
+
+                            Optimization
+                     Efficient Pixel Addressing
+               Performance Comparisons ş Special Cases
+
+                     PC and PS/2 Implementations
+                          Modular Routines
+                  Minimizing Video Buffer Accesses
+                   Efficient Address Calculations
+
+                           CGA ş HGC ş EGA
+                             MCGA ş VGA
+                            InColor Card
+
+                           Line Attributes
+
+                              Clipping
+          Pixel-by-Pixel Clipping ş A Brute-Force Approach
+                         A Better Algorithm
+
+
+
+     Most video graphics applications rely on routines that draw straight
+     lines on the screen. Straight lines are components of many graphics
+     images, including polygons, filled areas (made up of groups of
+     contiguous lines), and curves (made up of a series of short line
+     segments joined end to end). Because lines are used frequently in
+     video graphics, you need fast line-drawing subroutines to obtain high-
+     performance video graphics. This chapter describes how to construct
+     efficient and flexible line-drawing routines for IBM video subsystems.
+
+
+An Efficient Line-drawing Algorithm
+
+
+     Imagine what would happen if you tried to draw a straight line on a
+     piece of paper by painting through the square holes in a sieve (see
+     Figure 6-1). The result would not really be a line, but a group of
+     square dots that approximates a line.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 6-1 is found on page 162       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 6-1.  Line painted through a sieve.
+
+
+     A raster video display's rectangular grid of pixels resembles an
+     electronic "sieve" when it comes to drawing straight lines and
+     geometric curves. The best you can do is to represent each line or
+     curve with a group of pixels that closely approximates it. The process
+     of determining which set of pixels in the video buffer best
+     approximate a particular geometric figure is called scan-conversion.
+
+       ÉÍÍÍ»     The visual consequence of scan-conversion is that
+       º T º     mathematically smooth lines and curves appear jagged on
+       º I º     the screen. Consider the nearly horizontal line in Figure
+       º P º     6-2a. The only way to represent such a line within a grid
+       ÈÍÍÍ¼     of pixels is as a series of connected horizontal line
+                 segments. The more nearly horizontal or vertical the line,
+                 the more jagged it appears. Although sophisticated
+                 software techniques can minimize the jagged appearance of
+                 a scan-converted line, the easiest way to smooth out a
+                 line is to "use a finer sieve"; that is, to use a higher-
+                 resolution video mode or higher-resolution video display
+                 hardware (see Figure 6-2b).
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 6-2 is found on page 163       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 6-2.  A nearly horizontal line displayed with (a) low
+     resolution and (b) higher resolution.
+
+
+Scan-converting a Straight Line
+
+     The simplest way to draw a line is to use the equation of the line
+
+     y = mx + b
+
+     where m is the slope of the line and b is the y-intercept (the value
+     of y at the point where the line crosses the y-axis). You can use this
+     equation to calculate the corresponding y-coordinate for each pixel x-
+     coordinate between the line's endpoints as shown in Listing 6-1. This
+     technique is slow, but it is easy to implement.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-1.  Drawing a line using the equation of the
+     line.
+
+/* Listing 6-1 */
+
+Line( x1, y1, x2, y2, n )
+int     x1,y1;                  /* endpoint */
+int     x2,y2;                  /* endpoint */
+int     n;                      /* pixel value */
+{
+        int     x,y;
+        float   m;              /* slope */
+        float   b;              /* y-intercept */
+
+
+        if (x2 == x1)                           /* vertical line */
+        {
+          if (y1 > y2)
+           Swap( &y1, &y2 );                    /* force y1 < y2 */
+
+          for (y=y1; y<=y2; y++)                /* draw from y1 to y2 */
+           SetPixel( x1, y, n );
+
+          return;
+        }
+
+        if (x1 > x2)                            /* force x1 < x2 */
+        {
+          Swap( &x1, &x2 );
+          Swap( &y1, &y2 );
+        }
+
+
+        m = (float)(y2-y1) / (float)(x2-x1);    /* compute m and b */
+        b = y1 - (m*x1);
+
+        for (x=x1; x<=x2; x++)                  /* draw from x1 to x2 */
+        {
+          y = m*x + b;
+          SetPixel( x, y, n );
+        }
+}
+
+Swap( a, b )                    /* exchange values of a and b */
+int     *a,*b;
+{
+        int     t;
+
+        t = *a;
+        *a = *b;
+        *b = t;
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The problem is that the computational overhead in performing the
+     multiplication, addition, and rounding necessary to generate y for
+     each x in the line is considerable. Furthermore, the slope m must be
+     maintained as a floating-point number, and using floating-point
+     arithmetic in the calculations slows them down.
+
+
+Bresenham's Algorithm
+
+     Incrementally calculating the appropriate y-coordinates is much more
+     efficient. Given the x- and y-coordinates of the first pixel in the
+     line, you can calculate the location of each subsequent pixel by
+     incrementing the x- and y-coordinates in proportion to the line's
+     slope. The arithmetic is simpler and faster than that involved in
+     directly using the equation of the line.
+
+     The algorithm presented by J. E. Bresenham in 1965 (IBM Systems
+     Journal 4 (1) 1965, pp. 25-30) plots the set of pixels that lie
+     closest to the line between two given pixels--(x1,y1) and (x2,y2)--
+     assuming that x1 is less than x2 and that the slope of the line is
+     between 0 and 1. To simplify the equation of the line, the algorithm
+     assumes the location of the first endpoint (x1,y1) is (0,0). The
+     equation of the resulting line is
+
+     y = (dy/dx) * x
+
+     where
+
+     dy = y2 - y1
+
+     and
+
+     dx = x2 - x1
+
+     To visualize how Bresenham's algorithm works, consider the portion of
+     a line shown in Figure 6-3. The algorithm proceeds by iteratively
+     determining the corresponding y-coordinate for each value of x from x1
+     to x2. After plotting the pixel at (x(sub i-1),y(sub i-1)), for
+     example, the algorithm determines whether pixel A or pixel B is closer
+     to the exact line and plots the closer pixel.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 6-3 is found on page 165       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 6-3.  Bresenham's incremental line-drawing algorithm. Given the
+     pixel at (x(sub i-1),y(sub i-1)), the algorithm selects either pixel
+     A or B depending on the values of a and b.
+
+
+     The difference between pixel A's y-coordinate and the y-coordinate on
+     the exact line at x(sub i) is
+
+     a = (y(sub i)+1) - (dy/dx)*x(sub i)
+
+     where (dy/dx) represents the line's slope. Similarly, the distance b
+     from pixel B to the line is
+
+     b = (dy/dx)*x(sub i) - y(sub i)
+
+     If distance b is smaller than distance a, pixel B lies closer to the
+     exact line. If a is smaller than b, pixel A is closer. In other words,
+     the sign of the difference (b - a) determines whether pixel A or pixel
+     B is closer to the line.
+
+     Now, this may seem like much more work than simply using the equation
+     for the line. However, the values of a and b can be compared
+     implicitly for each x(sub i) by iteratively computing the value of
+     (b - a) for each succeeding x(sub i) in terms of simpler quantities
+     like dy and dx. The resulting computation is simple, although deriving
+     it requires a bit of algebra.
+
+     To derive the computation, combine the equations for a and b:
+
+     (b-a) = 2*(dy/dx)*x(sub i) - 2*y(sub i) - 1
+
+     Since x1 is less than x2, dx is always positive, so dx * (b - a) can
+     be used instead of (b - a) to decide whether to plot pixel A or pixel
+     B:
+
+     dx*(b-a) = 2*dy*x(sub i) - 2*y(sub i)*dx - dx
+
+              = 2*(dy*x(sub i) - dx*y(sub i) - dx
+
+
+     Let d(sub i) represent the quantity dx*(b-a). To calculate d(sub i)
+     iteratively, you need to know how to compute it from d(sub i-1):
+
+     (d(sub i)-d(sub i-1)) = (2*(dy*x(sub i) - dx*y(sub i))) -
+                               (2*(dy*x(sub i-1) - dx*y(sub i-1)))
+
+                           = 2*(dy*(x(sub i)-x(sub i-1))) - dx*(y(sub i)-
+                                y(sub i-1))
+
+     x(sub i) - x(sub i-1) is always 1, and y(sub i) - y(sub i-1 is either
+     1 (if pixel A at (x(sub i),y(sub i + 1) is plotted) or 0 (if pixel B
+     at (x(sub i),y(sub i) is plotted). Thus, computing the difference
+     between d(sub i) and d(sub i-1) is easy, and d(sub i) can be
+     calculated simply by incrementing d(sub i-1) with one of two
+     constants:
+
+
+     If d(sub i-1) >= 0, plot pixel A at (x(sub i),y(sub i + 1)). The
+     increment for d(sub i-1) is then
+
+     (d(sub i)-d(sub i-1)) = 2*(dy-dx)
+
+     If d(sub i-1) < 0, plot pixel B at (x(sub i),y(sub i)). The
+     increment for d(sub i-1) is then
+
+     (d(sub i)-d(sub i-1)) = 2*dy
+
+     To calculate d(sub i)'s initial value, remember that the first pixel
+     in the line is assumed to be at (0,0). Substituting x(sub i) = 1 and
+     y(sub i) = 0 into the equation for d(sub i) gives
+
+     d(sub i) = 2*dy - dx
+
+     The resulting algorithm is efficient, because the most complicated
+     calculations are performed only once, outside the loop that plots the
+     pixels (see Listing 6-2). Within the loop, incrementally determining
+     which pixels lie closest to the desired line (using the decision
+     variable d(sub i) eliminates the need for time-consuming floating-
+     point arithmetic. The result is a faster line-drawing algorithm.
+
+
+Optimization
+
+
+     Nevertheless, there is still room for improvement. The slowest part of
+     the line-drawing primitive in Listing 6-2 is the call to SetPixel(),
+     which calculates the pixel's address in the video buffer and then sets
+     the pixel's value. The pixel address calculation is clearly the
+     slowest part of the procedure.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-2.  A high-level implementation of Bresenham's
+     algorithm.
+
+/* Listing 6-2 */
+
+Line( x1, y1, x2, y2, n )       /* for lines with slope between -1 and 1 */
+int     x1,y1;
+int     x2,y2;                  /* endpoints */
+int     n;                      /* pixel value */
+{
+        int     d,dx,dy;
+        int     Aincr,Bincr,yincr;
+        int     x,y;
+
+
+        if (x1 > x2)                            /* force x1 < x2 */
+        {
+          Swap( &x1, &x2 );
+          Swap( &y1, &y2 );
+        }
+
+        if (y2 > y1)                            /* determine increment for y */
+          yincr = 1;
+        else
+          yincr = -1;
+
+        dx = x2 - x1;                           /* initialize constants */
+        dy = abs( y2-y1 );
+        d = 2 * dy - dx;
+
+        Aincr = 2 * (dy - dx);
+        Bincr = 2 * dy;
+
+        x = x1;                                 /* initial x and y */
+        y = y1;
+
+        SetPixel( x, y, n );                    /* set pixel at (x1,y1) */
+
+        for (x=x1+1; x<=x2; x++)                /* do from x1+1 to x2 */
+        {
+          if (d >= 0)
+          {
+            y += yincr;                         /* set pixel A */
+            d += Aincr;
+          }
+          else                                  /* set pixel B */
+            d += Bincr;
+
+          SetPixel( x, y, n );
+        }
+}
+
+
+Swap( pa, pb )
+int     *pa,*pb;
+{
+        int     t;
+
+        t = *pa;
+        *pa = *pb;
+        *pb = t;
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Efficient Pixel Addressing
+
+     Fortunately, you can optimize the pixel address calculation
+     significantly: The pixel addresses themselves can be calculated
+     incrementally, in the same way you increment the decision variable
+     d(sub i). After calculating the address of the first pixel in the
+     line, you can find its neighbors in the video buffer either by
+     incrementing the pixel's byte offset or by rotating the bit mask that
+     represents its bit offset. Calculating pixel addresses incrementally
+     is significantly faster than performing the computation from scratch
+     for each (x,y) coordinate pair in the line.
+
+     For example, you can identify the pixel immediately to the right of a
+     given pixel by rotating the given pixel's bit mask one pixel position
+     to the right. (If the given pixel is the rightmost pixel in its byte,
+     increment the byte offset as well.) To find the pixel immediately
+     above a given pixel, decrement the byte offset by the number of bytes
+     per row of pixels, but keep the bit mask the same. This calculation is
+     slightly more complicated in video modes with an interleaved video
+     buffer map, but the principle is the same.
+
+
+Performance Comparisons
+
+     When you compare the techniques for scan-converting lines, the
+     performance gains from using an incremental line-drawing algorithm and
+     incremental address calculations are remarkable (see Figure 6-4).
+     Writing your line-drawing routines in assembly language also helps.
+     Coding and optimizing bit mask manipulation and address computations
+     is much easier in assembly language than in a high-level language.
+
+
+Algorithm                              Language         Pixels per Second
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Algorithm based on the equation
+of a line                              C                 4,800
+Bresenham's algorithm                  C                16,000
+Bresenham's algorithm                  Assembler        26,000
+Bresenham's algorithm with             Assembler        70,000
+incremental pixel address calculation
+     Figure 6-4.  Performance of line-drawing algorithms in C and in
+     assembly language. Timings were obtained on a 6 MHz IBM PC/AT with a
+     Hercules Graphics Card.
+
+
+Special Cases
+
+     To further improve the overall performance of your video graphics
+     drivers, use special routines for drawing horizontal and vertical
+     lines. In many applications, these special cases account for a
+     surprising percentage of the calls to the line-drawing primitive. This
+     is especially true if you use lines to fill regions.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-3.  A routine that draws horizontal lines.
+
+/* Listing 6-3 */
+
+FilledRectangle( x1, y1, x2, y2, n )
+int     x1,y1;                  /* upper left corner */
+int     x2,y2;                  /* lower right corner */
+int     n;                      /* pixel value */
+{
+        int     y;
+
+        for (y=y1; y<=y2; y++)          /* draw rectangle as a set of */
+          Line( x1, y, x2, y, n );      /*  adjacent horizontal lines */
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     For example, the routine FilledRectangle() in Listing 6-3 calls on the
+     line-drawing function to draw horizontal lines exclusively. If you
+     fill a rectangle that is 100 pixels high, the line-drawing function is
+     called 100 times to draw a horizontal line. When the line-drawing
+     function recognizes the special case of horizontal lines, functions
+     such as FilledRectangle() run significantly faster.
+
+     A special-purpose routine can draw horizontal lines 10 times faster
+     than a general-purpose line-drawing routine. For vertical lines, a
+     special-purpose routine is about 25 percent faster. Horizontal lines
+     are represented in the video buffer by contiguous sequences of bytes
+     you can fill with an 80x86 REP STOSB instruction, which runs much
+     faster than the iterative loop the general line-drawing primitive
+     requires. In drawing vertical lines, no logic is required to determine
+     pixel locations. You simply increment the pixel address. Again, the
+     resulting code is simpler and faster.
+
+
+PC and PS/2 Implementations
+
+
+     Implementations of Bresenham's line-drawing algorithm on IBM video
+     hardware are strongly influenced by the CPU's capabilities and by the
+     idiosyncrasies of pixel mapping in the video buffer in various
+     graphics modes. Nevertheless, once you write a line-drawing routine
+     for one graphics mode, you can adapt the source code to other graphics
+     modes or to other video hardware with little difficulty.
+
+
+Modular Routines
+
+     You should build your line-drawing routines with a modular structure.
+     One practical way to break your code into modules is to write separate
+     routines for horizontal lines, vertical lines, lines with slope less
+     than 1, and lines with slope greater than 1. Each module itself
+     comprises a set of modules for performing each of the necessary pixel
+     manipulations--XOR, AND, OR, and pixel replacement.
+
+       ÉÍÍÍ»     Bresenham's algorithm as derived in this chapter is
+       º T º     applicable only to lines whose slope lies between 0 and 1.
+       º I º     However, it is easy to use the same algorithm for lines
+       º P º     with other slopes. For lines with slopes between -1 and 0,
+       ÈÍÍÍ¼     simply change the sign of the y-increment (see Listing
+                 6-2). For lines with slopes less than -1 or greater than 1
+                 (that is, |(dy/dx)|> 1), use the same algorithm but
+                 exchange the x- and y- coordinates.
+
+                 For example, each of the assembly-language line-drawing
+                 routines in this chapter contains two similar subroutines,
+                 one for |(dy/dx)|<= 1 and another for |(dy/dx)|> 1. Each
+                 routine contains a prologue that detects the special
+                 cases of horizontal and vertical lines, initializes the
+                 appropriate increment values, and selects the proper
+                 subroutine  for the slope.
+
+     Breaking your routines into modules helps when you customize your code
+     for an application. It also simplifies the task of writing code to run
+     symmetrically in different graphics modes. For example, a routine that
+     draws a vertical line in 640-by-200 2-color mode on a CGA requires
+     little modification to run properly in 320-by-200 4-color mode.
+
+
+Minimizing Video Buffer Accesses
+
+     In the 8086 family of microprocessors, data transfer instructions of
+     the form MOV mem,reg are among the slowest. Try to minimize use of
+     this CPU instruction within your line-drawing primitives. Neighboring
+     pixels in a line frequently are grouped in the same byte in the video
+     buffer. (Obviously, such groups occur more frequently in more nearly
+     horizontal lines.) You can speed your line-drawing routines by
+     updating all neighboring pixels in each byte you store in the video
+     buffer.
+
+
+
+Efficient Address Calculations
+
+     To maximize performance, use CPU registers carefully to hold the
+     values most frequently updated in the inner loops of your routines:
+     the pixel bit mask, the buffer offset, and the decision variable. In
+     Listing 6-4, for example, registers DH and DL hold bit masks,
+     register BX holds the buffer offset, and the decision variable d is
+     maintained in register DI. These values are the ones most frequently
+     updated in these routines, so they are the ones you should try to keep
+     in registers rather than in memory variables.
+
+     If you neglect to use the CPU registers effectively, your routines may
+     run much slower than necessary. Consider what would happen if you
+     rewrote the routine in Listing 6-4 to store the decision variable in
+     a memory variable instead of in register DI. Just this minor change
+     would cause the routine to run about 20 percent slower. (Not only does
+     this emphasize why you must make the best possible use of the CPU
+     registers, but it also suggests why writing highly optimized video
+     graphics primitives in a high-level language is very difficult.)
+
+
+CGA
+
+     Listing 6-4 contains code for drawing lines in the CGA's 640-by-200
+     2-color graphics mode. The routine consists of a prologue and four
+     line-drawing modules. The prologue puts the endpoints in ascending
+     order by their x-coordinates, sets  up appropriate vertical increments
+     for computing the pixel address within the  inner loop, and selects an
+     appropriate line-drawing module according to the  slope of the line.
+     The line-drawing modules (VertLine06, HorizLine06, LoSlopeLine06, and
+     HiSlopeLine06) contain the inner loops that actually update pixels and
+     increment addresses.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-4.  A line-drawing routine for CGA 640-by 200 2-color mode.
+
+                TITLE   'Listing 6-4'
+                NAME    Line06
+                PAGE    55,132
+
+;
+; Name:         Line06
+;
+; Function:     Draw a line in 640x200 2-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void Line06(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARleafincr     EQU     word ptr [bp-2]
+VARincr1        EQU     word ptr [bp-4]
+VARincr2        EQU     word ptr [bp-6]
+VARroutine      EQU     word ptr [bp-8]
+
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr06:near
+
+                PUBLIC  _Line06
+_Line06         PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,8            ; stack space for local variables
+                push    si
+                push    di
+
+
+                mov     si,2000h        ; increment for video buffer interleave
+                mov     di,80-2000h     ; increment from last to first interleave
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLine06      ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jnz     L02
+
+                jmp     HorizLine06     ; jump if horizontal line
+
+L02:            jns     L03
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate increments for buffer interleave
+                neg     di
+                xchg    si,di           ; exchange increments
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARleafincr,di  ; save increment for buffer interleave
+
+                mov     VARroutine,offset LoSlopeLine06
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLine06
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     di,bx           ; DI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddr06     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                mov     dx,ax           ; DH := bit mask
+                                        ; DL := pixel value
+                not     dh              ; DH := inverse bit mask
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                test    bx,2000h        ; set zero flag if BX in 1st interleave
+                jz      L05
+
+                xchg    si,VARleafincr  ; exchange increment values if 1st pixel
+                                        ;  lies in 1st interleave
+
+L05:            jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLine06:     mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddr06     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     al,ARGn         ; AL := pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+                not     ah              ; AH := inverse bit mask
+                pop     cx              ; restore this register
+
+                test    bx,si           ; set zero flag if BX in 1st interleave
+                jz      L32
+
+                xchg    si,di           ; exchange increment values if 1st pixel
+                                        ;  lies in 1st interleave
+
+L32:            test    al,al
+                jz      L34             ; jump if pixel value = 0
+
+L33:            or      es:[bx],al      ; set pixel values in buffer
+                add     bx,si           ; increment to next portion of interleave
+                xchg    si,di           ; toggle between increment values
+                loop    L33             ; loop down the line
+                jmp     short L35
+
+L34:            and     es:[bx],ah      ; reset pixel values in buffer
+                add     bx,si           ; increment to next portion of interleave
+                xchg    si,di           ; toggle between increment values
+                loop    L34
+
+L35:            jmp     Lexit
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLine06:    mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddr06     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah
+                not     dh              ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,7
+                xor     cl,7            ; CL := number of bits to shift left
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; propagate pixel value throughout one byte
+
+                mov     bx,offset DGROUP:PropagatedPixel
+                mov     al,ARGn         ; AL := pixel value
+                xlat
+
+; set pixels in leftmost byte of the line
+
+                or      dh,dh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     dl,dh           ; bit mask for the line
+                jmp     short L44
+
+L42:            mov     ah,al
+                and     ah,dh           ; AH := masked pixel bits
+                not     dh              ; DH := reverse bit mask for 1st byte
+                and     es:[di],dh      ; zero masked pixels in buffer
+                or      es:[di],ah      ; update masked pixels in buffer
+                inc     di
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            rep     stosb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            and     al,dl           ; AL := masked pixels for last byte
+                not     dl
+                and     es:[di],dl      ; zero masked pixels in buffer
+                or      es:[di],al      ; update masked pixels in buffer
+
+                jmp     Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:BX -> video buffer
+                                        ; CX = # pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+LoSlopeLine06:
+
+L10:            mov     ah,es:[bx]      ; AH := byte from video buffer
+
+L11:            and     ah,dh           ; zero pixel value at current bit offset
+                or      ah,dl           ; set pixel value in byte
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                jnc     L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      di,di           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L11
+
+                mov     es:[bx],ah      ; store remaining pixels in buffer
+                jmp     short Lexit
+
+L12:            add     di,VARincr2     ; d := d + incr2
+                mov     es:[bx],ah      ; update buffer
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr  ; exchange interleave increment values
+                loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            mov     es:[bx],ah      ; update buffer
+                inc     bx              ; BX := offset of next byte
+
+                or      di,di           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L10
+                jmp     short Lexit
+
+L15:            add     di,VARincr2     ; d := d + incr2
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr
+
+                loop    L10
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:BX -> video buffer
+                                        ; CX = # pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+HiSlopeLine06:
+
+L21:            and     es:[bx],dh      ; zero pixel value in video buffer
+                or      es:[bx],dl      ; set pixel value in byte
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr  ; exchange interleave increment values
+
+L22:            or      di,di           ; test sign of d
+                jns     L23             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L21
+
+                jmp     short Lexit
+
+
+L23:            add     di,VARincr2     ; d := d + incr2
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                cmc                     ; cf set if bit mask not rotated to
+                                        ;  leftmost pixel position
+
+                adc     bx,0            ; BX := offset of next byte
+
+                loop    L21
+
+
+Lexit:          pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Line06         ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+PropagatedPixel DB      00000000b       ; 0
+                DB      11111111b       ; 1
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+     Most of the execution time in this routine is spent in the inner loops
+     of the four line-drawing modules. To optimize the speed of the inner
+     loops, as much computation as possible is performed outside of them.
+     In particular, the inner loop of HorizLine06 (at label L43) is very
+     fast because it consists only of a single 80x86 machine instruction.
+
+     The routines LoSlopeLine06 and HiSlopeLine06 implement Bresenham's
+     algorithm. The inner loop of HiSlopeLine06 (at L21) is simpler than
+     the inner loop of LoSlopeLine06 (at L11). This is because
+     HiSlopeLine06 increments the pixel y-coordinate, and thus the buffer
+     offset, on every iteration, so the only other code needed in the loop
+     is the code to increment the decision variable and update the pixel
+     bit mask. In LoSlopeLine06, the x-coordinate is incremented on each
+     iteration by rotating the pixel bit mask. This necessitates some extra
+     code to update the bit mask and buffer offset in accordance with the
+     decision variable's value.
+
+     The routine for 320-by-200 4-color mode, shown in Listing 6-5, is
+     similar to the one for 640-by-200 2-color mode. In fact, you could
+     write a single routine that works in either mode without undue
+     sacrifice in performance. The differences lie in how the address of
+     the first pixel in the line is calculated (that is, a call to
+     PixelAddr04 versus one to PixelAddr06) and in how many bits are masked
+     and updated for each pixel in the buffer. The bit mask is 1 bit wide
+     in 640-by-200 2-color mode and 2 bits wide in 320-by-200 4-color mode.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-5.  A line-drawing routine for CGA 320-by-200 4-color
+     mode.
+
+                TITLE   'Listing 6-5'
+                NAME    Line04
+                PAGE    55,132
+
+;
+; Name:         Line04
+;
+; Function:     Draw a line in 320x200 4-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void Line04(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARleafincr     EQU     word ptr [bp-2]
+VARincr1        EQU     word ptr [bp-4]
+VARincr2        EQU     word ptr [bp-6]
+VARroutine      EQU     word ptr [bp-8]
+
+ByteOffsetShift EQU     2               ; used to convert pixels to byte offset
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr04:near
+
+                PUBLIC  _Line04
+_Line04         PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,8            ; stack space for local variables
+                push    si
+                push    di
+
+
+                mov     si,2000h        ; increment for video buffer interleave
+                mov     di,80-2000h     ; increment from last to first interleave
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLine04      ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jnz     L02
+
+                jmp     HorizLine04     ; jump if horizontal line
+
+L02:            jns     L03
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate increments for buffer interleave
+                neg     di
+                xchg    si,di           ; exchange increments
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARleafincr,di  ; save increment for buffer interleave
+
+                mov     VARroutine,offset LoSlopeLine04
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLine04
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     di,bx           ; DI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddr04     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                mov     dx,ax           ; DH := bit mask
+                                        ; DL := pixel value
+                not     dh              ; DH := inverse bit mask
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                test    bx,2000h        ; set zero flag if BX in 1st interleave
+                jz      L05
+
+                xchg    si,VARleafincr  ; exchange increment values if 1st pixel
+                                        ;  lies in 1st interleave
+
+L05:            jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLine04:     mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddr04     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     al,ARGn         ; AL := pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+                not     ah              ; AH := inverse bit mask
+                pop     cx              ; restore this register
+
+                test    bx,si           ; set zero flag if BX in 1st interleave
+                jz      L32
+
+                xchg    si,di           ; exchange increment values if 1st pixel
+                                        ;  lies in 1st interleave
+
+L32:            and     es:[bx],ah      ; zero pixel in buffer
+                or      es:[bx],al      ; set pixel value in buffer
+
+                add     bx,si           ; increment to next portion of interleave
+                xchg    si,di           ; toggle between increment values
+
+                loop    L32
+
+                jmp     Lexit
+
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLine04:    mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddr04     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah
+                not     dh              ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,3
+                xor     cl,3
+                shl     cl,1            ; CL := number of bits to shift left
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; propagate pixel value throughout one byte
+
+                mov     bx,offset DGROUP:PropagatedPixel
+                mov     al,ARGn         ; AL := pixel value
+                xlat                    ; AL := propagated pixel value
+
+; set pixels in leftmost byte of the line
+
+                or      dh,dh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     dl,dh           ; bit mask for the line
+                jmp     short L44
+
+L42:            mov     ah,al
+                and     ah,dh           ; AH := masked pixel bits
+                not     dh              ; DH := reverse bit mask for 1st byte
+                and     es:[di],dh      ; zero masked pixels in buffer
+                or      es:[di],ah      ; update masked pixels in buffer
+                inc     di
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            rep     stosb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            and     al,dl           ; AL := masked pixels for last byte
+                not     dl
+                and     es:[di],dl      ; zero masked pixels in buffer
+                or      es:[di],al      ; update masked pixels in buffer
+
+                jmp     Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+LoSlopeLine04:
+
+L10:            mov     ah,es:[bx]      ; AH := byte from video buffer
+
+L11:            and     ah,dh           ; zero pixel value at current bit offset
+                or      ah,dl           ; set pixel value in byte
+
+                ror     dl,1            ; rotate pixel value
+                ror     dl,1
+                ror     dh,1            ; rotate bit mask
+                ror     dh,1
+                jnc     L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      di,di           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L11
+
+                mov     es:[bx],ah      ; store remaining pixels in buffer
+                jmp     short Lexit
+
+L12:            add     di,VARincr2     ; d := d + incr2
+                mov     es:[bx],ah      ; update buffer
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr  ; exchange interleave increment values
+
+                loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            mov     es:[bx],ah      ; update buffer
+                inc     bx              ; BX := offset of next byte
+
+                or      di,di           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L10
+                jmp     short Lexit
+
+
+L15:            add     di,VARincr2     ; d := d + incr2
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr
+
+                loop    L10
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+HiSlopeLine04:
+
+L21:            and     es:[bx],dh      ; zero pixel value in video buffer
+                or      es:[bx],dl      ; set pixel value in byte
+
+                add     bx,si           ; increment y
+                xchg    si,VARleafincr  ; exchange interleave increment values
+
+L22:            or      di,di           ; test sign of d
+                jns     L23             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L21
+
+                jmp     short Lexit
+
+
+L23:            add     di,VARincr2     ; d := d + incr2
+
+                ror     dl,1            ; rotate pixel value
+                ror     dl,1
+                ror     dh,1            ; rotate bit mask
+                ror     dh,1
+                cmc                     ; cf set if bit mask not rotated to
+                                        ;  leftmost pixel position
+
+                adc     bx,0            ; BX := offset of next byte
+
+                loop    L21
+
+
+Lexit:          pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Line04         ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+PropagatedPixel db      00000000b       ; 0
+                db      01010101b       ; 1
+                db      10101010b       ; 2
+                db      11111111b       ; 3
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     On the CGA, the code that handles vertical increments is complicated
+     by the need to step across the interleaves in the video buffer. The
+     pixel address is incremented by 2000H to move from the first
+     interleave (even y-coordinates) to the second interleave (odd y-
+     coordinates). To increment from a pixel at an odd y-coordinate to the
+     pixel just below it, you add -2000H (to increment from the second to
+     the first interleave) plus 80 (the number of bytes in each pixel row
+     in the buffer). The increment is thus 0E050H (80 - 2000H).
+
+       ÉÍÍÍ»     The routines for the CGA presented in Listings 6-4 and
+       º T º     6-5 can only copy the specified pixel value into the
+       º I º     video buffer. To perform a XOR, an OR, or an AND operation
+       º P º     on the preexisting values in the buffer using the
+       ÈÍÍÍ¼     specified pixel value, change the inner loops of each of
+                 the four line-drawing modules.
+
+                 In selecting among pixel operations (XOR, AND, and so on),
+                 you face the usual trade-off between speed and code size.
+                 To maximize speed, write a separate line-drawing module
+                 for each pixel operation (AND, OR, XOR, and replace). To
+                 minimize redundant code, call a short subroutine, or add
+                 some branching logic to perform one of the pixel
+                 operations.
+
+
+HGC
+
+     The routine for the HGC, contained in Listing 6-6, is similar to the
+     one for the CGA's 640-by-200 2-color mode. The important difference is
+     in how the HGC's video buffer is mapped. Because of the Hercules video
+     buffer's four-way interleave, the pixel address is incremented by
+     adding the buffer interleave value (2000H or -2000H) until the result
+     exceeds the limit of valid buffer offsets. Because valid buffer
+     offsets lie in the range 0 through 7FFFH, the routine detects the
+     overflow condition by examining the high-order bit of the result. When
+     the result overflows, it adds another value (90 - 8000H or 8000H - 90)
+     to it, so that the new result is the proper offset in the next buffer
+     interleave.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-6.  A line-drawing routine for Hercules monochrome graphics
+     mode.
+
+                TITLE   'Listing 6-6'
+                NAME    LineHGC
+                PAGE    55,132
+
+;
+; Name:         LineHGC
+;
+; Function:     Draw a line in HGC or HGC+ 720x348 graphics
+;
+; Caller:       Microsoft C:
+;
+;                       void LineHGC(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARleafincr     EQU     word ptr [bp-2]
+VARincr1        EQU     word ptr [bp-4]
+VARincr2        EQU     word ptr [bp-6]
+VARroutine      EQU     word ptr [bp-8]
+
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddrHGC:near
+
+                PUBLIC  _LineHGC
+_LineHGC        PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,8            ; stack space for local variables
+                push    si
+                push    di
+
+                mov     si,2000h        ; increment for video buffer interleave
+                mov     di,90-8000h     ; increment from last to first interleave
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLineHGC     ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jnz     L02
+
+                jmp     HorizLineHGC    ; jump if horizontal line
+
+L02:            jns     L03
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate increments for buffer interleave
+                neg     di
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARleafincr,di  ; save increment for buffer interleave
+
+                mov     VARroutine,offset LoSlopeLineHGC
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLineHGC
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     di,bx           ; DI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                mov     dx,ax           ; DH := bit mask
+                                        ; DL := pixel value
+                not     dh              ; DH := inverse bit mask
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLineHGC:    mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     al,ARGn         ; AL := pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+                not     ah              ; AH := inverse bit mask
+                pop     cx              ; restore this register
+
+; draw the line
+                test    al,al
+                jz      L34             ; jump if pixel value is zero
+
+L32:            or      es:[bx],al      ; set pixel values in buffer
+
+                add     bx,si           ; increment to next portion of interleave
+                jns     L33
+                add     bx,di           ; increment to first portion of interleave
+L33:            loop    L32
+                jmp     short L36
+
+L34:            and     es:[bx],ah      ; reset pixel values in buffer
+
+                add     bx,si           ; increment to next portion of interleave
+                jns     L35
+                add     bx,di           ; increment to first portion of interleave
+L35:            loop    L34
+
+L36:            jmp     Lexit
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLineHGC:   mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah
+                not     dh              ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,7
+                xor     cl,7            ; CL := number of bits to shift left
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; propagate pixel value throughout one byte
+
+                mov     bx,offset DGROUP:PropagatedPixel
+                mov     al,ARGn         ; AL := pixel value
+                xlat                    ; AL := propagated pixel value
+
+; set pixels in leftmost byte of the line
+
+                or      dh,dh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     dl,dh           ; bit mask for the line
+                jmp     short L44
+
+L42:            mov     ah,al
+                and     ah,dh           ; AH := masked pixel bits
+                not     dh              ; DH := reverse bit mask for 1st byte
+                and     es:[di],dh      ; zero masked pixels in buffer
+                or      es:[di],ah      ; update masked pixels in buffer
+                inc     di
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            rep     stosb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            and     al,dl           ; AL := masked pixels for last byte
+                not     dl
+                and     es:[di],dl      ; zero masked pixels in buffer
+                or      es:[di],al      ; update masked pixels in buffer
+
+                jmp     Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+LoSlopeLineHGC: 
+
+L10:            mov     ah,es:[bx]      ; AH := byte from video buffer
+
+L11:            and     ah,dh           ; zero pixel value at current bit offset
+                or      ah,dl           ; set pixel value in byte
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                jnc     L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      di,di           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L11
+
+                mov     es:[bx],ah      ; store remaining pixels in buffer
+                jmp     short Lexit
+
+L12:            add     di,VARincr2     ; d := d + incr2
+                mov     es:[bx],ah      ; update buffer
+                
+                add     bx,si           ; increment y
+                jns     L13             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L13:            loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            mov     es:[bx],ah      ; update buffer
+                inc     bx              ; BX := offset of next byte
+
+                or      di,di           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L10
+                jmp     short Lexit
+
+L15:            add     di,VARincr2     ; d := d + incr2
+
+                add     bx,si           ; increment y
+                jns     L16             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L16:            loop    L10             ; loop until all pixels are set
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+HiSlopeLineHGC:
+
+L21:            and     es:[bx],dh      ; zero pixel value in video buffer
+                or      es:[bx],dl      ; set pixel value in byte
+
+                add     bx,si           ; increment y
+                jns     L22             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L22:            or      di,di
+                jns     L23             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L21
+                jmp     short Lexit
+
+
+L23:            add     di,VARincr2     ; d := d + incr2
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                cmc                     ; cf set if bit mask not rotated to
+                                        ;  leftmost pixel position
+                adc     bx,0            ; BX := offset of next byte
+
+                loop    L21
+
+
+Lexit:          pop     di
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_LineHGC        ENDP
+
+_TEXT           ENDS
+
+_DATA           SEGMENT word public 'DATA'
+
+PropagatedPixel DB      00000000b       ; 0
+                DB      11111111b       ; 1
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The routines for the HGC never access the video buffer with 16-bit
+     read/write operations such as MOVSW or AND [BX],DX. Avoiding these
+     16-bit operations ensures that the routines will run on the InColor
+     Card as well as on the HGC and HGC+.
+
+       ÉÍÍÍ»     You can use the same line-drawing routines on either of
+       º T º     the HGC's video pages by setting the appropriate value for
+       º I º     VideoBufferSeg in PixelAddrHGC. For video page 0, set
+       º P º     VideoBufferSeg to B000H. For video page 1, use B800H.
+       ÈÍÍÍ¼
+
+
+EGA
+
+     For the EGA, three line-drawing routines can cover all available
+     graphics modes. The routines for the CGA's 640-by-200 2-color and 320-
+     by-200 4-color modes work equally well in equivalent modes on the EGA.
+     The routine for the remaining graphics modes (200-line 16-color modes
+     and all 350-line modes) is complicated by the need to program the
+     Graphics Controller, but simplified in that the Graphics Controller
+     hardware handles some pixel manipulations that must be performed in
+     software on the CGA.
+
+     The routine in Listing 6-7 uses Graphics Controller write mode 0 to
+     update the video buffer. The routine stores the pixel value for the
+     line in the Set/Reset register. For each pixel updated in the buffer,
+     the routine writes the appropriate bit mask to the Bit Mask register.
+     Thus, a single 80x86 instruction can read, update, and rewrite up to 8
+     pixels at a time.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-7.  A line-drawing routine for native EGA graphics modes.
+
+                TITLE   'Listing 6-7'
+                NAME    Line10
+                PAGE    55,132
+
+;
+; Name:         Line10
+;
+; Function:     Draw a line in the following EGA and VGA graphics modes:
+;                       200-line 16-color modes
+;                       350-line modes
+;                       640x480 16-color
+;
+; Caller:       Microsoft C:
+;
+;                       void Line10(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARvertincr     EQU     word ptr [bp-2]
+VARincr1        EQU     word ptr [bp-4]
+VARincr2        EQU     word ptr [bp-6]
+VARroutine      EQU     word ptr [bp-8]
+
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+BytesPerLine    EQU     80
+RMWbits         EQU     0               ; value for Data Rotate/Func Select reg
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _Line10
+_Line10         PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,8            ; stack space for local variables
+                push    si
+                push    di
+
+; configure the Graphics Controller
+
+                mov     dx,3CEh         ; DX := Graphics Controller port addr
+
+                mov     ah,ARGn         ; AH := pixel value
+                xor     al,al           ; AL := Set/Reset Register number
+                out     dx,ax
+
+                mov     ax,0F01h        ; AH := 1111b (bit plane mask for
+                                        ;  Enable Set/Reset
+                out     dx,ax           ; AL := Enable Set/Reset Register #
+
+                mov     ah,RMWbits      ; bits 3 and 4 of AH := function
+                mov     al,3            ; AL := Data Rotate/Func Select reg #
+                out     dx,ax
+                
+; check for vertical line
+
+                mov     si,BytesPerLine ; increment for video buffer
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLine10      ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jz      HorizLine10     ; jump if horizontal line
+
+                jns     L03             ; jump if slope is positive
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate increment for buffer interleave
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARvertincr,si  ; save vertical increment
+
+                mov     VARroutine,offset LoSlopeLine10
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLine10
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     si,bx           ; SI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     di,bx           ; ES:DI -> buffer
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     bl,ah           ; AH,BL := bit mask
+                mov     al,8            ; AL := Bit Mask Register number
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLine10:     mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+; set up Graphics Controller
+
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     al,8            ; AL := Bit Mask reg number
+                out     dx,ax
+
+                pop     cx              ; restore this register
+
+; draw the line
+
+L32:            or      es:[bx],al      ; set pixel
+                add     bx,si           ; increment to next line
+                loop    L32
+
+                jmp     Lexit
+
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLine10:
+                push    ds              ; preserve DS
+
+                mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah           ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                not     dh
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,7
+                xor     cl,7            ; CL := number of bits to shift left
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; get Graphics Controller port address into DX
+
+                mov     bx,dx           ; BH := bit mask for first byte
+                                        ; BL := bit mask for last byte
+                mov     dx,3CEh         ; DX := Graphics Controller port
+                mov     al,8            ; AL := Bit Mask Register number
+
+; make video buffer addressible through DS:SI
+
+                push    es
+                pop     ds
+                mov     si,di           ; DS:SI -> video buffer
+
+; set pixels in leftmost byte of the line
+
+                or      bh,bh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     bl,bh           ; BL := bit mask for the line
+                jmp     short L44
+
+L42:            mov     ah,bh           ; AH := bit mask for 1st byte
+                out     dx,ax           ; update Graphics Controller
+
+                movsb                   ; update bit planes
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            mov     ah,11111111b    ; AH := bit mask
+                out     dx,ax           ; update Bit Mask Register
+
+                rep     movsb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            mov     ah,bl           ; AH := bit mask for last byte
+                out     dx,ax           ; update Graphics Controller
+
+                movsb                   ; update bit planes
+
+                pop     ds              ; restore DS
+                jmp     short Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:DI -> video buffer
+                                        ; AL = Bit Mask Register number
+                                        ; BL = bit mask for 1st pixel
+                                        ; CX = #pixels to draw
+                                        ; DX = Graphics Controller port addr
+                                        ; SI = decision variable
+LoSlopeLine10:
+
+L10:            mov     ah,bl           ; AH := bit mask for next pixel
+
+L11:            or      ah,bl           ; mask current pixel position
+                ror     bl,1            ; rotate pixel value
+                jc      L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      si,si           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     si,VARincr1     ; d := d + incr1
+                loop    L11
+
+                out     dx,ax           ; update Bit Mask Register
+                or      es:[di],al      ; set remaining pixel(s)
+                jmp     short Lexit
+
+L12:            add     si,VARincr2     ; d := d + incr2
+                out     dx,ax           ; update Bit Mask Register
+
+                or      es:[di],al      ; update bit planes
+
+                add     di,VARvertincr  ; increment y
+                loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            out     dx,ax           ; update Bit Mask Register ...
+
+                or      es:[di],al      ; update bit planes
+                inc     di              ; increment x
+
+                or      si,si           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     si,VARincr1     ; d := d + incr1
+                loop    L10 
+                jmp     short Lexit
+
+L15:            add     si,VARincr2     ; d := d + incr2
+                add     di,VARvertincr  ; vertical increment
+                loop    L10
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:DI -> video buffer
+                                        ; AH = bit mask for 1st pixel
+                                        ; AL = Bit Mask Register number
+                                        ; CX = #pixels to draw
+                                        ; DX = Graphics Controller port addr
+                                        ; SI = decision variable
+HiSlopeLine10:
+                mov     bx,VARvertincr  ; BX := y-increment
+
+L21:            out     dx,ax           ; update Bit Mask Register
+                or      es:[di],al      ; update bit planes
+
+                add     di,bx           ; increment y
+
+L22:            or      si,si           ; test sign of d
+                jns     L23             ; jump if d >= 0
+
+                add     si,VARincr1     ; d := d + incr1
+                loop    L21
+                jmp     short Lexit
+
+
+L23:            add     si,VARincr2     ; d := d + incr2
+
+                ror     ah,1            ; rotate bit mask
+                adc     di,0            ; increment DI if when mask rotated to
+                                        ;  leftmost pixel position
+
+                loop    L21
+
+
+; restore default Graphics Controller state and return to caller
+
+Lexit:          xor     ax,ax           ; AH := 0, AL := 0
+                out     dx,ax           ; restore Set/Reset Register
+
+                inc     ax              ; AH := 0, AL := 1
+                out     dx,ax           ; restore Enable Set/Reset Register
+
+                mov     al,3            ; AH := 0, AL := 3
+                out     dx,ax           ; AL := Data Rotate/Func Select reg #
+
+                mov     ax,0FF08h       ; AH := 1111111b, AL := 8
+                out     dx,ax           ; restore Bit Mask Register
+
+                pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Line10         ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Within the line-drawing modules, the value 3CEH (the port for the
+     Graphics Controller Address register) is maintained in DX, the value 8
+     (the Bit Mask register number) is kept in AL, and the current pixel
+     bit mask is kept in AH. This lets you update the bit planes with only
+     two machine instructions: OUT DX,AX to update the Bit Mask register
+     and a MOVSB or OR ES:[DI],AL instruction that causes a CPU read and
+     CPU write to occur.
+
+     This routine makes careful use of the 80x86 registers and the Graphics
+     Controller. The Graphics Controller's parallel processing helps the
+     routine run at about the same speed as do CGA and HGC line-drawing
+     routines.
+
+     Native EGA graphics modes use no video buffer interleave, so locating
+     a pixel's vertical neighbors in the video buffer is easy. If each line
+     contains n bytes of pixels, the next pixel up from a given pixel is -n
+     bytes away, and the next pixel down is n bytes away. The code for
+     incrementing pixel addresses vertically is thus simpler than the
+     corresponding code for the CGA or the HGC. (Compare, for example, the
+     code in the loop at label L32 in Listings 6-4 and 6-7.)
+
+     The Graphics Controller handles any of four pixel operations for you
+     (XOR, AND, OR, and replace), so the only extra code required to
+     support these functions consists of a few instructions to load the
+     Data Rotate/Function Select register (03H). This task is part of the
+     "configure the Graphics Controller" code near the beginning of the
+     routine in Listing 6-7.
+
+       ÉÍÍÍ»     You can use this line-drawing routine in 640-by-350
+       º T º     4-color and monochrome modes. Be sure to specify the
+       º I º     proper pixel value in these modes so that the routine sets
+       º P º     bits in the proper bit planes (see Chapter 4).
+       ÈÍÍÍ¼
+
+
+MCGA
+
+     In CGA-compatible modes, you can use the CGA line-drawing routines on
+     the MCGA. The non-CGA modes (640-by-480 2-color and 320-by-200 256-
+     color) require their own routines, as shown in Listings 6-8 and 6-9,
+     but these are easily derived from the code for 640-by-200 2-color
+     mode.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-8.  A line-drawing routine for MCGA and VGA 640-by-480
+     2-color mode.
+
+                TITLE   'Listing 6-8'
+                NAME    Line11
+                PAGE    55,132
+
+;
+; Name:         Line11
+;
+; Function:     Draw a line in 640x480 2-color mode (MCGA, VGA) 
+;
+; Caller:       Microsoft C:
+;
+;                       void Line11(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARincr1        EQU     word ptr [bp-2]
+VARincr2        EQU     word ptr [bp-4]
+VARroutine      EQU     word ptr [bp-6]
+
+BytesPerLine    EQU     80              ; bytes in one row of pixels
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _Line11
+_Line11         PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,6            ; stack space for local variables
+                push    si
+                push    di
+
+; check for vertical line
+
+                mov     si,BytesPerLine ; SI := initial y-increment
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLine11      ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jnz     L02
+
+                jmp     HorizLine11     ; jump if horizontal line
+
+L02:            jns     L03
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate y-increment
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARroutine,offset LoSlopeLine11
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLine11
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     di,bx           ; DI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                mov     dx,ax           ; DH := bit mask
+                                        ; DL := pixel value
+                not     dh              ; DH := inverse bit mask
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLine11:     mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     al,ARGn         ; AL := pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+                not     ah              ; AH := inverse bit mask
+                pop     cx              ; restore this register
+
+; draw the line
+
+                test    al,al
+                jz      L33             ; jump if pixel value = 0
+
+L32:            or      es:[bx],al      ; set pixel values in buffer
+                add     bx,si
+                loop    L32
+                jmp     short L34
+
+L33:            and     es:[bx],ah      ; reset pixel values in buffer
+                add     bx,si
+                loop    L33
+
+L34:            jmp     Lexit
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLine11:    mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah
+                not     dh              ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,7
+                xor     cl,7            ; CL := number of bits to shift left
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; propagate pixel value throughout one byte
+
+                mov     bx,offset DGROUP:PropagatedPixel
+                mov     al,ARGn         ; AL := pixel value
+                xlat
+
+; set pixels in leftmost byte of the line
+
+                or      dh,dh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     dl,dh           ; bit mask for the line
+                jmp     short L44
+
+L42:            mov     ah,al
+                and     ah,dh           ; AH := masked pixel bits
+                not     dh              ; DH := reverse bit mask for 1st byte
+                and     es:[di],dh      ; zero masked pixels in buffer
+                or      es:[di],ah      ; update masked pixels in buffer
+                inc     di
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            rep     stosb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            and     al,dl           ; AL := masked pixels for last byte
+                not     dl
+                and     es:[di],dl      ; zero masked pixels in buffer
+                or      es:[di],al      ; update masked pixels in buffer
+
+                jmp     Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = bytes per pixel row
+                                        ; DI = decision variable
+LoSlopeLine11:
+
+L10:            mov     ah,es:[bx]      ; AH := byte from video buffer
+
+L11:            and     ah,dh           ; zero pixel value at current bit offset
+                or      ah,dl           ; set pixel value in byte
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                jnc     L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      di,di           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L11
+
+                mov     es:[bx],ah      ; store remaining pixels in buffer
+                jmp     short Lexit
+
+L12:            add     di,VARincr2     ; d := d + incr2
+                mov     es:[bx],ah      ; update buffer
+
+                add     bx,si           ; increment y
+                loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            mov     es:[bx],ah      ; update buffer
+                inc     bx              ; BX := offset of next byte
+
+                or      di,di           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L10
+                jmp     short Lexit
+
+L15:            add     di,VARincr2     ; d := d + incr2
+
+                add     bx,si           ; increment y
+                loop    L10
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:BX -> video buffer
+                                        ; CX = #pixels to draw
+                                        ; DH = inverse bit mask
+                                        ; DL = pixel value in proper position
+                                        ; SI = bytes per pixel row
+                                        ; DI = decision variable
+HiSlopeLine11:
+
+L21:            and     es:[bx],dh      ; zero pixel value in video buffer
+                or      es:[bx],dl      ; set pixel value in byte
+
+                add     bx,si           ; increment y
+
+L22:            or      di,di           ; test sign of d
+                jns     L23             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L21
+
+                jmp     short Lexit
+
+
+L23:            add     di,VARincr2     ; d := d + incr2
+
+                ror     dl,1            ; rotate pixel value
+                ror     dh,1            ; rotate bit mask
+                cmc                     ; cf set if bit mask not rotated to
+                                        ;  leftmost pixel position
+
+                adc     bx,0            ; BX := offset of next byte
+
+                loop    L21
+
+
+Lexit:          pop     di
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Line11         ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+PropagatedPixel DB      00000000b       ; 0
+                DB      11111111b       ; 1
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-9.  A Line-drawing routine for MCGA and VGA 320-by-200
+     256-color mode.
+
+                TITLE   'Listing 6-9'
+                NAME    Line13
+                PAGE    55,132
+
+;
+; Name:         Line13
+;
+; Function:     Draw a line in MCGA/VGA 320x200 256-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void Line13(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARincr1        EQU     word ptr [bp-2]
+VARincr2        EQU     word ptr [bp-4]
+VARroutine      EQU     word ptr [bp-6]
+
+BytesPerLine    EQU     320
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr13:near
+
+                PUBLIC  _Line13
+_Line13         PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,6            ; stack space for local variables
+                push    si
+                push    di
+
+; check for vertical line
+
+                mov     si,BytesPerLine ; initial y-increment
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLine13      ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jz      HorizLine13     ; jump if horizontal line
+
+                jns     L03             ; jump if slope is positive
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate y-increment
+
+; select appropriate routine for slope of line
+
+L03:            push    si              ; preserve y-increment
+
+                mov     VARroutine,offset LoSlopeLine13
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLine13
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     si,bx           ; SI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddr13     ; ES:BX -> buffer
+
+                mov     di,bx           ; ES:DI -> buffer
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                pop     bx              ; BX := y-increment
+                jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLine13:     mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddr13     ; ES:BX -> video buffer
+                pop     cx
+
+                mov     di,bx           ; ES:DI -> video buffer
+                dec     si              ; SI := bytes/line - 1
+
+                mov     al,ARGn         ; AL := pixel value
+
+L32:            stosb                   ; set pixel value in buffer
+                add     di,si           ; increment to next line
+                loop    L32
+
+                jmp     Lexit
+
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLine13:
+                push    cx              ; preserve CX
+                mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddr13     ; ES:BX -> video buffer
+                mov     di,bx           ; ES:DI -> buffer
+
+                pop     cx
+                inc     cx              ; CX := number of pixels to draw
+
+                mov     al,ARGn         ; AL := pixel value
+
+                rep     stosb           ; update the video buffer
+
+                jmp     short Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:DI -> video buffer
+                                        ; BX = y-increment
+                                        ; CX = #pixels to draw
+                                        ; SI = decision variable
+LoSlopeLine13:
+
+                mov     al,ARGn         ; AL := pixel value
+
+L11:            stosb                   ; store pixel, increment x
+
+                or      si,si           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     si,VARincr1     ; d := d + incr1
+                loop    L11
+                jmp     short Lexit
+
+L12:            add     si,VARincr2     ; d := d + incr2
+                add     di,bx           ; increment y
+                loop    L11
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:DI -> video buffer
+                                        ; BX = y-increment
+                                        ; CX = #pixels to draw
+                                        ; SI = decision variable
+HiSlopeLine13:
+                mov     al,ARGn         ; AL := pixel value
+
+L21:            stosb                   ; update next pixel, increment x
+
+                add     di,bx           ; increment y
+
+L22:            or      si,si           ; test sign of d
+                jns     L23             ; jump if d >= 0
+
+                add     si,VARincr1     ; d := d + incr1
+                dec     di              ; decrement x (already incremented
+                                        ;  by stosb)
+                loop    L21
+                jmp     short Lexit
+
+
+L23:            add     si,VARincr2     ; d := d + incr2
+                loop    L21
+
+
+Lexit:          pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_Line13         ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+VGA
+
+     Once you implement routines for the EGA and the MCGA, you can draw
+     lines in any of the VGA's graphics modes. To draw lines in 640-by-480
+     16-color mode, use the 640-by-350 16-color routine.
+
+
+InColor Card
+
+     Because pixel addressing in the video buffer is the same on the
+     InColor Card as on Hercules monochrome cards, the only significant
+     difference in the line-drawing routines for the InColor Card, as
+     you'll see in Listing 6-10, is some extra code to select the
+     specified pixel value. Note how the InColor Card's write mode 1 is
+     used along with an appropriate foreground value in the Read/Write
+     Color register to set the values of neighboring pixels in each byte of
+     the buffer. This technique parallels the use of write mode 0 and the
+     Set/Reset register on the EGA.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-10.  A line-drawing routine for the InColor Card's 720-by-
+     348 16-color mode.
+
+                TITLE   'Listing 6-10'
+                NAME    LineInC
+                PAGE    55,132
+
+;
+; Name:         LineInC
+;
+; Function:     Draw a line in Hercules InColor 720x348 16-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void LineInC(x1,y1,x2,y2,n);
+;
+;                       int x1,y1,x2,y2;        /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx1           EQU     word ptr [bp+4] ; stack frame addressing
+ARGy1           EQU     word ptr [bp+6]
+ARGx2           EQU     word ptr [bp+8]
+ARGy2           EQU     word ptr [bp+10]
+ARGn            EQU     byte ptr [bp+12]
+VARleafincr     EQU     word ptr [bp-2]
+VARincr1        EQU     word ptr [bp-4]
+VARincr2        EQU     word ptr [bp-6]
+VARroutine      EQU     word ptr [bp-8]
+
+ByteOffsetShift EQU     3               ; used to convert pixels to byte offset
+DefaultRWColor  EQU     0Fh             ; default value for R/W Color register
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddrHGC:near
+
+                PUBLIC  _LineInC
+_LineInC        PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                sub     sp,8            ; stack space for local variables
+                push    si
+                push    di
+
+                mov     si,2000h        ; increment for video buffer interleave
+                mov     di,90-8000h     ; increment from last to first interleave
+
+; set up InColor CRTC registers
+
+                mov     dx,3B4h         ; DX := CRTC I/O port
+                mov     ax,5F19h        ; AH bit 6 := 1 (Mask Polarity)
+                                        ; AH bits 5-4 := 1 (Write Mode)
+                                        ; AH bits 3-0 := "don't care" bits
+                                        ; AL := R/W Control Register number
+                out     dx,ax           ; set R/W Control Register
+
+                inc     ax              ; AL := 1Ah (R/W Color Reg number)
+                mov     ah,ARGn         ; AH := foreground value
+                out     dx,ax           ; set R/W color register
+
+
+                mov     cx,ARGx2
+                sub     cx,ARGx1        ; CX := x2 - x1
+                jz      VertLineInC     ; jump if vertical line
+
+; force x1 < x2
+
+                jns     L01             ; jump if x2 > x1
+
+                neg     cx              ; CX := x1 - x2
+                
+                mov     bx,ARGx2        ; exchange x1 and x2
+                xchg    bx,ARGx1
+                mov     ARGx2,bx
+
+                mov     bx,ARGy2        ; exchange y1 and y2
+                xchg    bx,ARGy1
+                mov     ARGy2,bx
+
+; calculate dy = ABS(y2-y1)
+
+L01:            mov     bx,ARGy2
+                sub     bx,ARGy1        ; BX := y2 - y1
+                jz      HorizLineInC    ; jump if horizontal line
+
+                jns     L03
+
+                neg     bx              ; BX := y1 - y2
+                neg     si              ; negate increments for buffer interleave
+                neg     di
+
+; select appropriate routine for slope of line
+
+L03:            mov     VARleafincr,di  ; save increment for buffer interleave
+
+                mov     VARroutine,offset LoSlopeLineInC
+                cmp     bx,cx
+                jle     L04             ; jump if dy <= dx (slope <= 1)
+                mov     VARroutine,offset HiSlopeLineInC
+                xchg    bx,cx           ; exchange dy and dx
+
+; calculate initial decision variable and increments
+
+L04:            shl     bx,1            ; BX := 2 * dy
+                mov     VARincr1,bx     ; incr1 := 2 * dy
+                sub     bx,cx
+                mov     di,bx           ; DI := d = 2 * dy - dx
+                sub     bx,cx
+                mov     VARincr2,bx     ; incr2 := 2 * (dy - dx)
+
+; calculate first pixel address
+
+                push    cx              ; preserve this register
+                mov     ax,ARGy1        ; AX := y
+                mov     bx,ARGx1        ; BX := x
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                shl     ah,cl
+                mov     dh,ah           ; DH := bit mask in proper position
+
+                pop     cx              ; restore this register
+                inc     cx              ; CX := # of pixels to draw
+
+                jmp     VARroutine      ; jump to appropriate routine for slope
+
+
+; routine for vertical lines
+
+VertLineInC:    mov     ax,ARGy1        ; AX := y1
+                mov     bx,ARGy2        ; BX := y2
+                mov     cx,bx
+                sub     cx,ax           ; CX := dy
+                jge     L31             ; jump if dy >= 0
+
+                neg     cx              ; force dy >= 0
+                mov     ax,bx           ; AX := y2
+
+L31:            inc     cx              ; CX := # of pixels to draw
+                mov     bx,ARGx1        ; BX := x
+                push    cx              ; preserve this register
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                shl     ah,cl           ; AH := bit mask in proper position
+                pop     cx              ; restore this register
+
+L32:            or      es:[bx],ah      ; update pixel in buffer
+
+                add     bx,si           ; increment to next portion of interleave
+                jns     L33
+
+                add     bx,di           ; increment to first portion of interleave
+
+L33:            loop    L32
+
+                jmp     Lexit
+
+
+
+; routine for horizontal lines (slope = 0)
+
+HorizLineInC:   mov     ax,ARGy1
+                mov     bx,ARGx1
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> video buffer
+                                        ; CL := # bits to shift left
+                mov     di,bx           ; ES:DI -> buffer
+
+                mov     dh,ah
+                not     dh              ; DH := unshifted bit mask for leftmost
+                                        ;        byte
+                mov     dl,0FFh         ; DL := unshifted bit mask for
+                                        ;        rightmost byte
+
+                shl     dh,cl           ; DH := reverse bit mask for first byte
+                not     dh              ; DH := bit mask for first byte
+
+                mov     cx,ARGx2
+                and     cl,7
+                xor     cl,7            ; CL := number of bits to shift left
+                shl     dl,cl           ; DL := bit mask for last byte
+
+; determine byte offset of first and last pixel in the line
+
+                mov     ax,ARGx2        ; AX := x2
+                mov     bx,ARGx1        ; BX := x1
+
+                mov     cl,ByteOffsetShift      ; number of bits to shift to
+                                                ;  convert pixels to bytes
+
+                shr     ax,cl           ; AX := byte offset of x2
+                shr     bx,cl           ; BX := byte offset of x1
+                mov     cx,ax
+                sub     cx,bx           ; CX := (# bytes in line) - 1
+
+; set pixels in leftmost byte of the line
+
+                or      dh,dh
+                js      L43             ; jump if byte-aligned (x1 is leftmost
+                                        ;  pixel in byte)
+                or      cx,cx
+                jnz     L42             ; jump if more than one byte in the line
+
+                and     dl,dh           ; bit mask for the line
+                jmp     short L44
+
+L42:            or      es:[di],dh      ; update masked pixels in buffer
+                inc     di
+                dec     cx
+
+; use a fast 8086 machine instruction to draw the remainder of the line
+
+L43:            mov     al,0FFh         ; 8-pixel bit mask
+                rep     stosb           ; update all pixels in the line
+
+; set pixels in the rightmost byte of the line
+
+L44:            or      es:[di],dl      ; update masked pixels in buffer
+                jmp     Lexit
+
+
+; routine for dy <= dx (slope <= 1)     ; ES:BX -> video buffer
+                                        ; CX = # pixels to draw
+                                        ; DH = bit mask
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+LoSlopeLineInC: 
+
+L10:            mov     ah,es:[bx]      ; latch bit planes
+                                        ; AH := 0 because all planes
+                                        ;  are "don't care"
+
+L11:            or      ah,dh           ; set pixel value in byte
+
+                ror     dh,1            ; rotate bit mask
+                jc      L14             ; jump if bit mask rotated to
+                                        ;  leftmost pixel position
+
+; bit mask not shifted out
+
+                or      di,di           ; test sign of d
+                jns     L12             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L11
+
+                mov     es:[bx],ah      ; store remaining pixels in buffer
+                jmp     short Lexit
+
+L12:            add     di,VARincr2     ; d := d + incr2
+                mov     es:[bx],ah      ; update buffer
+                
+                add     bx,si           ; increment y
+                jns     L13             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L13:            loop    L10
+                jmp     short Lexit
+
+; bit mask shifted out
+
+L14:            mov     es:[bx],ah      ; update buffer
+                inc     bx              ; BX := offset of next byte
+
+                or      di,di           ; test sign of d
+                jns     L15             ; jump if non-negative
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L10
+                jmp     short Lexit
+
+L15:            add     di,VARincr2     ; d := d + incr2
+
+                add     bx,si           ; increment y
+                jns     L16             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L16:            loop    L10             ; loop until all pixels are set
+                jmp     short Lexit
+
+
+; routine for dy > dx (slope > 1)       ; ES:BX -> video buffer
+                                        ; CX = # pixels to draw
+                                        ; DH = bit mask
+                                        ; SI = buffer interleave increment
+                                        ; DI = decision variable
+HiSlopeLineInC:
+
+L21:            or      es:[bx],dh      ; set pixel value in video buffer
+
+                add     bx,si           ; increment y
+                jns     L22             ; jump if not in last interleave
+
+                add     bx,VARleafincr  ; increment into next interleave
+
+L22:            or      di,di
+                jns     L23             ; jump if d >= 0
+
+                add     di,VARincr1     ; d := d + incr1
+                loop    L21
+                jmp     short Lexit
+
+
+L23:            add     di,VARincr2     ; d := d + incr2
+
+                ror     dh,1            ; rotate bit mask
+                adc     bx,0            ; BX := offset of next byte (incremented
+                                        ;  if bit mask rotated to
+                                        ;  leftmost pixel position
+
+                loop    L21
+
+
+Lexit:          mov     dx,3B4h         ; DX := CRTC I/O port
+                mov     ax,0F18h
+                out     dx,ax           ; restore default Plane Mask value
+
+                mov     ax,4019h        ; restore default R/W Control value
+                out     dx,ax
+
+                inc     ax              ; restore default R/W Color value
+                mov     ah,DefaultRWColor
+                out     dx,ax
+
+                pop     di              ; restore registers and return
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_LineInC        ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+Line Attributes
+
+
+     The line-drawing algorithm in this chapter draws lines that are
+     exactly one pixel wide. Consequently, diagonal lines appear less
+     bright than horizontal or vertical lines. You can fatten diagonal
+     lines by modifying the pixel-setting inner loop of a Bresenham line-
+     drawing routine so that it always sets pixel B before selecting the
+     next pixel in the line. The resulting lines are fatter, but the
+     modified routine runs more slowly because it must update more pixels,
+     particularly in lines with slopes near 1 or -1.
+
+     To draw wider lines, simply draw contiguous, neighboring parallel
+     lines. If you are using a pointing device to draw a wide line
+     interactively, use a series of neighboring horizontal or vertical
+     lines. After implementing a fast routine for drawing horizontal lines,
+     you can write a high-level routine that paints wide lines by calling
+     the horizontal line primitive.
+
+     In some applications, you may wish to draw dashed lines or
+     multicolored lines that incorporate a pattern of pixel values. To do
+     this, modify the inner loop of your line-drawing routine to select
+     pixel values from a circular list of possible values. Rotate the list
+     each time you set a pixel.
+
+
+Clipping
+
+
+     Not one of the assembly-language routines in this chapter validates
+     the pixel coordinates you supply as endpoints. For example, if you
+     call the 640-by-200 2-color routine to draw a line from (0,0) to
+     (1000,1000), the routine blithely updates about 800 pixels at memory
+     locations that don't exist in the available video RAM, all the way
+     from (200,200) through (1000,1000). To avoid this sort of error, you
+     must determine which part of any arbitrary line lies within a given
+     area of the video buffer. This process is known as clipping.
+
+     In the case of 640-by-200 2-color mode, the area into which lines must
+     be clipped is the rectangular region defined by (0,0) in the upper
+     left corner and (639,199) in the lower right corner. You would
+     therefore clip a line with endpoints at (0,0) and (1000,1000) so that
+     only the portion from (0,0) to (199,199) is drawn. In avoiding the
+     error of updating nonexistent RAM, you might also improve your
+     program's performance, since the line-drawing primitive will not
+     attempt to update those nonexistent pixels.
+
+
+Pixel-by-Pixel Clipping
+
+     A simplistic approach to clipping is to include a clipping test in the
+     inner loop of your line-drawing routines. Just before setting the
+     value of each pixel, your routine could compare the current pixel bit
+     mask and buffer address with a set of precalculated limits. If the
+     address, the bit mask, or both exceeded the limits, the routine would
+     not update the video buffer. However, the overhead involved in
+     clipping in this manner can be considerably greater than the work
+     required to calculate and draw the pixels in the line.
+
+       ÉÍÍÍ»     In general, avoid integrating code for line clipping into
+       º T º     low-level line-drawing routines, regardless of how
+       º I º     efficient the code might be. Keeping the functions
+       º P º     separate can improve performance, because an application
+       ÈÍÍÍ¼     can invoke the line-drawing routines directly, bypassing
+                 the clipping code altogether when it's not needed.
+
+
+A Brute-Force Approach
+
+     Another way to clip a line is to use its equation to calculate where,
+     if anywhere, the line segment to be drawn intersects the edges of the
+     rectangular display region. For example, in Figure 6-5, the slope m
+     of the line is
+
+     m = dy/dx = (y2-y1)/(x2-x1) = (100-40)/(750-150) = 0.1
+
+     The y-intercept can be calculated by substituting x1 and y1 into the
+     equation of  the line:
+
+     b = y1 - m*x1 = 40 - (0.1*150) = 25
+
+     The equation of the line is thus
+
+     y = 0.1*x + 25
+
+     To calculate the coordinates of the intersections of the line and the
+     edges of the window, substitute the x-coordinates of the window's
+     vertical edges and the y-coordinates of its horizontal edges into the
+     equation. Each time you solve the equation for one side of the
+     rectangle, check the result to see whether the intersection point
+     actually lies within the line segment to be drawn as well as within
+     the rectangle.
+
+
+             ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+             º                                          º
+             º    Figure 6-5 is found on page 216       º
+             º    in the printed version of the book.   º
+             º                                          º
+             ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+     Figure 6-5.  Line segment (150,40)-(750,100) clipped at (639,89) in
+     640-by-200 2-color mode.
+
+
+     This approach to line clipping involves a lot of computation,
+     primarily because the equation of the line must be solved four times
+     for every line segment you clip. You must also check the results
+     against the limits of the line segment to determine whether the
+     intersection points fall between the endpoints. Furthermore, you must
+     still handle special cases such as horizontal and vertical lines or
+     degenerate "lines" consisting of a single pixel. This computational
+     burden makes brute-force clipping impractical.
+
+
+A Better Algorithm
+
+     A more efficient algorithm for line clipping compares the endpoints of
+     the line segment with the boundaries of the rectangular region before
+     computing intersection points. Thus, little computation is performed
+     for lines that need not be clipped. The Sutherland-Cohen algorithm,
+     which uses this approach, is widely known because of its simplicity
+     and computational efficiency. (See Sproull and Sutherland, "A Clipping
+     Divider," Conference Proceedings, Fall Joint Computer Conference,
+     volume 33, pp. 765-776. AFIPS Press, 1968.)
+
+     Conceptually, the algorithm extends the edges of the rectangular
+     clipping region, dividing the plane into nine regions (see Figure
+     6-6). Each endpoint of the line segment to be clipped falls into
+     one of these regions. Identifying the region that corresponds to each
+     endpoint makes it easy to determine the location of the line segment
+     relative to the rectangular clipping area.
+
+
+                  ³              ³
+         0011     ³     0010     ³     0110
+                  ³              ³                Mapping of bits
+                  ³              ³                in 4-bit codes
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄşÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                  ³(x(sub ul),y(sub ul))          bit 0:1 = left
+                  ³              ³                    1:1 = above
+         0001     ³     0000     ³     0100           2:1 = right
+                  ³              ³                    3:1 = below
+
+     ÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÄÄÄÄÄÄşÄÄÄÄÄÄÄÄÄÄÄÄÄ
+                  ³              ³(x(sub lr),y(sub lr))
+                  ³              ³
+         1001     ³     1000     ³     1100
+                  ³              ³
+
+     Figure 6-6.  Rectangular clipping using the Sutherland-Cohen
+     algorithm.
+
+
+     The algorithm uses a computational shortcut to determine the relative
+     location of the line segment. Each of the nine regions is represented
+     by a 4-bit code; each bit corresponds to whether the region is above,
+     below, left, or right of the clipping rectangle. The relationship of
+     the endpoints to the rectangle is then quickly determined by bitwise
+     combination of the 4-bit codes.
+
+     If the logical OR of the two codes is 0 (that is, the 4-bit code for
+     both endpoints is 0), both endpoints lie within the rectangle, and no
+     clipping is needed. If the logical AND of the two 4-bit codes is
+     nonzero, both endpoints lie on the same side of the rectangle, and the
+     entire line is clipped out. These tests can be performed rapidly,
+     because both the bitwise AND and OR operations can be implemented in
+     single 80x86 machine instructions.
+
+     If the logical OR of the endpoints' 4-bit codes is nonzero but the
+     logical AND is 0, then the line segment is clipped against one of the
+     rectangle's edges. The values of the 4-bit codes then determine which
+     edge is used. The resulting intersection point becomes a new endpoint
+     for the line segment.
+
+     This process is repeated for the new line segment. The 4-bit codes are
+     recalculated, the bitwise comparison is again performed, and, if
+     necessary, a new endpoint is calculated. Since a rectangle has four
+     sides, the algorithm requires at most four iterations.
+
+     The routine Clip() in Listing 6-11 is a C illustration of the
+     Sutherland-Cohen algorithm. The while block repeats while neither of
+     the two termination conditions (Inside or Outside) is true. The 4-bit
+     codes are used to determine which of the four sides of the rectangle
+     the clipping calculation uses. The intersection point between the line
+     segment and the side of the rectangle becomes a new endpoint. At the
+     bottom of the while block, the 4-bit code for the new endpoint is
+     calculated, and the loop repeats.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 6-11.  An implementation of the Sutherland-Cohen clipping
+     algorithm.
+
+/* Listing 6-11 */
+
+struct  EndpointStruct          /* endpoints for clipped line */
+{
+  int   x1,y1;
+  int   x2,y2;
+};
+
+struct  RegionStruct            /* rectangular clipping region */
+{
+  int   Xul;
+  int   Yul;
+  int   Xlr;
+  int   Ylr;
+};
+
+
+union OutcodeUnion      /* outcodes are represented as bit fields */
+{
+  struct
+  {
+    unsigned code0 : 1;         /* x < Xul */
+    unsigned code1 : 1;         /* y < Yul */
+    unsigned code2 : 1;         /* x > Xlr */
+    unsigned code3 : 1;         /* y > Ylr */
+  }
+        ocs;
+
+  int   outcodes;
+};
+
+
+#define X1      ep->x1
+#define Y1      ep->y1
+#define X2      ep->x2
+#define Y2      ep->y2
+#define XUL     r->Xul
+#define YUL     r->Yul
+#define XLR     r->Xlr
+#define YLR     r->Ylr
+
+
+Clip(ep,r)
+struct  EndpointStruct  *ep;
+struct  RegionStruct    *r;
+{
+        union OutcodeUnion      ocu1,ocu2;
+        int     Inside;
+        int     Outside;
+
+
+        /* initialize 4-bit codes */
+
+        SetOutcodes( &ocu1, r, X1, Y1 );        /* initial 4-bit codes */
+        SetOutcodes( &ocu2, r, X2, Y2 );
+
+        Inside  = ((ocu1.outcodes | ocu2.outcodes) == 0);
+        Outside = ((ocu1.outcodes & ocu2.outcodes) != 0);
+
+        while (!Outside && !Inside)
+        {
+          if (ocu1.outcodes==0)         /* swap endpoints if necessary so */
+          {                             /*  that (x1,y1) needs to be clipped */
+            Swap( &X1, &X2 );
+            Swap( &Y1, &Y2 );
+            Swap( &ocu1, &ocu2 );
+          }
+
+
+          if (ocu1.ocs.code0)                   /* clip left */
+          {
+            Y1 += (long)(Y2-Y1)*(XUL-X1)/(X2-X1);
+            X1 = XUL;
+          }
+
+          else if (ocu1.ocs.code1)              /* clip above */
+          {
+            X1 += (long)(X2-X1)*(YUL-Y1)/(Y2-Y1);
+            Y1 = YUL;
+          }
+
+          else if (ocu1.ocs.code2)              /* clip right */
+          {
+            Y1 += (long)(Y2-Y1)*(XLR-X1)/(X2-X1);
+            X1 = XLR;
+          }
+
+          else if (ocu1.ocs.code3)              /* clip below */
+          {
+            X1 += (long)(X2-X1)*(YLR-Y1)/(Y2-Y1);
+            Y1 = YLR;
+          }
+
+          SetOutcodes( &ocu1, r, X1, Y1 );            /* update for (x1,y1) */
+
+          Inside  = ((ocu1.outcodes | ocu2.outcodes) == 0); /* update       */
+          Outside = ((ocu1.outcodes & ocu2.outcodes) != 0); /*  4-bit codes */
+        }
+
+        return( Inside );
+}
+
+        
+SetOutcodes( u, r, x, y )
+union OutcodeUnion      *u;
+struct RegionStruct     *r;
+int     x,y;
+{
+        u->outcodes = 0;
+        u->ocs.code0 = (x < XUL);
+        u->ocs.code1 = (y < YUL);
+        u->ocs.code2 = (x > XLR);
+        u->ocs.code3 = (y > YLR);
+}
+
+        
+Swap( pa, pb )
+int     *pa,*pb;
+{
+        int     t;
+
+        t = *pa;
+        *pa = *pb;
+        *pb = t;
+}
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     A program could call Clip() before drawing a line with a fast
+     primitive such as Line(). If you are careful to define the values XUL,
+     YUL, XLR, and YLR as variables rather than constants, you can use
+     Clip() in any video mode. Furthermore, line clipping need not be
+     limited to clipping lines to the limits of available RAM in the video
+     buffer. You may instead want to define an arbitrary rectangular region
+     in the video buffer and clip lines against it. A good high-level video
+     graphics interface supports clipping into such arbitrary regions.
+

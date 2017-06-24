@@ -1,0 +1,22 @@
+        ;set 40x25 blink off
+        mov     ax,01h ;set 40x25
+        int     10h
+        mov     dx,3d8h
+        mov     al,8
+        out     dx,al
+        ;put something onscreen to look at
+        mov     ax,0b800h
+        mov     es,ax
+        xor     ax,ax
+        push    ds
+        mov     ds,ax
+        mov     si,ax
+        mov     di,ax
+        cld
+        mov     cx,1000
+        rep     movsw
+        ;wait for user to observe, then dismiss
+        xor     ax,ax
+        int     16h
+        mov     ax,04c00h
+        int     21h

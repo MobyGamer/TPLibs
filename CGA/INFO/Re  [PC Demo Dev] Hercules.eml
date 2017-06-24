@@ -1,0 +1,97 @@
+Return-Path: <pcdemo-bounces@oldskool.org>
+Delivered-To: <jleonard@driller.oldskool.org>
+Received: from mail.oldskool.org
+	by driller.oldskool.org (Dovecot) with LMTP id nCJQOvKbI1duPgAAzGaCEQ
+	for <jleonard@driller.oldskool.org>; Fri, 29 Apr 2016 12:37:55 -0500
+Received: from driller.oldskool.org (localhost [IPv6:::1])
+	by mail.oldskool.org (Postfix) with ESMTP id 077208004B;
+	Fri, 29 Apr 2016 12:37:53 -0500 (CDT)
+X-Original-To: pcdemo@oldskool.org
+Delivered-To: pcdemo@oldskool.org
+Received: from gproxy7-pub.mail.unifiedlayer.com
+ (gproxy7-pub.mail.unifiedlayer.com [70.40.196.235])
+ by mail.oldskool.org (Postfix) with SMTP id E1CFD8004B
+ for <pcdemo@oldskool.org>; Fri, 29 Apr 2016 12:37:42 -0500 (CDT)
+Received: (qmail 12674 invoked by uid 0); 29 Apr 2016 17:37:39 -0000
+Received: from unknown (HELO cmgw4) (10.0.90.85)
+ by gproxy7.mail.unifiedlayer.com with SMTP; 29 Apr 2016 17:37:39 -0000
+Received: from box507.bluehost.com ([74.220.219.107]) by cmgw4 with 
+ id oHdX1s00p2Kdeaq01Hda7X; Fri, 29 Apr 2016 11:37:39 -0600
+X-Authority-Analysis: v=2.1 cv=aJ5j99Nm c=1 sm=1 tr=0
+ a=qZV5233/NVa9GpwSaKrZXQ==:117 a=qZV5233/NVa9GpwSaKrZXQ==:17
+ a=L9H7d07YOLsA:10 a=9cW_t1CCXrUA:10 a=s5jvgZ67dGcA:10
+ a=8A7brI4kjU8C6ETGAX3PRdgeao0=:19 a=IkcTkHD0fZMA:10 a=GjiovwJvdrUA:10
+ a=UNcKYVr-mXcA:10 a=kziv93cY1bsA:10 a=YXAXDMiICpRzFsYahOgA:9 a=QEXdDO2ut3YA:10
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+ d=reenigne.org; s=default; h=Content-Transfer-Encoding:Content-Type:
+ MIME-Version:Date:Subject:In-Reply-To:References:To:From:Message-ID;
+ bh=DERM3okBITdm0Uk1VIUMnCU3wQzp8cyarC9e7I8KBzc=; b=MCrMb+KBWnq8+9vUaIC0B7+2jf
+ s2u/15XnRc7xkc1/y2ayDv/QAXnk3lU88z6cz3JPWhVjH97bY0J27EN0P5mZi5r6d2B7sGhSbo1GE
+ Qju7IN8/if3+Q0fuAwzU2K21P;
+Received: from [213.122.228.226] (port=51684 helo=benedict)
+ by box507.bluehost.com with esmtpa (Exim 4.86_2)
+ (envelope-from <andrew@reenigne.org>) id 1awCM7-0004pf-8h
+ for pcdemo@oldskool.org; Fri, 29 Apr 2016 11:37:31 -0600
+Message-ID: <C776BF9A23BD4EE1B709802D30BEEF57@benedict>
+From: "Andrew Jenner" <andrew@reenigne.org>
+To: "Oldskool PC Demo Development" <pcdemo@oldskool.org>
+References: <CAP3xA-EfUzKy5y=LwvU3hxn1QU57JGvbDa7ghK--v0A79nzUnA@mail.gmail.com>
+ <CAP3xA-GBNgQQKH_X-jwFRZK_Not22x91SCRZDBXxDfBm3pLG9w@mail.gmail.com>
+ <57211DA9.7030105@oldskool.org>
+ <CAP3xA-HBNUxKJRLTdoPdsdg0TgBzU3Uu_PtNFhsTH2ie73DgvQ@mail.gmail.com>
+ <CAP3xA-Gqmhoe0S6cLLOrPSV+V3_iyiqmjuFCUhLHMSVXjPWwgg@mail.gmail.com>
+ <CAP3xA-G_azjggvSARfNsh-qSqdT9D9xbCOxySuZbGU6UgMO9Lw@mail.gmail.com>
+ <57212B00.3090306@oldskool.org>
+ <CAP3xA-HLYh=RGf0DRH8-oqxWGQaEuQNiJZZf=0MKKbVb+SmbWw@mail.gmail.com>
+ <57217B88.8080300@oldskool.org>
+ <CAP3xA-FUPVFMBsbBgg4MZdhDKPZYvN-Y2B8DtTM7y3hsz_-9_g@mail.gmail.com>
+ <B9C8543A68514F78898DD0B5778AAFA3@benedict>
+ <CAP3xA-EKZ9qe86WFW0NiQtsZwL2wUpM9d2WKRysYoA0c6gbWcw@mail.gmail.com>
+ <B0E15F893BE24D60A2E31B3CD72E9E18@benedict>
+ <018101d1a1f6$5f1eb610$1d5c2230$@com>
+ <CAP3xA-EBHhPnZoPtz=UuOQsiXT4PE-j1T_UQukJBZ0OjjD1Z3Q@mail.gmail.com>
+ <CAP3xA-EiqS_wehUBDxYiOqJK0mE7u7D4-K1FWoZiPZnF6vUT4g@mail.gmail.com>
+ <CAP3xA-HM3+TVNNP14VTad8M-EkaHf=tyx8X9_kabryFSTt8X7w@mail.gmail.com>
+In-Reply-To: <CAP3xA-HM3+TVNNP14VTad8M-EkaHf=tyx8X9_kabryFSTt8X7w@mail.gmail.com>
+Date: Fri, 29 Apr 2016 18:37:23 +0100
+MIME-Version: 1.0
+X-Priority: 3
+X-MSMail-Priority: Normal
+X-Mailer: Microsoft Windows Mail 6.0.6002.18197
+X-MimeOLE: Produced By Microsoft MimeOLE V6.1.7601.17609
+X-Identified-User: {9295:box507.bluehost.com:reenigne:reenigne.org}
+ {sentby:smtp auth 213.122.228.226 authed with andrew@reenigne.org}
+X-Spam-Status: No, score=0.0 required=3.6 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	RCVD_IN_MSPIKE_H2,T_DKIM_INVALID,URIBL_BLOCKED autolearn=unavailable
+	autolearn_force=no version=3.4.0
+X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on driller.oldskool.org
+Subject: Re: [PC Demo Dev] Hercules
+X-BeenThere: pcdemo@oldskool.org
+X-Mailman-Version: 2.1.18
+Precedence: list
+List-Id: Oldskool PC Demo Development <pcdemo.oldskool.org>
+List-Unsubscribe: <http://lists.oldskool.org/options/pcdemo>,
+ <mailto:pcdemo-request@oldskool.org?subject=unsubscribe>
+List-Archive: <http://lists.oldskool.org/private/pcdemo/>
+List-Post: <mailto:pcdemo@oldskool.org>
+List-Help: <mailto:pcdemo-request@oldskool.org?subject=help>
+List-Subscribe: <http://lists.oldskool.org/listinfo/pcdemo>,
+ <mailto:pcdemo-request@oldskool.org?subject=subscribe>
+Reply-To: Oldskool PC Demo Development <pcdemo@oldskool.org>
+Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset="utf-8"; Format="flowed"
+Errors-To: pcdemo-bounces@oldskool.org
+Sender: "pcdemo" <pcdemo-bounces@oldskool.org>
+
+SGkgU2NhbGksCgo+IEFzIHlvdSBjYW4gc2VlLCBJIG9ubHkgdG91Y2hlZCB0aGUgJ0hvcml6b250
+YWwgZGlzcGxheWVkJyBhbmQgJ1ZlcnRpY2FsCj4gZGlzcGxheWVkJy4gVGhhdCBpcyBzYWZlLCBy
+aWdodD8KClllcy4gQXMgbG9uZyBhcyBkaXNwbGF5ZWQ+MCBhbmQgZGlzcGxheWVkPHN5bmNfcG9z
+aXRpb24gdGhlbiBpdCdzIHNhZmUuCgo+IEFuZCBJIGNvdWxkIGNoYW5nZSAnSG9yaXpvbnRhbCBz
+eW5jJyBhbmQgJ1ZlcnRpY2FsIHN5bmMnIHBvc2l0aW9ucyB0bwo+IGNlbnRlciB0aGUgaW1hZ2Ug
+b24gc2NyZWVuLCB3aXRob3V0IGFueSByaXNrLCByaWdodD8KClllcywgdGhvdWdoIGFnYWluIG1h
+a2Ugc3VyZSB0aGF0IHN5bmNfcG9zaXRpb24+ZGlzcGxheWVkIGFuZCAKc3luY19wb3NpdGlvbitz
+eW5jX3dpZHRoIDw9IHRvdGFsLiBUaGUgdmVydGljYWwgZXF1aXZhbGVudCBvZiBzeW5jX3dpZHRo
+IGlzIApmaXhlZCBieSB0aGUgQ1JUQyBhdCAxNiBzY2FubGluZXMuCgpBbmRyZXcgCgpfX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fXwpwY2RlbW8gbWFpbGluZyBs
+aXN0CnBjZGVtb0BvbGRza29vbC5vcmcKaHR0cDovL2xpc3RzLm9sZHNrb29sLm9yZy9saXN0aW5m
+by9wY2RlbW8K

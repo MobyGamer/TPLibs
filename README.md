@@ -10,5 +10,6 @@ These are libs and utils that I've found to greatly speed up the development pro
   * EXELINKR - J.E. Hoffmann's excellent XLINK file linker/joiner.  Demoscene Represent!
   * spwno413 - Ralf Brown's amazing SPAWNO swapping library
   * STREAM16 - Duncan Murdoch's Turbo Pascal stream extensions
+  * CGA - My attempt at a CGA library, created before the ludicrous CGA hacking performed by VileR and reenigne and visible in 8088 MPH.  It is more useful as a reference than as a functional library.
 
 Of the above, only TTOT is modified on a semi-regular basis as bugs/enhancements are processed; the others are provided here for convenience for anyone attempting to compile some of my other projects.

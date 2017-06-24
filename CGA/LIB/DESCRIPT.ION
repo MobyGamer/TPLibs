@@ -1,0 +1,28 @@
+demos Some demo effects implemented for CGA
+extras Extra reference code
+160x100.dmp Dump of CRTC regs to make 160x100x4
+256x200.dmp Dump of CRTC regs to make 256x200x4
+320line.inc asm source for "fast" 320x200 line
+320x100.dmp Dump of CRTC regs to make 320x100x4
+cgalib.doc Documentation for CGALIB
+cgalib.pas CGALIB main "wrapper" library
+cgalib_g.pas CGALIB Global Variables and definitions
+crtctwkg.pas Tweaks CRTC regs. to make new graf mode
+crtctwkt.pas Tweaks CRTC regs. to make new text mode
+dbtest2.pas Visual benchmark of box drawing
+file_id.diz Description of files in this package
+hlinetst.pas Tests horizontal lines for accuracy
+libdemo1.pas Unfinished demo of library routines
+m320_640.pas CGALIB low-level routines for graphics
+m6845ctl.pas CGALIB Motorola 6845 char. gen. code
+m_comp.pas CGALIB low-level routines for graphics
+m_lowres.pas CGALIB low-level code for 160x100x16
+m_textm.pas CGALIB low-level code for text modes
+setmodet.pas Rapidly flips between different modes
+showcolr.pas Displays every color of a video mode
+testline.pas Visually shows line drawing performance
+testpix.pas Tests the setpixel routine
+testram.pas Tests CGA RAM for faults
+testvbda.pas Tests Video BIOS Data Area variables
+whats.new Lists changes in the present release
+wilt_cga.inc asm source adapted from Richard Wilton

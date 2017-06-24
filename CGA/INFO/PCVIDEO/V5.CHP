@@ -1,0 +1,2827 @@
+
+
+
+                        5  Pixel Programming
+
+
+                        Bit-Plane Programming
+                     EGA and VGA ş InColor Card
+
+                       Reading a Pixel's Value
+                      CGA ş HGC and HGC+ ş EGA
+                      InColor Card ş MCGA ş VGA
+
+                       Setting a Pixel's Value
+                      CGA ş HGC and HGC+ ş EGA
+                      InColor Card ş MCGA ş VGA
+
+                      Filling the Video Buffer
+                  CGA ş HGC and HGC+ ş EGA and VGA
+                         InColor Card ş MCGA
+
+
+
+     Many graphics programming techniques are based on routines that
+     manipulate individual pixels in the video buffer. This chapter
+     presents the fundamentals of pixel programming: reading a pixel's
+     value, setting the value of a pixel in the video buffer, and
+     initializing an area of the video buffer with a pattern of pixels.
+
+
+Bit-Plane Programming
+
+
+     There is a fundamental difference between graphics-mode programming
+     using video subsystems whose video RAM is organized as parallel bit
+     planes (the EGA, the VGA, and the InColor Card) and graphics-mode
+     programming for the other IBM video subsystems. On the CGA, the MCGA,
+     or the Hercules monochrome adapter, your program accesses pixels by
+     directly reading and writing bytes in video RAM. In contrast, in
+     native graphics modes on the EGA, VGA, or InColor Card, your program
+     cannot access video RAM directly. Instead, special hardware logic in
+     the video subsystem mediates accesses to pixels in the bit planes.
+
+     The graphics-mode bit planes on the EGA, VGA, and InColor Cards are
+     addressed in parallel; that is, when you execute a CPU read or write
+     at a particular address in the video buffer, the address refers not to
+     one byte, but to four bytes, one in each of the bit planes.
+
+     When you execute an 80x86 instruction that attempts to read data from
+     an address in the video buffer, four bytes of data are actually moved
+     out of the buffer. The data does not go directly to the CPU, however.
+     Instead, it is copied into a set of four 8-bit latches. Each latch is
+     assigned to one of the four bit planes. Executing an 8-bit CPU read
+     from an address in the video buffer thus has the effect of
+     transferring four bytes (32 bits) of data from the video buffer into
+     the latches (see Figure 5-1a). Instructions such as MOV reg,mem,
+     LODS, and CMP reg,mem require a CPU read, and thus cause the latches
+     to be updated.
+
+     Similarly, instructions such as MOV mem,reg, STOS, and XOR mem,reg
+     cause a CPU write; in this case, all four bit planes can be updated in
+     parallel using a combination of the data in the latches, the data byte
+     that the CPU writes, and a predefined pixel value stored in a graphics
+     control register (see Figure 5-1b).
+
+     Some CPU instructions require both a CPU read and a CPU write. (The
+     CPU reads a value from memory, performs an operation on it, and then
+     writes the result back to memory.) MOVS is an obvious example, but
+     OR mem,reg, AND mem,reg, and XOR mem,reg also generate a CPU read and
+     write. When such an instruction refers to an address in video RAM, the
+     latches are updated during the CPU read, and then the bit planes are
+     updated during the CPU write.
+
+     The use of latches to process bit-plane data in parallel lets you
+     write deceptively simple code. For example, consider the following
+     fragment, which copies the second byte of pixels in the video buffer
+     to the first byte.
+
+
+       ÚÄÄ¿
+       ³  ³
+       ³  ÃÄÄ¿
+       ÀÄÄÙ  ³
+             ³
+       ÚÄÄ¿  ³    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ ÄÄ¿
+       ³  ³  ÀÄÄ ³1  1  0  0  0  0  1  1 ³   ³
+       ³  ÃÄÄ¿    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³
+       ÀÄÄÙ  ÀÄÄ ³0  1  0  1  0  0  1  0 ³   ³ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+bit               ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   Ã³x  x  x  x  x  x  x  x ³
+planes ÚÄÄ¿  ÚÄÄ ³1  0  1  0  1  1  0  1 ³   ³ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+       ³  ÃÄÄÙ    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´   ³    8-bit CPU register    
+       ³  ³  ÚÄÄ ³1  0  1  1  0  1  1  0 ³   ³
+       ÀÄÄÙ  ³    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ÄÄÙ
+             ³       four 8-bit latches
+       ÚÄÄ¿  ³
+       ³  ÃÄÄÙ
+       ³  ³
+       ÀÄÄÙ
+     a.
+
+    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿                                  ÚÄÄ¿
+    ³x  x  x  x  x  x  x  x ÃÄÄÄÄ¿                             ³  ³
+    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ    ³        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³  ³
+       8-bit CPU register        ³        ³                    ÀÄÄÙ
+                                 ³        ³
+                                 ³        ³                    ÚÄÄ¿
+                                 ³        ³                    ³  ³
+                                 ³        ³   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³  ³
+    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³        ³   ³                ÀÄÄÙ
+    ³1  1  0  0  0  0  1  1 ÃÄÄÄÄÄÄÄÄÄÄÄÙ   ³                      bit
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´    ³  ³         ³                ÚÄÄ¿  planes
+    ³0  1  0  1  0  0  1  0 ÃÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÙ   ÚÄÄÄÄÄÄÄÄÄÄÄ³  ³
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´    ³  ³  ³          ³            ³  ³
+    ³1  0  1  0  1  1  0  1 ÃÄÄÄÄÄÄÅÄÄÅÄÄÄÄÄÄÄÄÄÙ            ÀÄÄÙ
+    ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´    ³  ³  ³  ³
+    ³1  0  1  1  0  1  1  0 ÃÄÄÄÄÄÄÅÄÄÅÄÄÅÄÄÄÄÄÄ¿            ÚÄÄ¿
+    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ³  ³  ³  ³    ³            ³  ³
+       four 8-bit latches           ³  ³  ³  ³    ÀÄÄÄÄÄÄÄÄÄÄÄ³  ³
+                       ÚÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÁÄ¿               ÀÄÄÙ
+                       ³            x  x  x  x ³
+                       ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                            4-bit pixel data
+                     (EGA, VGA: Set/Reset register)
+     b.           (InColor: Read/Write Color register)
+
+     Figure 5-1.  Graphics mode data flow on the EGA, the VGA, and the
+     InColor Card during CPU (a.) read and (b.) write.
+
+
+        mov     ax,VideoBufferSegment
+        mov     ds,ax
+        mov     es,ax
+        mov     si,1     ; DS:SI -> second byte
+        mov     di,0     ; ES:DI -> first byte
+        movsb
+
+
+     This code looks straightforward. The MOVSB instruction apparently
+     copies one byte from the memory location at DS:SI to the location at
+     ES:DI--but this is not really what takes place in graphics modes that
+     use bit planes in the EGA, VGA, or InColor video buffer.
+
+     What actually happens is this: The MOVSB instruction causes a CPU
+     read, followed by a CPU write. Because the CPU read references an
+     address in the video buffer, a byte from each bit plane at that
+     address is loaded into the latches. Then, because the CPU write
+     references an address in the video buffer, the contents of the latches
+     are copied into the bit planes at the specified address. Thus, the
+     MOVSB actually causes four bytes of data to be moved instead of one.
+
+       ÉÍÍÍ»     There is more to this example than meets the eye. Consider
+       º T º     what would happen if you substituted a MOVSW instruction
+       º I º     for the MOVSB. Without bit planes and latches, this would
+       º P º     result in two bytes of data being copied instead of one
+       ÈÍÍÍ¼     byte. However, half of the pixel data would be lost on the
+                 EGA, the VGA, or the InColor Card. The reason is that the
+                 MOVSW executes as a sequence of two 8-bit CPU reads,
+                 followed by two 8-bit CPU writes, so the second CPU read
+                 updates the latches before the bytes latched by the first
+                 CPU read can be written.
+
+                 For this reason, you should use 16-bit 80x86 instructions
+                 cautiously when accessing the video buffer on the EGA, the
+                 VGA, and the InColor Card. Instructions such as
+                 OR mem,reg, AND mem,reg, and XOR mem,reg do not work
+                 properly with 16-bit data.
+
+     The latches clearly improve efficiency in moving data to and from the
+     video buffer, but the real fun begins in transferring data between the
+     latches and the CPU. Since the latches contain 32 bits of data and a
+     CPU byte register contains only eight bits, some sort of data
+     compression must take place during CPU reads. Conversely, in
+     transferring data from the CPU to the bit planes, you can combine the
+     8-bit CPU data byte with the contents of all four latches in a number
+     of ways. The key to graphics-mode programming on the EGA, the VGA, and
+     the InColor Card is to exploit the data transformations involving the
+     CPU and the latches.
+
+
+EGA and VGA
+
+     On the EGA and VGA, the Graphics Controller manages all transfers of
+     data among the CPU, the latches, and the video buffer. The EGA's
+     Graphics Controller consists of two LSI chips; the VGA's is part of
+     the Video Graphics Array chip. The Graphics Controller has nine
+     registers addressable at port 3CFH via an address register at port
+     3CEH. The values you store in the registers control the way the
+     Graphics Controller processes latched data during CPU reads and
+     writes.
+
+     In a sense, the Graphics Controller lets you manipulate the latched
+     pixel data two-dimensionally. Some of the operations you can perform
+     on the latched data are byte-oriented; they affect each latch
+     separately. Other operations are pixel-oriented in that they regard
+     the latched data as a set of eight pixel values; these operations
+     affect each pixel value separately.
+
+     The Graphics Controller can perform three different byte-oriented
+     operations on latched data. It can copy the contents of the latches to
+     and from the video buffer; this action occurs implicitly when a CPU
+     write or read is executed. It can return the contents of one of the
+     latches to a CPU register during a CPU read. It can also combine a
+     data byte from a CPU register with the bytes in any or all of the
+     latches during a single CPU write.
+
+     The Graphics Controller also processes latched data pixel by pixel.
+     During a CPU read, the Graphics Controller can compare each latched
+     pixel value with a predefined value and return the result of the
+     comparison to the CPU. During CPU writes, it can combine a 4-bit CPU
+     value with any or all pixel values in the latches; it can use an 8-bit
+     CPU value as a mask that indicates which of the eight latched pixels
+     are copied back to the bit planes; and it can combine the latched
+     pixel values with a predefined 4-bit value.
+
+     Both byte-oriented and pixel-oriented operations are programmed by
+     selecting a write mode and a read mode. Each write mode sets up a
+     predefined sequence of byte-oriented and pixel-oriented operations
+     which occur when a CPU write is executed. Similarly, each read mode
+     defines a set of actions performed during CPU reads. The EGA has three
+     write modes and two read modes; the VGA has these five modes and one
+     additional write mode.
+
+     Until you become familiar with each of the Graphics Controller's read
+     and write modes, their raison d'etre may seem a bit obscure. However,
+     each mode has practical advantages in certain programming situations,
+     as the examples in this and subsequent chapters demonstrate.
+
+     The Graphics Controller's Mode register (05H) contains two bit fields
+     whose values specify the graphics read and write mode. For example, to
+     establish read mode 1 you would set bit 3 of the Mode register to 1;
+     to set up write mode 2, you would store the value 2 (10B) in bits 0
+     and 1 of the Mode register (Listing 5-1).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-1.  How to set Graphics Controller read and write modes.
+     This example sets read mode 0 and write mode 1 in in 640-by-350 16-
+     color mode.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     The video BIOS default values for the Graphics
+       º T º     Controller's Mode register and its other registers are
+       º I º     listed in Figure 5-2. It is good practice to restore the
+       º P º     Graphics Controller registers to their default values
+       ÈÍÍÍ¼     after you modify them in your program.
+
+
+Register    Function             Value
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0           Set/Reset            0
+1           Enable Set/Reset     0
+2           Color Compare        0
+3           Data Rotate          0
+4           Read Map Select      0
+5           Mode                 Bits 0-3 always 0
+6           Miscellaneous        (depends on video mode)
+7           Color Don't Care     0FH (16-color modes)
+                                 01H (640-by-480 2-color mode)
+8           Bit Mask             FFH
+     Figure 5-2.  Default ROM BIOS values for EGA and VGA Graphics
+     Controller registers.
+
+
+     Read mode 0
+     In graphics read mode 0, the Graphics Controller returns the contents
+     of one of the four latches to the CPU each time a CPU read loads the
+     latches (see Figure 5-3). The value in the Read Map Select register
+     (04H) indicates which latch to read. Read mode 0 thus lets you read
+     bytes from each individual bit plane; this is useful in transferring
+     data between the bit planes and system RAM or a disk file.
+
+
+                                               Read Map Select register
+                                              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                              ³x  x  x  x  x  x  0  0 ³
+                                              ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                                 ±±±±      
+                                           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+              ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³
+       ÄÄÄÄÄÄ³1  1  0  0  0  0  1  1 ³3ÄÄÙ
+              ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+       ÄÄÄÄÄÄ³0  1  0  1  0  0  1  0 ³2
+bit           ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+planes ÄÄÄÄÄÄ³1  0  1  0  1  1  0  1 ³1               CPU data
+              ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´       ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+       ÄÄÄÄÄÄ³1  0  1  1  0  1  1  0 ³0ÄÄÄÄÄ³1  0  1  1  0  1  1  0 ³
+              ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 5-3.  EGA and VGA graphics read mode 0.
+
+
+     Read Mode 1
+     In graphics read mode 1, each of the eight pixel values latched during
+     a CPU read is compared with the value in the Color Compare register
+     (02H). The result of the comparison is returned to the CPU as a single
+     byte (see Figure 5-4). Where a pixel value matches the Color Compare
+     value, a bit in the CPU data byte is set to 1; where the values are
+     different, the corresponding bit in the data byte is 0.
+
+     Note how the value in the Color Don't Care register (07H) interacts
+     with the pixel value and Color Compare value. In effect, setting a bit
+     to 0 in the Color Don't  Care value excludes a latch from the
+     comparison. For example, a Color Don't Care value of 0111B causes only
+     the three low-order bits of each pixel value to participate in the
+     comparison. Another example: If you store a 0 in the Color Don't Care
+     register, all four bits in the comparison become "don't care" bits, so
+     all pixel values match the Color Compare value, and the CPU always
+     reads the value 11111111B in read mode 1.
+
+
+                                                 Color Don't Care register
+                                                 ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+ÚÄbit planes                                     ³x  x  x  x  1  1  1  1 ³
+³                            latches             ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+³        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ±±±±±±±±±±
+
+ÃÄÄÄÄÄ  ³  1     1    ±0±±   0     0    ±0±±   1     1  ³         ³
+³        ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ³
+ÃÄÄÄÄÄ  ³  0     1    ±0±±   1     0    ±0±±   1     0  ³         ³
+³        ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ³
+ÃÄÄÄÄÄ  ³  1     0    ±1±±   0     1    ±1±±   0     1  ³         ³
+³        ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ³
+ÀÄÄÄÄÄ  ³  1     0    ±1±±   1     0    ±1±±   1     0  ³         ³
+         ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ         ³
+                                                           ³
+pixel      1011  1100  0011  0101  0010  0011  1101  1010          ³
+values      ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄ³
+                                                           ³
+AND with   1011  1100  0011  0101  0010  0011  1101  1010          
+Color       ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+Don't                                                         ³
+Care    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿            ³
+        ³   0     0    ±1±±   0     0    ±1±±   0     0  ³            ³
+        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ            ³
+                           CPU data byte                       ±±±±±±±±±±
+                                                  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                                  ³x  x  x  x ±0±±0±±1±±1±³
+                                                  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                                                   Color Compare register
+
+     Figure 5-4.  EGA and VGA graphics read mode 1.
+
+
+     Write mode 0
+     Graphics write mode 0 sets up a combination of byte-oriented and
+     pixel-oriented operations that occur when a CPU write is executed. The
+     data byte written by the CPU can be used to update any or all of the
+     bit planes; at the same time, a predefined pixel value can be used to
+     update any or all of the eight pixels involved. This two-dimensional
+     update of the latches is controlled in several different ways using
+     the values in the Enable Set/Reset, Data Rotate/Function Select, and
+     Bit Mask registers (see Figure 5-5).
+
+     The Bit Mask register (08H) specifies how the new value of each of the
+     eight pixels in the video buffer is derived. Where a bit in the Bit
+     Mask register equals 0, the corresponding pixel value is copied
+     directly from the latches into the video buffer. For each 1 bit in the
+     Bit Mask value, the corresponding pixel is updated with the latched
+     pixel value combined with either the CPU data or the pixel value in
+     the Set/Reset register. Thus, if a CPU write immediately follows a CPU
+     read at the same address, the only pixels updated are those for which
+     the corresponding bit in the Bit Mask register is set to 1.
+
+
+             Data Rotate/Function Select register
+                  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                  ³x  x  x  0  0  x  x  x ³
+                  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+      replace, AND. OR, XOR ±±±±           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿     
+                             ³          ÚÄ³1  1  0  0 ±0±±0±±0±±0±³±
+        latches              ³       ÚÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿±±±±±±±±±±±±³  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ±
+³1  1  0  0  0  0  1  1 ÃÄÄÄÄÄÄÄÄÄÄÄÄÙÚ³0  1  0  1 ±1±±1±±1±±1±³   ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ÚÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ±bit
+³0  1  0  1  0  0  1  0 ÃÅÄÄÄÄÄÄÄÄÄÙ  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿     ±planes
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´³        ÚÄ³1  0  1  0 ±1±±1±±1±±1±³     ±
+³1  0  1  0  1  1  0  1 ÃÅÄÄÅÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´³  ³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿       ±
+³1  0  1  1  0  1  1  0 ÃÅÄÄÅÄÄÅÄÄÄ³1  0  1  1 ±1±±1±±1±±1±³       ±
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ³  ³  ³   ÀÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+                       ÚÄÙÚÄÙÚÄÙÚÄÙ  |  |  |  |  |  |  |  |
+Set/Reset ÚÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÁÄ¿ ÚÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄ¿
+register  ³x  x  x  x ±0±±1±±1±±1±³ ³0  0  0  0  1  1  1  1 ³
+          ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+           |  |  |  |  |  |  |  |      Bit Mask register
+Enable     |  |  |  |  |  |  |  |      (Pixels 0-3 are derived from
+Set/Reset ÚÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄ¿    Set/Reset; pixels 4-7 are
+register  ³x  x  x  x  1  1  1  1 ³    copied from latches.)
+          ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+a.
+
+
+
+                                           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                                        ÚÄ³1  1  0  0 ±0±±1±±1±±1±³±
+        latches                      ÚÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿            ³  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   ±
+³1  1  0  0  0  0  1  1 ÃÄÄÄÄÄÂÄÄÄÄÄÄÙÚ³0  1  0  1 ±0±±1±±1±±1±³   ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ÚÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ   ±bit
+³0  1  0  1  0  0  1  0 ÃÄÄÄÄÄÅÄÄÄÄÙÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿       ±planes
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´       ÚÄ³1  0  1  0 ±0±±1±±1±±1±³       ±
+³1  0  1  0  1  1  0  1 ÃÄÄÄÄÄÅÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ       ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´         ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿        ±
+³1  0  1  1  0  1  1  0 ÃÄÄÄÄÄÅÄÄÄ³1  0  1  1 ±0±±1±±1±±1±³        ±
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ         ÀÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+        replace, AND, OR, XOR ³     |  |  |  |  |  |  |  |
+           Ú Ä Ä Ä Ä Ä Ä Ä Ä Ä³    ÚÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄ¿
+           |                  ³    ³0  0  0  0  1  1  1  1 ³
+           ³              00010111 ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+           |         Rotate        Bit Mask register (Pixels 0-3
+           ³       Ú Ä Ä Ä Ä Ä³     are derived from CPU data; pixels
+           |       |          ³     4-7 are copied from latches.)
+          ±±±±  ±±±±±±±       ³
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ ÚÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³x  x  x  0  0  0  0  0 ³ ³0  0  0  1 ±0±±1±±1±±1±³
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+  Data Rotate/Function          CPU data byte
+     Select register 
+b.
+
+     Figure 5-5.  EGA and VGA graphics write mode 0: (a.) Enable Set/Reset
+     Value = 1111B, (b.) Enable Set/Reset value = 0000B.
+
+
+     The Data Rotate/Function Select register (03H) contains two bit fields
+     whose contents affect the way the latched pixels are updated. Bits 3
+     through 4 are important because their value specifies which bitwise
+     logical operation (AND, OR, XOR, or replace) is used to update the
+     pixels (see Figure 5-6). Bits 0 through 2 specify the number of bits
+     by which to right-rotate the CPU data byte before combining it with
+     latched data.
+
+
+    Bit Value            Function
+Bit 4       Bit 3
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0           0            Replace
+0           1            AND
+1           0            OR
+1           1            XOR
+     Figure 5-6.  Functions available for updating pixels in EGA and VGA
+     write modes 0, 2, and 3. Bits 3 and 4 of the Data Rotate/Function
+     Select register specify which is used.
+
+
+       ÉÍÍÍ»     This data-rotate capability is not particularly useful. In
+       º T º     practice, it is generally easier to let the CPU rotate and
+       º I º     shift data before writing it to the bit planes than it is
+       º P º     to program the Graphics Controller to do this.
+       ÈÍÍÍ¼
+
+     The value in the Enable Set/Reset register (register 01H) determines
+     whether the bit planes are updated byte by byte or pixel by pixel.
+     When the Enable Set/Reset value is 0FH (1111B), each pixel is updated
+     by combining the latched pixel value with the value in the Set/Reset
+     register (register 00H) using the logical operation that the Data
+     Rotate/Function Select register specifies (refer to Figure 5-5a).
+     When the Enable Set/Reset value is 0, the rotated CPU data byte is
+     combined with the bytes in each of the latches, again using the
+     function that the Data Rotate/Function Select register specifies (see
+     Figure 5-5b). In either case, only the pixels masked by the Bit
+     Mask register are updated.
+
+       ÉÍÍÍ»     Of course, you can set the Enable Set/Reset register to
+       º T º     any value from 0 through 0FH. Each bit in each pixel is
+       º I º     then updated by combining it either with the corresponding
+       º P º     bit in the Set/Reset register or with the corresponding
+       ÈÍÍÍ¼     bit in the CPU data byte--depending on the value of the
+                 corresponding bit in the Enable Set/Reset register.
+                 Needless to say, this kind of programming is tricky and
+                 infrequently used.
+
+
+     Write mode 1
+     In write mode 1, the latches are copied directly to the bit planes
+     when a CPU write occurs (see Figure 5-7). Neither the value of the
+     CPU data byte nor those of the Data Rotate/Function Select, the Bit
+     Mask, the Set/Reset, and the Enable Set/Reset registers affect this
+     process. Clearly, for a write mode 1 operation to make sense, you must
+     first perform a CPU read to initialize the latches.
+
+
+             latches
+     ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+     ³x  x  x  x  x  x  x  x ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+     ³x  x  x  x  x  x  x  x ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´               bit planes
+     ³x  x  x  x  x  x  x  x ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+     ³x  x  x  x  x  x  x  x ÃÄÄÄÄÄÄÄÄÄÄÄÄÄ
+     ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+     Figure 5-7.  EGA and VGA graphics write mode 1.
+
+
+     Write mode 2
+     In write mode 2, the low-order bits of the byte written by the CPU
+     play the same role as the Set/Reset register value in write mode 0.
+     That is, the bit planes are updated by combining the pixel values in
+     the latches with the CPU data, using the logical operation specified
+     in the Data Rotate/Function Select register (see Figure 5-8). As in
+     write mode 0, the Bit Mask register specifies which pixels are updated
+     using the combined pixel values and which pixels are updated directly
+     from the latches.
+
+
+             Data Rotate/Function Select register
+                   ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                   ³x  x  x  0  0  x  x  x ³
+                   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+                             ±±±±
+        replace, AND, OR, XOR ³            ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                              ³   ÚÄÄÄÄÄÄÄ³1  1  0  0 ±0±±0±±0±±0±³±
+         latches                 ³        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿±±±±±±±±±³      ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  ±
+³1  1  0  0  0  0  1  1 ÃÄÄÄÄÄÄÄÄÄÙ ÚÄÄÄ³0  1  0  1 ±1±±1±±1±±1±³  ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´          ³    ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ±
+³0  1  0  1  0  0  1  0 ÃÄÅÄÄÄÄÄÄÄÄÄÙ  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ±bit
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³        ÚÄ³1  0  1  0 ±1±±1±±1±±1±³    ±planes
+³1  0  1  0  1  1  0  1 ÃÄÅÄÄÅÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ    ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³  ³        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ±
+³1  0  1  1  0  1  1  0 ÃÄÅÄÄÅÄÄÅÄÄÄÄÄ³1  0  1  1 ±1±±1±±1±±1±³    ±
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ³  ³  ³     ÀÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+                          ³  ³  ³  ³    |  |  |  |  |  |  |  |
+             ÚÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÁÄ¿ ÚÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄ¿
+             ³x  x  x  x ±0±±1±±1±±1±³ ³0  0  0  0  1  1  1  1 ³
+             ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                     CPU data              Bit Mask register
+
+     Figure 5-8.  EGA and VGA graphics write mode 2.
+
+
+     Write mode 3
+     In write mode 3 (supported on the VGA only), the pixels are updated by
+     combining the pixel values in the latches with the value in the
+     Set/Reset register. Again, the Data Rotate/Function Select register
+     specifies the logical operation used to combine the values. The CPU
+     data byte is rotated by the number of bits indicated in the Data
+     Rotate/Function Select register and combined with the value in the Bit
+     Mask register using a logical AND. The resulting bit mask then plays
+     the same role as the Bit Mask register value in write modes 0 and 2;
+     that is, it determines which pixels in the bit planes are updated by
+     combining the latched pixel values with the Set/Reset value, and which
+     are updated directly from the latches (see Figure 5-9).
+
+
+       Enable ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+    Set/Reset ³x  x  x  x  1  1  1  1 ³
+     register ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+                           |  |  |  |
+              ÚÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÁÄ¿
+    Set/Reset ³x  x  x  x ±0±±1±±1±±1±³
+     register ÀÄÄÄÄÄÄÄÄÄÄÄÄÂÄÄÂÄÄÂÄÄÂÄÙ       ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  
+                           ³  ³  ³  ³ ÚÄÄÄÄÄÄ³1  1  0  0 ±0±±0±±0±±0±³  ±
+         latches           ³  ³  ³  ³ ³       ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ±
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ³  ³  ³ ³    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿     ±
+³1  1  0  0  0  0  1  1 ÃÄÄÄÄÄÅÄÄÅÄÄÅÄÙÚÄÄ³0  1  0  1 ±1±±1±±1±±1±³     ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´       ³  ³  ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ     ±
+³0  1  0  1  0  0  1  0 ÃÄÄÄÄÄÄÄÄÅÄÄÅÄÄÙ  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   bit±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´          ³  ÚÄ³1  0  1  0 ±1±±1±±1±±1±³planes±
+³1  0  1  0  1  1  0  1 ÃÄÄÄÄÄÄÄÄÄÄÄÅÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ      ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´               ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿       ±
+³1  0  1  1  0  1  1  0 ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ³1  0  1  1 ±1±±1±±1±±1±³       ±
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ±±±±±±±±±±±±±±± ÀÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+                               ³          |  |  |  |  |  |  |  |
+                               ³          0  0  0  0  1  1  1  1
+                               ³                               
+                               ³             ÚÄÄÄÄÄÄÄÁÄÄÄÄÄ¿    
+                    ÚÄÄÄÄÄÄÄÄÄÄÙ             ³ Logical AND ³    
+                    ³                        ³   ÚÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+       replace, AND,³                   00001111 ³1  1  1  1  1  1  1  1 ³
+       OR, XOR      ³           Rotate       ³   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                    ³       Ú Ä Ä Ä Ä Ä Ä Ä Ä|       Bit Mask register
+                    ³       |                ³              
+                  ±±±±  ±±±±±±±              |              
+        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  ÚÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+        ³x  x  x  0  0  0  1  0 ³  ³0  0  1  1  1  1  0  0 ³
+        ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+       Data Rotate/Function Select        CPU data
+                 register
+
+     Figure 5-9.  VGA graphics write mode 3.
+
+
+     Sequencer Map Mask
+     One additional level of control is available in all of the EGA's and
+     the VGA's Graphics Controller write modes. You can use the Sequencer
+     Map Mask register (Sequencer register 02H) to selectively enable or
+     disable data transfers to the bit planes. In 16-color graphics modes,
+     bits 0 through 3 of this register are normally set to 1 to allow
+     graphics writes to access all four maps. However, by zeroing one or
+     more of these bits, you can write-protect the corresponding memory
+     maps.
+
+     The Sequencer Map Mask register is not often used, because the
+     Graphics Controller provides better control for pixel-oriented
+     operations. Use of this register is better suited to techniques such
+     as bit-plane layering (see Chapter 12).
+
+
+InColor Card
+
+     The InColor Card has two gate arrays, the Encoder and the Decoder,
+     which mediate CPU accesses to video RAM. The Encoder gate array
+     participates in CPU writes to video RAM. The Decoder gate array
+     manages the transfer of data from video RAM to the CPU, as well as to
+     the card's attribute-decoding circuitry.
+
+     The programming interface to the InColor Card's graphics-mode
+     hardware, including the Encoder and Decoder chips, is unified through
+     the card's control register set at I/O ports 3B4H and 3B5H (see Figure
+     5-10). There is no distinction between the Encoder, the Decoder, and
+     their associated circuitry from a software point of view. The InColor
+     Card's graphics-mode control registers are similar to control
+     registers on the EGA and the VGA (see Figure 5-11).
+
+
+Register Number    Register Function                  Read/Write Status
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+18H                Plane Mask register                Write only
+19H                Read/Write Control register        Write only
+1AH                Read/Write Color register          Write only
+1BH                Latch Protect register             Write only
+     Figure 5-10.  Graphics control registers on the Hercules InColor Card.
+
+
+InColor                       EGA and VGA
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+Plane Mask register           Sequencer Map Mask register
+                              Attribute Controller Color Plane
+                              Enable register
+Read/Write Control register   Graphics Controller Mode register
+                              Graphics Controller Color Don't Care
+                              register
+Read/Write Color register     Graphics Controller Set/Reset register
+Palette register              Attribute Controller Palette registers
+     Figure 5-11.  Functionally similar control registers on the EGA, VGA,
+     and InColor Card.
+
+
+     As on the EGA and VGA, video RAM accesses in graphics mode are
+     performed using a set of four 8-bit latches. CPU reads and writes
+     cause bytes to be transferred in parallel between the latches and the
+     corresponding bit planes. When a CPU read is executed, the Decoder
+     latches a byte from each bit plane and returns a single byte of data
+     to the CPU. When a CPU write is executed, the Encoder combines the
+     latched data with the pixel values stored in the Read/Write Color
+     register and updates the bit planes with the result.
+
+     Like the EGA and VGA, the InColor Card can process CPU data and
+     latched data in several ways. The card supports four graphics write
+     modes (see Figure 5-12), selected by bits 4 and 5 of the Read/Write
+     Control register (19H). There is only one graphics read mode, which
+     is similar to read mode 1 on the EGA and VGA.
+
+
+Write Mode   CPU Data Bit = 0    CPU Data Bit = 1
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+0            Background value    Foreground value
+1            Latch               Foreground value
+2            Background value    Latch
+3            NOT latch           Latch
+     Figure 5-12.  Source of pixel data in InColor graphics write modes.
+
+
+     Write modes 0-3
+     In all four InColor graphics write modes, the CPU data functions as an
+     8-bit mask. The Encoder uses the value of each bit in the mask to
+     determine how to update the corresponding pixel value in the latches.
+     That is, the source of the pixel value at a particular bit position is
+     determined by the value of the corresponding bit in the CPU data byte.
+
+     For example, in graphics write mode 1, when a bit in the CPU data byte
+     is 1, the corresponding pixel in the video buffer is replaced with the
+     foreground value in the Read/Write Control register; when a bit in the
+     CPU data byte is 0, the corresponding pixel value is copied from the
+     latches. For example, in Figure 5-13, the pixels corresponding to
+     bits 0 through 3 are replaced with the Read/Write Control register
+     foreground value, while the remaining pixels are updated from the
+     pixel values in the latches.
+
+     Similarly, in the other three graphics write modes, the value of each
+     bit in the CPU data byte controls how the corresponding pixel is
+     updated. The write modes differ only in how the pixel values are
+     derived (see Figure 5-12). In write mode 0, either the foreground or
+     the background value in the Read/Write Control register replaces the
+     pixels in the bit planes. In write mode 2, for each 0 bit in the CPU
+     data byte, the Read/Write Control register background value is used to
+     update the corresponding pixel in the bit planes. In write mode 3,
+     each 0 bit in the CPU data byte causes the corresponding pixel in the
+     video buffer to be replaced with the bitwise NOT of the pixel value in
+     the latches.
+
+
+                             Plane Mask register
+
+                          ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                          ³0  0  0  0  x  x  x  x ³
+                          ÀÂÄÄÂÄÄÂÄÄÂÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                           |  |  |  |        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+                           |  |  |  | ÉÍÍÍÍÍ³1  1  0  0 ±0±±0±±0±±0±³  ±
+         latches           |  |  |  | º      ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  ±
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  |  |  |  | º    ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿    ±
+³1  1  0  0  0  0  1  1 ÃÄÕÏÍÍ|ÍÍ|ÍÍ|Í¼ÉÍÍ³0  1  0  1 ±1±±1±±1±±1±³    ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³   |  |  |  º   ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ    ±
+³0  1  0  1  0  0  1  0 ÃÄÅÄÄÕÏÍÍ|ÍÍ|ÍÍ¼ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿   bit±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³  ³   |  | ÉÍ³1  0  1  0 ±1±±1±±1±±1±³planes±
+³1  0  1  0  1  1  0  1 ÃÄÅÄÄÅÄÄÕÏÍÍ|Í¼  ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ      ±
+ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´ ³  ³  ³   |  ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿        ±
+³1  0  1  1  0  1  1  0 ÃÄÅÄÄÅÄÄÅÄÄÕÏÍ³1  0  1  1 ±1±±1±±1±±1±³        ±
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ³  ³  ³  ³   ÀÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÄÂÄÙ
+                          ³  ³  ³  ³    |  |  |  |  |  |  |  |
+             ÚÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÁÄÄÁÄÄÁÄ¿ ÚÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄÄÁÄ¿
+             ³x  x  x  x ±0±±1±±1±±1±³ ³0  0  0  0  1  1  1  1 ³
+             ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+                 Read/Write Color              CPU data 
+                     register       (Pixels 0-3 copied from foreground
+                                    value in R/W Color register; pixels
+                                        4-7 copied from latches.)
+
+     Figure 5-13.  InColor graphics write mode 1.
+
+
+     CPU writes affect only those bit planes specified in the Plane Mask
+     register (18H). This register's function is thus analogous to that of
+     the EGA's Sequencer Map Mask register. Bits 4 through 7 of this
+     register control which of the four bit planes are writable; setting
+     any of these bits to 1 prevents updating of the corresponding bit
+     planes during CPU writes.
+
+
+     Read mode
+     The InColor Card has only one graphics read mode (see Figure 5-14). It
+     resembles read mode 1 on the EGA and the VGA. When a CPU read is
+     executed, the latches are loaded with data from the bit planes. Unlike
+     the EGA and the VGA, however, the InColor Card lets you control which
+     individual pixel values are latched during a CPU read. The bit mask
+     value in the Latch Protect register (1BH) indicates which pixel values
+     are latched. Where a bit in the Latch Protect register is 0, the
+     corresponding pixel value is latched; where a bit is 1, the
+     corresponding pixel value in the latch remains unchanged.
+
+
+           ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿ Latch
+
+           ³  0     0     0     0     0     0     0     0   ³ Protect
+
+           ÀÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÄÄÂÄÄÄÙ register
+
+              |     |     |     |     |     |     |     |   
+
+           ÚÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄÄÄÄÁÄÄ¿
+
+      ÄÄÄÄ³  1     1    ±0±±   0     0    ±0±±   1     1  ³
+
+           ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+
+bit   ÄÄÄÄ³  0     1    ±0±±   1     0    ±0±±   1     0  ³
+
+planes     ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+
+      ÄÄÄÄ³  1     0    ±1±±   0     1    ±1±±   0     1  ³
+
+           ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´
+
+      ÄÄÄÄ³  1     0    ±1±±   1     0    ±1±±   1     0  ³ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿Read/Write Control
+
+           ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ ³ x  0  x  x  0  0  0  0³register
+
+pixel                                                ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ 
+
+values       1011  1100  0011  0101  0010  0011  1101  1010    ±±±±        ±±±±±±±±±± 
+
+              ³     ³     ³     ³     ³     ³     ³     ³       ³  ÚÄÄÄÄÄÄÄÄÄÄÄÄÙ      Read/Write Color
+
+OR with Don't ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄÄÄÄÄÄ´ ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿register
+
+Care value                                              ³  ³ ³±0±±0±±1±±1± x  x  x  x³
+
+             1011  1100  0011  0101  0010  0011  1101  1010     ³  ³ ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+COMPARE with  ³     ³     ³     ³     ³     ³     ³     ³       ³     ±±±±±±±±±±
+
+(background   ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³ÄÄÄÄ³Ä Ä Ä Ä Ä Ä Ä Ä Ä Ù
+
+value OR      ³     ³     ³     ³     ³     ³     ³     ³       ³ 
+
+Don't Care                                              ³ 
+
+value.)       0     0     1     0     0     1     0     0       ³
+
+              ³     ³     ³     ³     ³     ³     ³     ³       ³
+
+XOR with Mask ³     ³     ³     ³     ³     ³     ³     ³       ³
+
+Polarity bit  ³ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄ´ÄÄÄÄÄÄÙ
+
+              ³     ³     ³     ³     ³     ³     ³     ³
+
+                                                 
+
+CPU        ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿  
+
+data       ³  1     1    ±0±±    1     1    ±0±±  1     1  ³  
+
+           ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ  
+
+     Figure 5-14.  InColor graphics read.
+
+
+     After the specified pixel values in the latches have been updated from
+     the bit planes, the Decoder compares each pixel value in the latches
+     with the background value in the Read/Write Color register. The 8-bit
+     result of the comparison is returned to the CPU. This is similar to
+     read mode 1 on the EGA and the VGA.
+
+     Bits 0 through 3 of the Read/Write Control register are "don't care"
+     bits analogous to the Color Don't Care value on the EGA and the VGA.
+     Setting a Read/Write Control "don't care" bit to 1 has the effect of
+     excluding a latch from the background value compare operation. If you
+     set all four "don't care" bits to 1, all pixel values match the
+     background value no matter what it is.
+
+     The polarity of the bits in the result returned to the CPU depends
+     upon the value of the Mask Polarity bit (bit 6 of the Read/Write
+     Control register). When this bit  is 0, bits in the result are 1 where
+     a pixel value in the latches matches the background value. Setting the
+     Mask Polarity bit to 1 inverts the result; that is, bits are 1 where a
+     pixel value in the latches does not match the background value.
+
+
+Reading a Pixel's Value
+
+
+     Now it is time to turn to some specific programming techniques for
+     manipulating pixels on the various PC and PS/2 video subsystems. Once
+     you calculate the byte and bit offsets of a particular pixel in the
+     video buffer, determining the pixel's value is a matter of isolating
+     the bits that represent it in the buffer. This is as true on the CGA
+     and HGC, with their simpler video RAM architecture, as it is on more
+     complicated video subsystems that use bit planes.
+
+
+CGA
+
+     In 640-by-200 2-color mode, the value of a pixel is determined simply
+     by reading the byte that contains the pixel from the video buffer and
+     testing the value of the bit that represents the pixel (see Listing
+     5-2).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-2.  Determining a pixel value in CGA 640-by-200 2-color
+     mode.
+
+                TITLE   'Listing 5-2'
+                NAME    ReadPixel06
+                PAGE    55,132
+
+;
+; Name:         ReadPixel06
+;
+; Function:     Read the value of a pixel in 640x200 2-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       int ReadPixel06(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr06:near
+
+                PUBLIC  _ReadPixel06
+_ReadPixel06    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr06     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+                mov     al,es:[bx]      ; AL := byte containing pixel
+                shr     al,cl           ; shift pixel value to low-order bits
+                and     al,ah           ; AL := pixel value
+                xor     ah,ah           ; AX := pixel value
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_ReadPixel06    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The technique for determining the value of a pixel in 320-by-200 
+     4-color graphics mode, as shown in Listing 5-3, is similar. After
+     isolating the bits that represent the pixel, however, your program
+     must shift them rightward so that the value returned represents the
+     actual pixel value.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-3.  Determining a pixel value in CGA 320-by-200 4-color
+     mode.
+
+                TITLE   'Listing 5-3'
+                NAME    ReadPixel04
+                PAGE    55,132
+
+;
+; Name:         ReadPixel04
+;
+; Function:     Read the value of a pixel in 320x200 4-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       int ReadPixel04(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr04:near
+
+                PUBLIC  _ReadPixel04
+_ReadPixel04    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr04     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+                mov     al,es:[bx]      ; AL := byte containing pixel
+                shr     al,cl           ; shift pixel value to low-order bits
+                and     al,ah           ; AL := pixel value
+                xor     ah,ah           ; AX := pixel value
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_ReadPixel04    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC and HGC+
+
+     The only difference between the pixel-read routines for the Hercules
+     mono- chrome adapters and the ones used in the CGA's 640-by-200 2-
+     color mode lies in how the pixel's address is computed. For example,
+     you can adapt the CGA routine shown in Listing 5-2 for the HGC simply
+     by substituting PixelAddrHGC for PixelAddr06.
+
+
+EGA
+
+     In CGA-emulation modes, the routines used for the CGA work unchanged.
+     However, in 16-color 200-line modes and in 350-line modes, you must
+     program the Graphics Controller to isolate the bits that represent a
+     pixel in the video buffer's bit planes, as the routine in Listing 5-4
+     does.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-4.  Determining a pixel value in native EGA graphics
+     modes.
+
+                TITLE   'Listing 5-4'
+                NAME    ReadPixel10
+                PAGE    55,132
+
+;
+; Name:         ReadPixel10
+;
+; Function:     Read the value of a pixel in EGA native graphics modes
+;
+; Caller:       Microsoft C:
+;
+;                       int ReadPixel10(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _ReadPixel10
+_ReadPixel10    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+                mov     ch,ah
+                shl     ch,cl           ; CH := bit mask in proper position
+
+                mov     si,bx           ; ES:SI -> regen buffer byte
+                xor     bl,bl           ; BL is used to accumulate the pixel value
+
+                mov     dx,3CEh         ; DX := Graphics Controller port
+                mov     ax,304h         ; AH := initial bit plane number
+                                        ; AL := Read Map Select register number
+
+L01:            out     dx,ax           ; select bit plane
+                mov     bh,es:[si]      ; BH := byte from current bit plane
+                and     bh,ch           ; mask one bit
+                neg     bh              ; bit 7 of BH := 1 (if masked bit = 1)
+                                        ; bit 7 of BH := 0 (if masked bit = 0)
+                rol     bx,1            ; bit 0 of BL := next bit from pixel value
+                dec     ah              ; AH := next bit plane number
+                jge     L01
+
+                mov     al,bl           ; AL := pixel value
+                xor     ah,ah           ; AX := pixel value
+
+                pop     si              ; restore caller registers and return
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ReadPixel10    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     This routine uses the Graphics Controller's read mode 0 to read a
+     single byte from each of the EGA's planes. As the bytes are read, the
+     desired pixel's bits are masked and concatenated to form the pixel's
+     value.
+
+       ÉÍÍÍ»     In 640-by-350 monochrome graphics mode, only bit planes 0
+       º T º     and 2 are used to represent pixel values. In these modes,
+       º I º     only bits from these two planes are concatenated to form a
+       º P º     pixel value (see Listing 5-5).
+       ÈÍÍÍ¼
+
+                 As described in Chapter 4, 640-by-350 graphics modes are
+                 mapped differently on an EGA with only 64 KB of video RAM
+                 than on an EGA with more memory. Memory maps 0 through 1
+                 and 2 through 3 are chained to form two bit planes. Pixels
+                 at even byte addresses are represented in maps 0 and 2,
+                 while pixels at odd byte addresses are represented in maps
+                 1 and 3. A routine to read pixel values in these modes
+                 must use the pixel's byte address to determine which maps
+                 to read (see Listing 5-6).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-5.  Determining a pixel value in EGA monochrome graphics
+     mode.
+
+                TITLE   'Listing 5-5'
+                NAME    ReadPixel0F
+                PAGE    55,132
+
+;
+; Name:         ReadPixel0F
+;
+; Function:     Read the value of a pixel in 640x350 monochrome mode
+;
+; Caller:       Microsoft C:
+;
+;                       int     ReadPixel0F(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _ReadPixel0F
+_ReadPixel0F    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+; concatenate bits from bit planes 2 and 0
+
+                mov     ch,ah
+                shl     ch,cl           ; CH := bit mask in proper position
+                mov     si,bx           ; ES:SI -> regen buffer byte
+
+                mov     dx,3CEh         ; DX := Graphics Controller port
+                mov     ax,204h         ; AH := initial bit plane number
+                                        ; AL := Read Map Select register number
+
+                xor     bl,bl           ; BL is used to accumulate the pixel value
+
+L01:            out     dx,ax           ; (same as before)
+                mov     bh,es:[si]
+                and     bh,ch
+                neg     bh
+
+                rol     bx,1
+                sub     ah,2
+                jge     L01
+
+                mov     al,bl
+                xor     ah,ah
+
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ReadPixel0F    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-6.  Determining a pixel value in 640-by-350 modes on an EGA 
+     with 64 KB.
+
+                TITLE   'Listing 5-6'
+                NAME    ReadPixel10
+                PAGE    55,132
+
+;
+; Name:         ReadPixel10
+;
+; Function:     Read the value of a pixel in 640x350 modes on 64K EGA
+;
+; Caller:       Microsoft C:
+;
+;                       int     ReadPixel10(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _ReadPixel10
+_ReadPixel10    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+; concatenate bits from bit planes 2 and 0 (even byte address)
+;  or 3 and 1 (odd byte address)
+
+                mov     ch,ah
+                shl     ch,cl           ; CH := bit mask in proper position
+
+                mov     si,bx           ; ES:SI -> regen buffer byte
+
+                mov     ah,bl           ; AH := low-order byte of address
+                and     ax,100h         ; AH := low-order bit of address
+                                        ; AL := 0
+                add     ax,204h         ; AH := initial bit plane number (2 or 3)
+                                        ; AL := Read Map Select register number
+
+                mov     dx,3CEh         ; DX := Graphics Controller port
+                xor     bl,bl           ; BL is used to accumulate the pixel value
+
+L01:            out     dx,ax           ; (same as before)
+                mov     bh,es:[si]
+                and     bh,ch
+                neg     bh
+
+                rol     bx,1
+                sub     ah,2
+                jge     L01
+
+                mov     al,bl
+                xor     ah,ah
+
+                pop     si
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ReadPixel10    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+InColor Card
+
+     As with the EGA, to read a pixel's value on the InColor Card requires
+     reading each bit plane separately. To do this, you must use the "don't
+     care" bits in the Read/Write Control register along with the
+     background value in the Read/Write Color register to isolate the
+     contents of each latch.
+
+     The routine in Listing 5-7 accumulates a pixel's 4-bit value by
+     concatenating one bit from each of the InColor card's four bit planes.
+     The routine determines the contents of each of the bit planes by
+     setting the background value in the Read/Write Color register to 0FH
+     (1111B) and by individually zeroing each Read/Write Control register
+     "don't care" bit. When each CPU read is executed (with the
+     AND CH,ES:[SI] instruction), the value returned to the CPU is thus
+     the 8-bit value in one of the four latches. This value is ANDed with
+     the bit mask in CH, and the isolated bits are accumulated in BL.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-7.  Determining a pixel value in InColor graphics mode.
+
+                TITLE   'Listing 5-7'
+                NAME    ReadPixelInC
+                PAGE    55,132
+
+;
+; Name:         ReadPixelInC
+;
+; Function:     Read the value of a pixel in InColor 720x348 16-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       int     ReadPixelInC(x,y);
+;
+;                       int x,y;
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+DefaultRWColor  EQU     0Fh             ; default value for R/W Color Register
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddrHGC:near
+
+                PUBLIC  _ReadPixelInC
+_ReadPixelInC   PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+                push    si
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+; set up to examine each bit plane separately
+
+                mov     si,bx           ; ES:SI -> buffer
+
+                shl     ah,cl
+                mov     cl,ah           ; CL := bit mask in proper position
+
+                mov     dx,3B4h         ; DX := graphics control port
+
+                mov     ax,0F01Ah       ; AH bits 4-7 := 1111b (background value)
+                                        ; AL := 1Ah (R/W Color Register)
+                out     dx,ax           ; set background value
+
+                mov     bx,800h         ; BH := 1000b (initial "don't care" bits)
+                                        ; BL := 0 (initial value for result)
+
+                dec     ax              ; AL := 19h (R/W Control Register number)
+
+; loop across bit planes by updating "don't care" bits
+
+L01:            mov     ah,bh           ; AH bits 0-3 := next "don't care" bits
+                                        ; AH bit 6 := 0 (Mask Polarity bit)
+                xor     ah,1111b        ; invert "don't care" bits
+                out     dx,ax           ; set R/W Control Register
+
+                mov     ch,cl           ; CH := bit mask
+                and     ch,es:[si]      ; latch bit planes
+                                        ; CH <> 0 if bit in latch is set
+
+                neg     ch              ; cf set if CH <> 0
+                rcl     bl,1            ; accumulate result in BL
+
+                shr     bh,1            ; BH := shifted "don't care" bits
+                jnz     L01             ; loop until shifted out of BH,
+                                        ;  at which point BX = pixel value
+; restore default state
+
+                mov     ah,40h          ; AH := default R/W Control Register value
+                out     dx,ax
+
+                inc     ax              ; AL := 1Ah (R/W Color Register number)
+                mov     ah,DefaultRWColor
+                out     dx,ax
+
+                mov     ax,bx           ; AX := pixel value
+
+                pop     si              ; restore caller registers and return
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ReadPixelInC   ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+       ÉÍÍÍ»     As usual in bit-plane programming, the tricky part of this
+       º T º     process is in setting up the control register values to
+       º I º     produce the desired result. For example, here is what
+       º P º     happens when the AND CH,ES:[SI] instruction executes:
+       ÈÍÍÍ¼
+
+                 1. One byte from each bit plane is copied into the
+                    latches.
+
+                 2. Each of the eight pixels in the latches is compared
+                    with the background value (1111B), and the eight bits
+                    that reflect the result of the eight comparisons are
+                    returned to the CPU. Because only one of the four
+                    "don't care" bits in the Read/Write Control register
+                    is 0, only one of the four bits in each pixel value
+                    participates in each comparison. If this bit is 1, the
+                    comparison is true, and the Decoder returns a 1 in the
+                    bit position corresponding to this pixel value.
+
+                 3. The eight bits returned to the CPU are ANDed with the
+                    bit mask in CH to give the desired result.
+
+                 That's a lot of action for a single AND instruction.
+
+
+MCGA
+
+     In 640-by-200 2-color and 320-by-200 4-color modes, the routines
+     written for the CGA (shown in Listings 5-2 and 5-3) also work on the
+     MCGA. The two other MCGA graphics modes pose no additional problems
+     (see Listings 5-8 and 5-9), because they use no buffer interleave as
+     do CGA-compatible modes, and because there are no bit planes to worry
+     about.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-8.  Determining a pixel value in MCGA and VGA 640-by-480
+     2-color mode.
+
+                TITLE   'Listing 5-8'
+                NAME    ReadPixel11
+                PAGE    55,132
+
+;
+; Name:         ReadPixel11
+;
+; Function:     Read the value of a pixel in 640x480 2-color mode (MCGA or VGA)
+;
+; Caller:       Microsoft C:
+;
+;                       int ReadPixel11(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _ReadPixel11
+_ReadPixel11    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift
+
+                mov     al,es:[bx]      ; AL := byte containing pixel
+                shr     al,cl           ; shift pixel value to low-order bits
+                and     al,ah           ; AL := pixel value
+                xor     ah,ah           ; AX := pixel value
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_ReadPixel11    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-9.  Determining a pixel value in MCGA and VGA 320-by-200 
+     256-color mode.
+
+                TITLE   'Listing 5-9'
+                NAME    ReadPixel13
+                PAGE    55,132
+
+;
+; Name:         ReadPixel13
+;
+; Function:     Read the value of a pixel in 320x200 256-color mode (MCGA and VGA)
+;
+; Caller:       Microsoft C:
+;
+;                       int ReadPixel13(x,y);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr13:near
+
+                PUBLIC  _ReadPixel13
+_ReadPixel13    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr13     ; ES:BX -> buffer
+
+                mov     al,es:[bx]      ; AL := pixel value
+                xor     ah,ah           ; AX := pixel value
+
+                mov     sp,bp
+                pop     bp
+                ret
+
+_ReadPixel13    ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+
+VGA
+
+     Once you write pixel-read routines for the CGA, the EGA, and the MCGA,
+     you have covered all the bases as far as the VGA is concerned. The
+     only VGA graphics mode not available on the other subsystems is 640-
+     by-480 16-color mode. However, pixel representation and addressing are
+     the same in this mode as in the EGA's 640-by-350 16-color mode, so you
+     can use the routine in Listing 5-4 for both.
+
+
+Setting a Pixel's Value
+
+
+     In some ways, setting a pixel's value is the converse of determining
+     its value. Once the byte and bit offsets of a particular pixel have
+     been calculated, setting its value is a simple matter of putting the
+     right bits in the right places in the video buffer.
+
+     What complicates pixel-setting routines is that you may not always
+     wish simply to replace a pixel's old value with a new value. It is
+     sometimes desirable to derive a pixel's new value by performing a
+     bitwise logical operation on its old value. This is why the EGA and
+     the VGA Graphics Controllers directly support logical AND, OR, and XOR
+     operations on pixel values, as well as direct replacement of old
+     values with new ones.
+
+       ÉÍÍÍ»     Since the bulk of the overhead in a pixel-setting routine 
+       º T º     is in calculating the pixel's location in the video
+       º I º     buffer, you can keep your code small and modular by
+       º P º     integrating different pixel-value manipulations into a
+       ÈÍÍÍ¼     single routine rather than writing separate routines to
+                 replace pixels and to perform bitwise logical operations
+                 on them. The examples in this chapter combine these
+                 different pixel-value operations into unified routines.
+
+                 Where each bitwise operation requires a different
+                 subroutine, the subroutine's address is stored in a
+                 variable (SetPixelOp). This technique is more flexible
+                 than coding a jump to the desired pixel operation
+                 (replace, AND, OR, or XOR), because you can change the
+                 address in the variable with another independent
+                 subroutine.
+
+                 The examples in this chapter do not include code for
+                 updating a pixel's value by performing a bitwise NOT
+                 operation. You can use the XOR operation to obtain the
+                 same result as NOT without decreasing performance and
+                 without writing additional code.
+
+
+CGA
+
+     To set a pixel in 640-by-200 2-color mode, mask the appropriate bit in
+     a byte in the video buffer and then set the bit's value. The routine
+     in Listing 5-10 implements four different ways of setting the value--
+     by replacing the old pixel value with a new value and by using the
+     logical operations OR, AND, and XOR.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-10.  Setting a pixel value in CGA and 640-by-200 2-color
+     mode.
+
+                TITLE   'Listing 5-10'
+                NAME    SetPixel06
+                PAGE    55,132
+
+;
+; Name:         SetPixel06
+;
+; Function:     Set the value of a pixel in 640x200 2-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr06:near
+
+                PUBLIC  _SetPixel06
+_SetPixel06     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr06     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                jmp     word ptr SetPixelOp06   ; jump to Replace, AND,
+                                                ;  OR or XOR routine
+
+
+                                        ; routine to Replace pixel value
+
+ReplacePixel06: not     ah              ; AH := inverse bit mask
+                and     es:[bx],ah      ; zero the pixel value
+                or      es:[bx],al      ; set the pixel value
+                jmp     short L02
+
+
+                                        ; routine to AND pixel value
+ANDPixel06:     test    al,al
+                jnz     L02             ; do nothing if pixel value = 1
+
+L01:            not     ah              ; AH := inverse of bit mask
+                and     es:[bx],ah      ; set bit in video buffer to 0
+                jmp     short L02
+                                
+
+                                        ; routine to OR pixel value
+ORPixel06:      test    al,al
+                jz      L02             ; do nothing if pixel value = 0
+
+                or      es:[bx],al      ; set bit in video buffer
+                jmp     short L02
+
+
+                                        ; routine to XOR pixel value
+XORPixel06:     test    al,al
+                jz      L02             ; do nothing if pixel value = 0
+
+                xor     es:[bx],al      ; XOR bit in video buffer
+
+                
+L02:            mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel06     ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+SetPixelOp06    dw      ReplacePixel06  ; contains addr of pixel operation
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The routine for 320-by-200 4-color mode is similar. This routine,
+     shown in  Listing 5-11, differs from the routine for 640-by-200
+     2-color mode (see Listing 5-10) only in its technique for computing
+     pixel addresses and in its representation of pixels in bit fields that
+     are two bits wide.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Listing 5-11.  Setting a pixel value in CGA 320-by-200 2-color mode.
+
+                TITLE   'Listing 5-11'
+                NAME    SetPixel04
+                PAGE    55,132
+
+;
+; Name:         SetPixel04
+;
+; Function:     Set the value of a pixel in 320x200 4-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr04:near
+
+                PUBLIC  _SetPixel04
+_SetPixel04     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr04     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := #bits to shift left
+
+                mov     al,ARGn
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                jmp     word ptr SetPixelOp04   ; jump to Replace, AND,
+                                                ;  OR or XOR routine
+
+
+                                        ; routine to Replace pixel value
+
+ReplacePixel04: not     ah              ; AH := inverse bit mask
+                and     es:[bx],ah      ; zero the pixel value
+                or      es:[bx],al      ; set the pixel value
+                jmp     short L02
+
+                                        ; routine to AND pixel value
+
+ANDPixel04:     not     ah              ; AH := inverse bit mask
+                or      al,ah           ; AL := all 1's except pixel value
+                and     es:[bx],al
+                jmp     short L02
+                                
+                                        
+ORPixel04:      or      es:[bx],al      ; routine to OR pixel value
+                jmp     short L02
+
+
+XORPixel04:     xor     es:[bx],al      ; routine to XOR pixel value
+                
+
+L02:            mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel04     ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+SetPixelOp04    DW      ReplacePixel04  ; contains addr of pixel operation
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC and HGC+
+
+     As you might expect, a routine for writing a pixel in the HGC's 720-
+     by-348 monochrome graphics mode can be derived from the equivalent
+     routine for the CGA's 640-by-200 2-color mode in Listing 5-10 by
+     substituting the HGC's pixel-address computation routine
+     (PixelAddrHGC) for the CGA's.
+
+
+EGA
+
+     You don't need to worry about CGA-emulation modes (640-by-200 2-color
+     and 320-by-200 4-color), because the routines that work on the CGA
+     work equally well on the EGA. However, things become considerably more
+     complicated in the EGA's native graphics modes. In these modes, there
+     are several different ways you can program the Graphics Controller to
+     set the value of an individual pixel. Also, the pixel-setting routine
+     must properly handle the video memory maps in monochrome and 640-by-
+     350 4-color graphics modes (on an EGA with 64 KB).
+
+
+     Write mode 0
+     The method for setting a pixel's value in write mode 0 is shown in
+     Listing 5-12. First, as usual, you calculate the byte offset and bit
+     mask, which identify the pixel's location in the video buffer. Then
+     you program the Graphics Controller: Set up write mode 0, store the
+     bit mask value in the Bit Mask register, and configure the Set/Reset
+     and Enable Set/Reset registers for the pixel value. Then you can
+     perform a CPU read to latch the bit planes, followed by a CPU write to
+     copy the contents of the latches and the new pixel value into the bit
+     planes.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-12.  Setting a pixel value in native EGA graphics modes
+     using write mode 0.
+
+                TITLE   'Listing 5-12'
+                NAME    SetPixel10
+                PAGE    55,132
+
+;
+; Name:         SetPixel10
+;
+; Function:     Set the value of a pixel in native EGA graphics modes.
+;
+;               *** Write Mode 0, Set/Reset ***
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+RMWbits         EQU     18h             ; read-modify-write bits
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _SetPixel10
+_SetPixel10     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+; set Graphics Controller Bit Mask register
+
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     dx,3CEh         ; GC address register port
+                mov     al,8            ; AL := Bit Mask register number
+                out     dx,ax
+
+; set Graphics Controller Mode register
+
+                mov     ax,0005h        ; AL :=  Mode register number
+                                        ; AH :=  Write Mode 0 (bits 0,1)
+                                        ;        Read Mode 0 (bit 3)
+                out     dx,ax
+
+; set Data Rotate/Function Select register
+
+                mov     ah,RMWbits      ; AH := Read-Modify-Write bits
+                mov     al,3            ; AL := Data Rotate/Function Select reg
+                out     dx,ax
+
+; set Set/Reset and Enable Set/Reset registers
+
+                mov     ah,ARGn         ; AH := pixel value
+                mov     al,0            ; AL := Set/Reset reg number
+                out     dx,ax
+
+                mov     ax,0F01h        ; AH := value for Enable Set/Reset (all
+                                        ;  bit planes enabled)
+                                        ; AL := Enable Set/Reset reg number
+                out     dx,ax
+
+; set the pixel value
+
+                or      es:[bx],al      ; load latches during CPU read
+                                        ; update latches and bit planes during
+                                        ;  CPU write
+
+; restore default Graphics Controller registers
+
+                mov     ax,0FF08h       ; default Bit Mask
+                out     dx,ax
+
+                mov     ax,0005         ; default Mode register
+                out     dx,ax
+
+                mov     ax,0003         ; default Function Select
+                out     dx,ax
+
+                mov     ax,0001         ; default Enable Set/Reset
+                out     dx,ax
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel10     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Note how the contents of the Graphics Controller registers determine
+     how the bit planes are updated during the CPU write in the OR
+     instruction. The value in the Bit Mask register has only one nonzero
+     bit, so only one pixel is updated. This pixel takes its value from the
+     Set/Reset register. (The other seven pixels are updated from the
+     latches; since the CPU read loaded the latches with these same pixels,
+     the CPU write doesn't change them.) The Enable Set/Reset value is
+     1111B, so the CPU data byte in AL plays no part in the operation.
+
+       ÉÍÍÍ»     IBM's EGA BIOS uses write mode 0 to set the values of
+       º T º     individual pixels in INT 10H function 0CH, but the BIOS
+       º I º     routine does not use the Set/Reset register to specify the
+       º P º     pixel value. Instead, it first zeroes the pixel by using
+       ÈÍÍÍ¼     the Bit Mask register to isolate it and by writing a CPU
+                 data byte of 0. Then the BIOS programs the Sequencer Map
+                 Mask register to select only those bit planes in which the
+                 desired pixel value contains a nonzero bit. The routine
+                 then performs a second CPU write to set the nonzero bits,
+                 as shown in Listing 5-13.
+
+                 This technique has two weaknesses: There are easier ways
+                 to do the same job, and the routine requires extra coding
+                 if you want to AND, OR, or XOR the pixel value in the
+                 video buffer. For both reasons, video BIOS INT 10H
+                 function 0CH is limited in both speed and flexibility.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-13.  Setting a pixel value in native EGA graphics modes
+     using the Sequencer Map Mask.
+
+                TITLE   'Listing 5-13'
+                NAME    SetPixel10
+                PAGE    55,132
+
+;
+; Name:         SetPixel10
+;
+; Function:     Set the value of a pixel in native EGA graphics modes.
+;
+;               *** Write Mode 0, Sequencer Map Mask ***
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _SetPixel10
+_SetPixel10     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+; set Graphics Controller Bit Mask register
+
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     dx,3CEh         ; Graphics Controller address reg port
+                mov     al,8            ; AL := Bit Mask register number
+                out     dx,ax
+
+; zero the pixel value
+
+                mov     al,es:[bx]      ; latch one byte from each bit plane
+                mov     byte ptr es:[bx],0  ; zero masked bits in all planes
+
+; set Sequencer Map Mask register
+
+                mov     dl,0C4h         ; DX := 3C4h (Sequencer addr reg port)
+                mov     ah,ARGn         ; AH := value for Map Mask register
+                                        ;  (nonzero bits in pixel value select
+                                        ;    enabled bit planes for Sequencer)
+                mov     al,2            ; AL := Map Mask register number
+                out     dx,ax
+
+; set the nonzero bits in the pixel value
+
+                mov     byte ptr es:[bx],0FFh ; set bits in enabled bit planes
+
+; restore default Sequencer registers
+
+                mov     ah,0Fh          ; AH := value for Map Mask reg (all bit
+                                        ;  planes enabled)
+                out     dx,ax
+
+; restore default Graphics Controller registers
+
+                mov     dl,0CEh         ; DX := 3CEh (Graphics Controller port)
+                mov     ax,0FF08h       ; default Bit Mask
+                out     dx,ax
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel10     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Write mode 2
+     A somewhat simpler way to set the value of an individual pixel is to
+     use write mode 2. The routine in Listing 5-14 demonstrates this
+     technique. As in write mode 0, the Bit Mask register determines how
+     each of the eight pixels is updated. In write mode 2, however, new
+     pixel values are derived by combining the CPU data byte with the
+     latched pixel values; this avoids the need to program the Set/Reset
+     and Enable Set/Reset registers and leads to shorter, faster code.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-14.  Setting a pixel value in native EGA graphics modes
+     using write mode 2.
+
+                TITLE   'Listing 5-14'
+                NAME    SetPixel10
+                PAGE    55,132
+
+;
+; Name:         SetPixel10
+;
+; Function:     Set the value of a pixel in native EGA graphics modes.
+;
+;               *** Write Mode 2 ***
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+RMWbits         EQU     18h             ; read-modify-write bits
+
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _SetPixel10
+_SetPixel10     PROC    near
+
+                push    bp              ; preserve stack frame
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+; set Graphics Controller Bit Mask register
+
+                shl     ah,cl           ; AH := bit mask in proper position
+                mov     dx,3CEh         ; GC address register port
+                mov     al,8            ; AL := Bit Mask register number
+                out     dx,ax
+
+; set Graphics Controller Mode register
+
+                mov     ax,205h         ; AL :=  Mode register number
+                                        ; AH :=  Write Mode 2 (bits 0,1)
+                                        ;        Read Mode 0 (bit 3)
+                out     dx,ax
+
+; set Data Rotate/Function Select register
+
+                mov     ah,RMWbits      ; AH := Read-Modify-Write bits
+                mov     al,3            ; AL := Data Rotate/Function Select reg
+                out     dx,ax
+
+; set the pixel value
+
+                mov     al,es:[bx]      ; latch one byte from each bit plane
+                mov     al,ARGn         ; AL := pixel value
+                mov     es:[bx],al      ; update all bit planes
+
+; restore default Graphics Controller registers
+
+                mov     ax,0FF08h       ; default Bit Mask
+                out     dx,ax
+
+                mov     ax,0005         ; default Mode register
+                out     dx,ax
+
+                mov     ax,0003         ; default Function Select
+                out     dx,ax
+
+                mov     sp,bp           ; restore stack frame and return
+                pop     bp
+                ret
+
+_SetPixel10     ENDP
+
+_TEXT           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     The routines in Listings 5-12 and 5-14 are designed to work correctly
+     when the Function Select register specifies the AND, OR, or XOR
+     function. Thus, you need write no extra code to perform these
+     alternative pixel manipulations in the EGA's native graphics modes.
+
+     Furthermore, if you are careful to use the proper pixel values, the
+     routines in Listings 5-12 and 5-14 can be used in any native EGA
+     graphics mode. To ensure that the appropriate bits in the memory maps
+     are updated in 640-by-350 monochrome mode, use pixel values of 0, 1,
+     4, and 5 only. On an EGA with 64 KB of RAM, use pixel values 0, 3,
+     0CH, and 0FH.
+
+
+InColor Card
+
+     The routine in Listing 5-15 updates a single pixel in the InColor
+     Card's 720-by-348 16-color mode. The InColor Card lacks a functional
+     equivalent of the EGA's Function Select register, so this routine
+     contains four separate subroutines which perform AND, OR, or XOR
+     operations on pixel values.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-15.  Setting a pixel value in InColor graphics
+     mode.
+
+                TITLE   'Listing 5-15'
+                NAME    SetPixelInC
+                PAGE    55,132
+
+;
+; Name:         SetPixelInC
+;
+; Function:     Set the value of a pixel in 720x348 16-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+DefaultRWColor  EQU     0Fh             ; default value for R/W Color Register
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddrHGC:near
+
+                PUBLIC  _SetPixelInC
+_SetPixelInC    PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddrHGC    ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                shl     ah,cl           ; AH := bit mask in proper position
+
+                mov     dx,3B4h         ; DX := CRTC port
+
+                jmp     word ptr SetPixelOpInC  ; jump to Replace, AND,
+                                                ;  OR or XOR routine
+
+
+ReplacePixelInC:                        ; routine to Replace pixel value
+
+                mov     ch,ah           ; CH := bit mask for pixel
+                mov     ax,1F19h        ; AH bit 6 := 0 (Mask Polarity)
+                                        ; AH bits 5-4 := 1 (Write Mode)
+                                        ; AH bits 3-0 := "don't care" bits
+                                        ; AL := R/W Control Register number
+                out     dx,ax           ; set R/W Control Register
+
+                inc     ax              ; AL := 1Ah (R/W Color Reg number)
+                mov     ah,ARGn         ; AH := foreground value
+                out     dx,ax           ; set R/W color register
+
+                and     es:[bx],ch      ; update bit planes
+                jmp     short L01
+
+ANDPixelInC:                            ; routine to AND pixel value
+
+                mov     ch,ah           ; CH := bit mask for pixel
+                mov     ax,1F19h        ; AH bit 6 := 0 (Mask Polarity)
+                                        ; AH bits 5-4 := 1 (Write Mode)
+                                        ; AH bits 3-0 := "don't care" bits
+                                        ; AL := R/W Control Register number
+                out     dx,ax           ; set R/W Control Register
+
+                dec     ax              ; AL := 18h (Plane Mask Register number)
+                mov     ah,ARGn         ; AH := pixel value
+                mov     cl,4
+                shl     ah,cl           ; AH bits 7-4 := writeable plane mask
+                or      ah,0Fh          ; AH bits 3-0 := visible plane mask
+                out     dx,ax           ; set Plane Mask Register
+
+                mov     ax,001Ah        ; AH := 0 (foreground value)
+                                        ; AL := 1Ah (R/W Color reg)
+                out     dx,ax           ; set R/W Color Register
+
+                and     es:[bx],ch      ; update bit planes
+                jmp     short L01
+
+                                        ; routine to OR pixel value
+ORPixelInC:     
+                mov     ch,ah           ; CH := bit mask for pixel
+                mov     ax,1F19h        ; AH bit 6 := 0 (Mask Polarity)
+                                        ; AH bits 5-4 := 1 (Write Mode)
+                                        ; AH bits 3-0 := "don't care" bits
+                                        ; AL := R/W Control Register number
+                out     dx,ax           ; set R/W Control Register
+
+                dec     ax              ; AL := 18h (Plane Mask Register number)
+                mov     ah,ARGn         ; AH := pixel value
+                not     ah              ; AH := complement of pixel value
+                mov     cl,4
+                shl     ah,cl           ; AH bits 7-4 := writeable plane mask
+                or      ah,0Fh          ; AH bits 3-0 := visible plane mask
+                out     dx,ax           ; set Plane Mask Register
+
+                mov     ax,0F1Ah        ; AH := 0 (foreground value)
+                                        ; AL := 1Ah (R/W Color reg)
+                out     dx,ax           ; set R/W Color Register
+
+                and     es:[bx],ch      ; update bit planes
+                jmp     short L01
+
+XORPixelInC:                            ; routine to XOR pixel value
+                mov     ch,ah           ; CH := bit mask for pixel
+                mov     ax,3F19h        ; AH bit 6 := 0 (Mask Polarity)
+                                        ; AH bits 5-4 := 3 (Write Mode)
+                                        ; AH bits 3-0 := "don't care" bits
+                                        ; AL := R/W Control Register number
+                out     dx,ax           ; set R/W Control Register
+
+                dec     ax              ; AL := 18h (Plane Mask Register number)
+                mov     ah,ARGn         ; AH := pixel value
+                not     ah              ; AH := complement of pixel value
+                mov     cl,4
+                shl     ah,cl           ; AH bits 7-4 := writeable plane mask
+                or      ah,0Fh          ; AH bits 3-0 := visible plane mask
+                out     dx,ax           ; set Plane Mask Register
+
+                xor     es:[bx],ch      ; update bit planes
+
+L01:            mov     ax,0F18h
+                out     dx,ax           ; restore default Plane Mask value
+
+                mov     ax,4019h        ; restore default R/W Control value
+                out     dx,ax
+
+                inc     ax              ; restore default R/W Color value
+                mov     ah,DefaultRWColor
+                out     dx,ax
+
+                mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixelInC    ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+SetPixelOpInC   DW      ReplacePixelInc ; contains addr of pixel operation
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Each one of these subroutines begins by programming the Read/Write
+     Control, Read/Write Color, and Plane Mask registers. Then a CPU read
+     loads the latches, and a subsequent CPU write updates the bit planes.
+
+     Each subroutine starts by programming the Read/Write Control register
+     for one of the four graphics write modes. At the same time, the "don't
+     care" bits are all set to 1 and the Mask Polarity bit is zeroed so
+     that the Decoder always returns 11111111B as the result of a CPU read.
+     Then the Plane Mask and Read/Write Color foreground values are set up;
+     these values depend upon whether the pixel value is to be replaced or
+     manipulated by an AND, OR, or XOR operation.
+
+     The instruction AND ES:[BX],CH (or XOR ES:[BX],CH for the pixel XOR
+     operation) causes the CPU read and write. During the CPU read, the
+     latches are loaded and the value 11111111B is returned to the CPU; the
+     CPU ANDs (or XORs) this value with the bit mask in CH and writes the
+     result back to the same address in the video buffer. In this way, the
+     bit mask in CH selects which pixel value is updated during the CPU
+     write.
+
+     Except for the pixel that the bit mask specifies, the contents of the
+     latches are copied back into the bit planes from which they were just
+     read; the value of the pixel being updated derives from the foreground
+     value in the Read/Write Color register. Only the bit planes that the
+     Plane Mask register specifies are modified, so the only bits in the
+     bit planes that are updated are those that the replace, AND, OR, or
+     XOR operation modifies.
+
+       ÉÍÍÍ»     It is instructive to compare the interaction of the write
+       º T º     mode, foreground color, and Plane Mask values within each
+       º I º     of the subroutines. The logical operation that takes place
+       º P º     (replace, AND, OR, or XOR) is not programmed explicitly
+       ÈÍÍÍ¼     with an 80x86 instruction. It is implicit in the contents
+                 of the graphics control registers, which are programmed to
+                 emulate the logical operation by modifying the individual
+                 bits in the updated pixel.
+
+
+MCGA
+
+     In CGA-compatible graphics modes, the same routines for setting pixel
+     values run unchanged on both the CGA and the MCGA. The two non-CGA
+     modes (640-by-480 2-color and 320-by-200 256-color) can be handled
+     easily with simple modifications to the routine for 640-by-200 2-color
+     mode. Listings 5-16 and 5-17 show the necessary changes.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-16.  Setting a pixel value in MCGA or VGA 640-by-480 2-color
+     mode.
+
+                TITLE   'Listing 5-16'
+                NAME    SetPixel11
+                PAGE    55,132
+
+;
+; Name:         SetPixel11
+;
+; Function:     Set the value of a pixel in 640x480 2-color mode (MCGA or VGA)
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr10:near
+
+                PUBLIC  _SetPixel11
+_SetPixel11     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr10     ; AH := bit mask
+                                        ; ES:BX -> buffer
+                                        ; CL := # bits to shift left
+
+                mov     al,ARGn         ; AL := unshifted pixel value
+                shl     ax,cl           ; AH := bit mask in proper position
+                                        ; AL := pixel value in proper position
+
+                jmp     word ptr SetPixelOp11   ; jump to Replace, AND,
+                                                ;  OR or XOR routine
+
+
+                                        ; routine to Replace pixel value
+
+ReplacePixel11: not     ah              ; AH := inverse bit mask
+                and     es:[bx],ah      ; zero the pixel value
+                or      es:[bx],al      ; set the pixel value
+                jmp     short L02
+
+
+                                        ; routine to AND pixel value
+ANDPixel11:     test    al,al
+                jnz     L02             ; do nothing if pixel value = 1
+
+L01:            not     ah              ; AH := inverse of bit mask
+                and     es:[bx],ah      ; set bit in video buffer to 0
+                jmp     short L02
+                                
+
+                                        ; routine to OR pixel value
+ORPixel11:      test    al,al
+                jz      L02             ; do nothing if pixel value = 0
+
+                or      es:[bx],al      ; set bit in video buffer
+                jmp     short L02
+
+
+                                        ; routine to XOR pixel value
+XORPixel11:     test    al,al
+                jz      L02             ; do nothing if pixel value = 0
+
+                xor     es:[bx],al      ; XOR bit in video buffer
+
+                
+L02:            mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel11     ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+SetPixelOp11    DW      ReplacePixel11  ; contains addr of pixel operation
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-17.  Setting a pixel value in MCGA or VGA 320-by-200 256-
+     color mode.
+
+                TITLE   'Listing 5-17'
+                NAME    SetPixel13
+                PAGE    55,132
+
+;
+; Name:         SetPixel13
+;
+; Function:     Set the value of a pixel in VGA 320x200 256-color mode
+;
+; Caller:       Microsoft C:
+;
+;                       void SetPixel(x,y,n);
+;
+;                       int x,y;                /* pixel coordinates */
+;
+;                       int n;                  /* pixel value */
+;
+
+ARGx            EQU     word ptr [bp+4] ; stack frame addressing
+ARGy            EQU     word ptr [bp+6]
+ARGn            EQU     byte ptr [bp+8]
+
+DGROUP          GROUP   _DATA
+
+_TEXT           SEGMENT byte public 'CODE'
+                ASSUME  cs:_TEXT,ds:DGROUP
+
+                EXTRN   PixelAddr13:near
+
+                PUBLIC  _SetPixel13
+_SetPixel13     PROC    near
+
+                push    bp              ; preserve caller registers
+                mov     bp,sp
+
+                mov     ax,ARGy         ; AX := y
+                mov     bx,ARGx         ; BX := x
+                call    PixelAddr13     ; ES:BX -> buffer
+
+                mov     al,ARGn         ; AL := pixel value
+
+                jmp     word ptr SetPixelOp13   ; jump to Replace, AND,
+                                                ;  OR or XOR routine
+
+
+ReplacePixel13: mov     es:[bx],al
+                jmp     short L01
+
+ANDPixel13:     and     es:[bx],al
+                jmp     short L01
+
+ORPixel13:      or      es:[bx],al
+                jmp     short L01
+
+XORPixel13:     xor     es:[bx],al
+
+
+L01:            mov     sp,bp           ; restore caller registers and return
+                pop     bp
+                ret
+
+_SetPixel13     ENDP
+
+_TEXT           ENDS
+
+
+_DATA           SEGMENT word public 'DATA'
+
+SetPixelOp13    DW      ReplacePixel13
+
+_DATA           ENDS
+
+                END
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+VGA
+
+     Once you create routines to update pixels on the MCGA and EGA, doing
+     the same for the VGA is easy. The only VGA video mode that does not
+     exist on the other subsystems is 640-by-480 16-color mode. Pixel
+     addressing in this mode is the same as in the EGA's 640-by-350 16-
+     color mode, so the routines in Listings 5-12 through 5-14 may
+     be used.
+
+
+Filling the Video Buffer
+
+
+     Usually the first thing you do after selecting a new video mode is
+     clear the video buffer by filling it with a uniform background of
+     repetitive data. In alphanumeric modes, it is easy and efficient to
+     fill the buffer with blanks or nulls by using the 80x86 STOSW
+     instruction.
+
+     Filling the video buffer in graphics modes is more of a challenge.
+     Zeroing the entire buffer is relatively easy, but filling the screen
+     with a solid color or pixel pattern is more difficult, particularly on
+     the EGA, the VGA, and the InColor Card.
+
+
+CGA
+
+     On the CGA, you can set the entire buffer to a single pixel value or a
+     pattern of vertical stripes with a REP STOSW operation, as the routine
+     in Listing 5-18 does. Because of the two-way interleave in the video
+     buffer map, this technique fills all even-numbered scan lines before
+     filling the odd-numbered lines. You might prefer to clear the buffer
+     from the top down by filling it a line at a time. This technique, used
+     in Listing 5-19, achieves a slightly smoother appearance, but requires
+     slower and bulkier code.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-18.  Simple CGA graphics buffer fill.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-19.  CGA graphics buffer fill using two-way interleave.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     You can exploit the two-way interleave in the video buffer map to
+     create a color blend or a simple pattern (see Listing 5-20). In this
+     case, the pixel pattern in the even-numbered scan lines is shifted in
+     position from the pattern in the odd-numbered scan lines. This creates
+     a dithered or halftone pattern on the screen. Because the pixels are
+     so close together, the eye blends them, perceiving the dithered
+     pattern as gray in 640-by-200 2-color mode or as an intermediate color
+     blend in 320-by-200 4-color mode.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-20.  CGA graphics buffer fill with different pixel pattern
+     in odd and even rows.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+HGC and HGC+
+
+     You can use the same basic techniques for clearing the video buffer in
+     the HGC's 720-by-348 monochrome graphics mode as in the CGA's 640-by-
+     200 2-color mode. However, your routine must be able to clear either
+     of the two displayable portions of the HGC's video buffer. +Listing
+     5-21 demonstrates how you can do this. Again, you can take advantage
+     of the interleaved video memory map to create a dithered pattern as
+     you clear the buffer.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-21.  HGC graphics buffer fill using four-way interleave.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+EGA and VGA
+
+     The Graphics Controller can provide a certain amount of hardware
+     assistance in filling the EGA and VGA video buffer. Also, because the
+     buffer holds more data than can be displayed on the screen, you can
+     choose to clear only the displayed portion, an undisplayed portion, or
+     the entire buffer.
+
+     In 640-by-200 2-color and 320-by-200 4-color modes you can use the
+     routines for the CGA (see Listings 5-18 through 5-20). Remember,
+     however, that the EGA and the VGA have enough video RAM to support two
+     screens of data in 320-by-200 4-color mode. Your routine should
+     therefore be capable of clearing any designated area of the buffer.
+     Filling the video buffer in 640-by-480 2-color mode (see Listing 5-22)
+     and 320-by-200 256-color mode (see Listing 5-23) is also a relatively
+     easy task, because pixel addressing in these modes is simple.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-22.  MCGA and VGA 640-by-480 2-color graphics buffer fill.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-23.  MCGA and VGA 320-by-200 256-color graphics buffer fill.
+     This routine fills alternate pixel rows separately to allow dithered
+     pixel patterns.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     In 16-color 200-line graphics modes and all 350-line graphics modes,
+     your routines should program the Graphics Controller to exploit its
+     parallel processing capabilities. The most efficient way to fill the
+     video buffer with a solid color is to use write mode 0 to repeatedly
+     copy the Set/Reset value into the video buffer. Because no CPU read is
+     required for this operation, you can set the entire video buffer to a
+     solid color with a single REP STOSW instruction as shown in Listing
+     5-24.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-24.  Solid buffer fill for EGA and VGA native graphics
+     modes. The code assumes that the Graphics Controller is already in
+     write mode 0 (the BIOS default).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+     Filling the video buffer with an arbitrary pixel pattern is more
+     difficult. Although the basic technique is the same, each component of
+     the pattern must be written separately to the bit planes. The example
+     in Listing 5-25 fills the video buffer with an 8-by-2 pattern of
+     pixels in the VGA's 640-by-480 16-color mode. You can adapt the
+     routine to 200-line and 350-line 16-color modes on both the EGA and
+     VGA.
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-25.  Patterned buffer fill for EGA and VGA native graphics
+     modes. The code assumes that the desired pixel pattern is already
+     stored in the first eight pixels of the first two rows of the video
+     buffer (that is, at A000:0000 and A000:0050).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+InColor Card
+
+     As with the EGA and the VGA, you should use the InColor Card's
+     graphics data latches to update the four bit planes in parallel.
+     Filling the video buffer with a solid color is straightforward, as
+     shown in Listing 5-26. Filling it with a pixel pattern demands the
+     same sort of logic used in the equivalent routine for the EGA and VGA
+     (shown in Listing 5-27).
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-26.  Solid buffer fill for Hercules InColor graphics mode.
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+     Listing 5-27.  Patterned buffer fill for InColor Card. The code
+     assumes that the desired pixel pattern is already stored in the first
+     eight pixels of the first two rows of the video buffer (that is, at
+     offsets 0 and 2000H in BufferSeg).
+
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+
+MCGA
+
+     You can use the routines written for the CGA and the VGA to fill the
+     video buffer in equivalent graphics modes on the MCGA.
+
