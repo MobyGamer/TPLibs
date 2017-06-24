@@ -1,0 +1,85 @@
+Note: this file is used in DEMMN8.PAS and defines the pull down menu
+\ ð "System Commands
+ ~A~bout...        "Show version and copyright information"100
+ ~R~efresh display "Redraw the screen"101
+ ~C~lear desktop   "Close all windows on the desktop, clear history lists"102
+\ ~F~ile "File management commands (Open, New, Save, etc.)
+ ~O~pen...       "Locate and open a file in an edit window"201
+ ~N~ew           "Create a new file in a new Edit window"202
+ ~S~ave          "Save the file in the active Edit window"203
+ S~a~ve as...    "Save the current file under a different name"204
+ Save a~l~l      "Save all modified files
+-
+ ~C~hange dir... "Choose a new default directory"206
+ ~P~rint         "Print the contents of the active Edit window"207
+ ~G~et info...   "Show status information"208
+ ~D~OS shell     "Temporarily exit to DOS"209
+ E~x~it          "Exit Turbo Pascal"9999
+\ ~E~dit "Cut-and-paste editing commands"
+_ ~R~estore line   "Cancel edits to the current line in active Edit window"301
+-
+_ Cu~t~            "Remove the selected text and put it in the Clipboard"302
+_ ~C~opy           "Copy the selected text into the Clipboard"303
+_ ~P~aste          "Insert selected text from the Clipboard"304
+_ Copy e~x~ample   "Copy example from the Help window into the ClipBoard"305
+ ~S~how clipboard "Open the Clipboard window"306
+-
+_ C~l~ear          "Delete the selected text
+\ ~S~earch "Text and error search commands
+ ~F~ind...             "Search for text"401
+ ~R~eplace...          "Search for text and replace it with new text"402
+ ~S~earch again        "Repeat the last Find or Replace command"403
+ ~G~oto line number... "Move the cursor to a specified line number"404
+ ~F~ind procedure...   "Search for a procedure or function while debugging"405
+ Find e~r~ror...       "Move the cursor to the position of a runtime error"406
+\ ~R~un "Execute or single-step through a program
+ ~R~un           "Run the current program"501
+_ ~P~rogram reset "Halt debugging session and release memory"502
+ ~G~o to cursor  "Run program from the run bar to the cursor position"503
+ ~T~race into    "Execute next statement, stopping within the current proc"504
+ ~S~tep over     "Execute next statement, skipping over the current proc"505
+ P~a~rameters... "Set command line parameters to be passed to the program"506
+\ ~C~ompile "Compile to disk or memory
+ ~C~ompile         "Compile source file"601
+ ~M~ake            "Rebuild source file and all modified files"602
+ ~B~uild           "Rebuild source file and all files"603
+ ~D~estination     "Specify whether file is compiled to memory or disk"604
+ ~P~rimary file... "Define the file that is the focus of make and Build"605
+\ ~D~ebug "Evaluate expressions, modify data, set breakpoints and watches
+ ~E~valute/modify    "Evaluate a variable or expression and display or modify the value"701
+ ~W~atches           "Add, delete and edit expressions in the watch window"702
+ ~T~oggle breakpoint "Set or clear an unconditional breakpoint at the cursor position"703
+ ~B~reakpoints...    "Set conditional breakpoints, view and edit breakpoints"704
+\ ~O~ptions "Set defaults for compiler, editor, mouse, debugger, etc.
+ ~C~ompiler            "Set default compiler directives and condl. defines"801
+ ~M~emory sizes...     "Set default stack and heap sizes for generated programs"802
+ ~L~inker...           "Set linker options"803
+ De~b~ugger...         "Set debugger options"804
+ ~D~irectories...      "Set paths for units, include files, OBJs anfd generated files"805
+-
+ ~E~nvironment        "Specify environment settings"806
+-
+ ~S~ave options...     "Save all the settings you''ve made in the Options menu"807
+ ~R~etrieve options... "Load options file previously created with Save Options"808
+\ ~W~indow "Open, arrange, and list windows
+ ~S~ize/Move   "Change the size or position of the active window"901';
+ ~Z~oom        "Enlarge or restore the size of the active window"902
+ ~T~ile        "Arrange windows on desktop by tiling"903
+ C~a~scade     "Arrange windows on desktop by cascading"904
+ ~N~ext        "Make the next window active"905
+ ~P~revious    "Make the previous window active"906
+ ~C~lose       "Close the active window"907
+-
+ ~W~atch       "Open the watch window"908
+ ~R~egister    "Open the Register window"909
+ ~O~utput      "Open the Output window"910
+ Call stac~k~  "Show the procedures the program called to reach this point"911
+ ~U~ser screen "Switch to the full-screen user output"912
+-
+ ~L~ist...     "Show a list of all open windows"913
+\ ~H~elp "Get online help
+ ~C~ontents       "Show table of contents of online Help"1001
+ ~I~ndex          "Show index for online Help"1002
+ ~T~opic Search   "Display help on the word at the cursor"1003
+ ~P~revious Topic "Redisplay the last-viewed online Help screen"1004
+ ~H~elp on Help   "How to use online Help"1005

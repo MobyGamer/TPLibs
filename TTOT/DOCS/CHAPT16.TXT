@@ -1,0 +1,367 @@
+                                                                             OOP
+                                                                      Principles
+
+
+
+         "The human mind treats a new idea the way the body treats a strange
+         protein; it rejects it."
+
+                                                        P. B. Medawar, Biologist
+
+
+         Part 2 of the User's manual explains how, by using object oriented
+         programming, you can customize the Toolkit to meet your very specific
+         needs. In this chapter, some of the main features of OOP extensibility
+         are explained. If you are an experienced OOPer, you may want to skip
+         this chapter and proceed with the Toolkit specific text.
+
+         If you are new to OOP, be sure to read the Object Primer starting on
+         page 3.1 before you look at this chapter.
+
+
+Understanding Inheritance
+         One of the most powerful and alluring aspects of object oriented pro-
+         gramming is the ability to modify and expand an object without changing
+         any of the object's source code. What's more, it's easy to do! The
+         basic approach is to create an object which inherits all the properties
+         of another object, i.e. you clone the object (sorry Compaq). You can
+         then change some of the properties of the cloned object so that it
+         functions the way you want it to.
+
+         This feature allows you to enhance and improve the Toolkit without
+         changing a single line of Toolkit source code. That way, when we
+         release a new and improved version, you don't have to wrestle with two
+         sets of source code - the code that you changed and the code that we
+         changed. All you need to do is "plug in" the new Toolkit and your
+         objects will automatically inherit the new features added to the Tool-
+         kit.
+         To illustrate object inheritance, let's solve a practical problem.
+         Imagine that you use the EquipOBJ object, but need to enhance it so
+         that it will report if a CD-ROM is installed. Rather than change the
+         EquipOBJ object, the approach is to create a new object which inherits
+         all the properties of EquipOBJ, and add the new CD-ROM method to it.
+
+         You may recall from chapter 3: Toolkit Basics that declaring an object
+         is very similar to declaring a record. To declare a object that inher-
+         its the properties of another object, you specify the name of the par-
+         ent object in parentheses after the object keyword. The following code
+         fragment declares a new object type, NewEquipOBJ, which inherits all
+         the properties of EquipOBJ:
+         NewEquipOBJ = object (EquipOBJ)
+         end; {NewEquipOBJ}
+
+16-2                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         If you create an object which is a descendant of a Toolkit object, you
+         must define two special methods known as the CONSTRUCTOR and the
+         DESTRUCTOR. Furthermore, these should be named INIT and DONE, respec-
+         tively. These special methods instruct Turbo Pascal to use special
+         memory techniques when creating and disposing of the object. The
+         NewEquipOBJ object declaration must be expanded to include the con-
+         structor and destructor methods as follows:
+
+         NewEquipOBJ = object (EquipOBJ)
+            constructor Init;
+            destructor  Done;
+         end; {NewEquipOBJ}
+         Now we can add the new CD-ROM method to the object declaration.  Assum-
+         ing that the new method is just a boolean function, it would be
+         declared as follows:
+
+         NewEquipOBJ = object (EquipOBJ)
+            constructor Init;
+            function    CDROM: boolean;
+            destructor  Done;
+         end; {NewEquipOBJ}
+         As well as adding new methods to the object, you can override or change
+         existing methods. For example, the GameAdapter function inherited from
+         EquipOBJ can be replaced with a new method by expanding the object
+         declaration as follows:
+
+         NewEquipOBJ = object (EquipOBJ)
+            constructor Init;
+            function    CDROM: boolean;
+            function    GameAdapter: boolean;
+            destructor  Done;
+         end; {NewEquipOBJ}
+         Although you have only declared NewEquipOBJ with four methods, it
+         actually includes all the data and methods it has inherited from Equi-
+         pOBJ. The following table compares the data and methods declared in
+         EquipOBJ, with the data and methods in NewEquipOBJ. The non-bold items
+         are inherited.
+
+
+                       EquipOBJ                          NewEquipOBJ
+          vMainInfo: integer;                vMainInfo: integer;
+          vComputerID: byte;                 vComputerID: byte;
+          vRomDate: string[8];               vRomDate: string[8];
+          constructor Init;                  constructor Init;
+          function    ComputerID:byte;       function    ComputerID:byte;
+          function    ParallelPorts:byte;    function    ParallelPorts:byte;
+          function    SerialPorts:byte;      function    SerialPorts:byte;
+          function    FloppyDrives:byte;     function    FloppyDrives:byte;
+
+
+
+
+OOP Principles                                                              16-3
+--------------------------------------------------------------------------------
+
+          function    ROMDate:string;        function    ROMDate:string;
+          function    SerialPrinter:boolean; function    SerialPrinter:boolean;
+          function    MathChip:boolean;      function    MathChip:boolean;
+          function    GameAdapter:boolean;   function    GameAdapter:boolean;
+          destructor  Done;                  function    CDROM:boolean;
+                                             destructor  Done;
+
+
+
+
+           Note: an inherited object may also include data items, provided
+           the identifiers (or variable names) are different from the ones
+           inherited from the parent object.
+
+
+
+         The object declaration defines a new object type and should be located
+         in the TYPE declaration section of your program or unit. The corre-
+         sponding detail of each object method must be listed either in the body
+         of your program, or in the implementation section of a unit.
+
+         Listed below is a unit, EXTDEM1.PAS, which fully defines the new object
+         NewEquipOBJ. One of the important points to note is that the construc-
+         tor and destructor methods must call the associated constructor and
+         destructor from the parent method. This ensures that the inherited data
+         is initialized and disposed of properly. These important statements are
+         highlighted in bold in the listing.
+
+
+         Unit ExtDem1;
+         INTERFACE
+
+         Uses DOS,CRT, totSYS;
+         TYPE
+
+         NewEquipOBJ = object (EquipOBJ)
+            constructor Init;
+            function    CDROM: boolean;
+            function    GameAdapter: boolean;
+            destructor  Done;
+         end; {NewEquipOBJ}
+         IMPLEMENTATION
+
+         constructor NewEquipOBJ.Init;
+         {}
+         begin
+            EquipOBJ.Init;
+         end; {NewEquipOBJ.Init}
+
+
+16-4                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         function NewEquipOBJ.CDROM:boolean;
+         {If you know how to do this - please tell us!
+          For now, we'll assume one isn't installed}
+         begin
+            CDROM := false;
+         end; {NewEquipOBJ.CDROM}
+
+         function NewEquipOBJ.GameAdapter:boolean;
+         {}
+         begin
+            GameAdapter := paramstr(1) = '/G';
+         end; {NewEquipOBJ.GameAdapter}
+         destructor NewEquipOBJ.Done;
+         {}
+         begin
+            EquipOBJ.Done;
+         end; {NewEquipOBJ.Done}
+
+         end.
+
+         The body of the CD-ROM and GameAdapter methods would normally contain
+         your custom code. In this case, their value is limited. But you get the
+         idea!
+
+         Take a look at the object hierarchy diagrams at the beginning of the
+         Flash Cards. They show the Toolkit's parent-sibling object relation-
+         ships. For example, ScrollWinOBJ inherits MoveWinOBJ, which, in turn,
+         inherits WinOBJ.
+
+
+Mastering Extensibility
+
+         All the methods in the EquipOBJ object, discussed in the last section,
+         are known as static methods. Static methods are usually independent
+         methods, i.e. methods which do not call other methods in the object.
+         For example, the GameAdapter method has no relationship with the Math-
+         Chip method or any other EquipOBJ method.
+         Inheritance becomes somewhat more complicated when methods call other
+         methods from the same object. The problem is best illustrated by exam-
+         ple. The unit listing below contains an object, PrintOBJ, which is used
+         to print strings or integers to the printer connected to LPT1. The
+         objective is to create a descendant object which can print to any
+         printer port.
+
+         Unit BadPrint;
+         INTERFACE
+
+         Uses DOS,CRT, totSTR;
+
+
+
+OOP Principles                                                              16-5
+--------------------------------------------------------------------------------
+
+         TYPE
+         PrintOBJ = object
+            constructor Init;
+            procedure   PrintChar(Ch:char);
+            procedure   PrintStr(Str:string);
+            procedure   PrintInt(Int:integer);
+            destructor  Done;
+         end; {PrintOBJ}
+
+         IMPLEMENTATION
+         constructor PrintOBJ.Init;
+         {no data to initialize}
+         begin
+         end; {PrintOBJ.Init}
+
+         procedure PrintOBJ.PrintChar(Ch:char);
+         {}
+         var
+           Lst: text;
+         begin
+            Assign(Lst,'LPT1');
+            Rewrite(Lst);
+            Write(Lst,Ch);
+            Close(Lst);
+         end; {PrintOBJ.PrintChar}
+         procedure PrintOBJ.PrintStr(Str:string);
+         {}
+         var I : integer;
+         begin
+            for I := 1 to length(Str) do
+                PrintChar(Str[I]);
+         end; {PrintOBJ.PrintStr}
+
+         procedure PrintOBJ.PrintInt(Int:integer);
+         {}
+         var I:integer; Str:string;
+         begin
+            Str := IntToStr(Int);
+            for I := 1 to length(Str) do
+                PrintChar(Str[I]);
+         end; {PrintOBJ.PrintInt}
+         destructor PrintOBJ.Done;
+         {no data to dispose of}
+         begin
+         end; {PrintOBJ.Done}
+
+         end.
+
+
+
+16-6                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         The two main methods are PrintStr and PrintInt, but these methods both
+         call the method PrintChar to print each individual character. (By
+         design, the code is simplistic; just remember the main purpose is to
+         teach you about extensibility, not how to write to the printer!)
+
+         PrintChar is the root of the problem because it is hard-coded to print
+         to LPT1. If you are getting into the OOP groove, and you're from Cali-
+         fornia, you might say: "No sweat, DUDE! Create a descendant object and
+         replace the PrintChar method. Gnarly!" It's the right idea, but in this
+         case it won't work.
+         If you create a descendant object, NewPrintOBJ, and replace the Print-
+         Char method, the object will inherit the PrintStr and PrintInt methods.
+         However, when you call PrintStr or PrintInt, they will in turn call
+         THEIR object's version of PrintChar, i.e. PrintOBJ.PrintChar not New-
+         PrintOBJ.PrintChar. One solution is to also replace the PrintStr and
+         PrintInt methods, but then you have rewritten the entire object without
+         taking advantage of inheritance!
+
+         The OOP solution lies in virtual methods. If the PrintChar method in
+         PrintOBJ is declared as virtual, Turbo Pascal will manage the situation
+         very differently. A method is identified as virtual by adding the key-
+         word virtual at the end of the method declaration. The following code
+         fragment shows the PrintOBJ object declared with a virtual method:
+         PrintOBJ = object
+            constructor Init;
+            procedure   PrintChar(Ch:char); virtual;
+            procedure   PrintStr(Str:string);
+            procedure   PrintInt(Int:integer);
+            destructor  Done;
+         end; {PrintOBJ}
+
+         The virtual keyword instructs Turbo Pascal to late bind the PrintChar
+         method. That is, the compiler implements a special linking method which
+         ensures that descendant objects, like NewPrintOBJ, can redefine any
+         virtual methods. The redefined version of the method will always be
+         called even by inherited methods. For example, the following code
+         defines a descendant of PrintOBJ (assuming PrintOBJ used the virtual
+         keyword):
+         NewPrintOBJ = object (PrintOBJ)
+            constructor Init;
+            procedure   PrintChar(Ch:char); virtual;
+            destructor  Done;
+         end; {NewPrintOBJ}
+
+         Now if the inherited method NewPrintOBJ.PrintStr is called, Turbo Pas-
+         cal is smart enough to ensure that PrintStr calls NewPrintOBJ.Print-
+         Char, and not PrintOBJ.PrintChar. All you would have to do is customize
+         PrintChar to print to any port and the problem is solved. The on-disk
+         demo file, EXTDEM2.PAS, includes the full solution for this example.
+
+
+OOP Principles                                                              16-7
+--------------------------------------------------------------------------------
+
+           Note: if an object includes virtual methods, the object must have
+           a constructor and destructor. In addition, if a method is declared
+           as virtual, all descendant methods with the same name must also be
+           declared virtual, and they must have identical passed parameters.
+
+
+
+         The down side of virtual methods is that they will always be linked
+         into your EXE program code whether the methods are called or not. If
+         this were not so, there would be good justification for making every
+         method virtual. As it is, the Toolkit only makes methods virtual if
+         they are likely to be accessed in some descendant object. It's a trade-
+         off between complete flexibility and program code size.
+
+         You may have heard or read about polymorphism. Polymorphism allows sim-
+         ilar objects to execute different code when the same call is made to
+         them from some independent routine. It is virtual methods which provide
+         Turbo Pascal objects with polymorphism. One of the best Toolkit exam-
+         ples of polymorphism is in the totIO units. The FormOBJ object, which
+         controls all the input fields, knows that every input field object has
+         the methods Display, Select, ProcessKey and Suspend. Any object which
+         is created as a descendant from BaseIOOBJ will inherit these methods,
+         and can be managed by FormOBJ. All FormOBJ needs to do is call one of
+         these methods. (Actually, there are a few more methods than listed, but
+         the theory still holds.) In chapter 20: Extending Input Fields the full
+         power of polymorphism is explored.
+
+
+Know Your Ancestor!
+
+         As you have probably assessed, you need to know some details about the
+         Toolkit objects before you can start to extend them. You need to know
+         about the methods and the data that will be inherited. Its a good idea
+         to print the interface section of each unit, as this provides all the
+         important information about each object's data and methods.
+         This concludes the brief explanation of OOP. Remember that the text is
+         aimed at helping you to extend the Toolkit. You should consider re-
+         reading the discussion of object-oriented programming in the Turbo Pas-
+         cal's User's Guide. It might make a lot more sense now! In addition, it
+         covers, in much greater depth, some of the principles introduced in
+         this chapter.
+
+

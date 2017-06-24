@@ -1,0 +1,5 @@
+AREA
+   OVERLAY totsys+totlook+totinput;
+   OVERLAY totfast+totwin;
+   OVERLAY totIO1+totMsg;
+   

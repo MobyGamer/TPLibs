@@ -1,0 +1,1062 @@
+                                                                        Keyboard
+                                                                               &
+                                                                           Mouse
+                                                                           Input
+
+
+
+         "The computer is down. I hope it's something serious."
+
+                                                               Stanton Delaplane
+
+         The totINPUT unit includes two objects for managing the mouse and key-
+         board. KeyOBJ is the main object for determining mouse and keyboard
+         activity. MouseOBJ controls the location and shape of the mouse cursor.
+         Mouse support is provided for Microsoft two-button, Logitech three-
+         button, and 100% compatible mice.
+
+
+Getting Keyboard and Mouse Input
+
+         totINPUT includes a global instance KEY of type KeyOBJ. In the same way
+         that the instance SCREEN is used for all screen writes, the KEY
+         instance should be used for all keyboard and mouse polling. Key
+         includes methods for determining which key or mouse button was pressed,
+         checking the status of the Alt/Ctrl/Shift keys, controlling the
+         Num/Scroll/Caps lock keys, setting the keyboard repeat rate, and
+         stuffing the keyboard buffer.
+         There are also two special user hooks which provide easy ways to cus-
+         tomize your program. The idle hook allows you to perform some action
+         (like displaying a ticking clock) while the program is idle waiting for
+         user input. The character hook allows you to intercept every user
+         action, and is called every time a key is pressed or a mouse button is
+         clicked.
+
+
+Setting Mouse Methods
+
+         Users of TechnoJock's Turbo Toolkit (TTT) may recall that the input
+         routines supported an "invisible" mouse cursor. If the user moved the
+         mouse while a program was waiting for a key press, a special code was
+         returned which indicated that the mouse had been moved either up, down,
+         left or right. Most of the TTT units would respond to the mouse move-
+         ment as though a cursor key had been pressed.
+         TechnoJock's Object Toolkit provides much more extensive mouse support.
+         However, if you want to make your programs respond like the original
+         TTT, you can with the following SetMouseMethod method:
+
+
+         SetMouseMethod(Method:byte);
+
+
+6-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         This method instructs the Toolkit on which form of mouse support to
+         provide. If a 0 is passed, or if there is no mouse detected, the object
+         will ignore any mouse activity. If a 1 is passed, an "invisible" mouse
+         will be supported, and if a 2 is passed, full mouse support is enabled.
+         If you want to temporarily disable mouse support, set the mouse method
+         to 0, which can later be set back to 1 or 2.
+
+
+         When the mouse method is set to 1, the following two methods control
+         how much the mouse must be moved before the movement is detected:
+
+
+         SetHoriz(Sensitivity:byte);
+         This method is passed the number of characters that the mouse cursor
+         must be moved horizontally before a MouseLeft or MouseRight code is
+         returned.
+
+
+         SetVert(Sensitivity:byte);
+         This method is passed the number of characters that the mouse cursor
+         must be moved vertically before a MouseUp or MouseDown code is
+         returned.
+
+
+
+Determining User Input
+         The heart of the KeyOBJ object is the GetInput method. GetInput pauses
+         program execution and waits for the user to press a key, or click a
+         mouse button (or move the mouse, if the MouseMethod is set to 1). The
+         user action can be determined by calling the functions Lastkey, LastX
+         and LastY. These functions return the key/button(s) which were pressed,
+         and the (X,Y) location of the mouse when the action took place, respec-
+         tively.
+
+         Another method, GetKey, automatically calls GetInput, and returns the
+         user action code -- this saves calling GetInput followed by LastKey.
+         The method DelayKey is like GetInput, but will only pause for user
+         input for a specified number of milliseconds. This method is useful for
+         displaying temporary messages and the like. If a key has not been
+         pressed after a specified time period, Lastkey is updated with a value
+         of 0.
+
+         Unlike Turbo Pascal, the Toolkit uses a WORD sized variable to record
+         the user activity. As well as supporting the standard keyboard, KeyOBJ
+         reports mouse button activity, as well as many special key combina-
+         tions, e.g. Alt-TAB. Refer to table 6.1 for a full list of the KeyOBJ
+         action codes. Some of the action codes listed in the table are raised
+
+
+
+Keyboard & Mouse                                                             6-3
+--------------------------------------------------------------------------------
+
+         by totWIN objects which indicate that the mouse was clicked on a spe-
+         cial window icon. Refer to chapter 7: Using Windows for further infor-
+         mation.
+
+
+
+6-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+Table 6.1
+Key Action Codes
+
+           Key  Norm   Shift  Alt    Ctrl     Key   Norm   Shift  Alt    Ctrl
+           a    97     65     286    1        F1    315    340    360    350
+           b    98     66     304    2        F2    316    341    361    351
+           c    99     67     302    3        F3    317    342    362    352
+           d    100    68     288    4        F4    318    343    363    353
+           e    101    69     274    5        F5    319    344    364    354
+           f    102    70     289    6        F6    320    345    365    355
+           g    103    71     290    7        F7    321    346    366    356
+           h    104    72     291    8        F8    322    347    367    357
+           i    105    73     279    9        F9    323    348    368    358
+           j    106    74     292    10       F10   324    349    369    359
+           k    107    75     293    11       F11   389    391    395    393
+           l    108    76     294    12       F12   390    392    396    394
+           m    109    77     306    13
+           n    110    78     305    14       BkSp  8      8      270    127
+           o    111    79     280    15       Up    328    428    408    397
+           p    112    80     281    16       Down  336    436    416    401
+           q    113    81     272    17       Left  331    431    411    371
+           r    114    82     275    18       Right 333    433    413    372
+           s    115    83     287    19       End   335    435    415    373
+           t    116    84     276    20       Home  327    427    407    375
+           u    117    85     278    21       PgUp  329    429    409    388
+           v    118    86     303    22       PgDn  337    437    417    374
+           w    119    87     273    23       Ins   338    261    418    260
+           x    120    88     301    24       Del   339    263    419    262
+           y    121    89     277    25       Tab   9      271    421    404
+           z    122    90     300    26       Esc   27     27     257    27
+                                              Enter 13     13     284    10
+           1 !  49     33     376    -
+           2 @  50     64     377    259      , <   44     60     307    -
+           3 #  51     35     378    -        . >   46     62     308    -
+           4 $  52     36     379    -        / ?   47     63     309    -
+           5 %  53     37     380    -        ; :   59     58     295    -
+           6 ^  54     94     381    30       ' "   39     34     296    -
+           7 &  55     38     382    -        [ {   91     123    282    27
+           8 *  56     42     383    -        ] }   93     125    283    29
+           9 (  57     40     384    -        \ |   92     124    299    28
+           0 )  48     41     385    -
+           - _  45     95     386    31
+           = +  61     43     387    -
+
+
+
+
+Keyboard & Mouse                                                             6-5
+--------------------------------------------------------------------------------
+
+Table 6.1
+Key Action Codes
+(Contd.)
+
+           Mouse Action     Code           Window Action           Code
+           Left Click       513            Close Icon Selected     600
+           Right Click      514            Window Moved            601
+           Middle Click     515            Window Resized          602
+           Left + Right     516            Scroll Bar Up           610
+           Left + Middle    517            Scroll Bar Down         611
+           Middle + Right   518            Scroll Bar Left         612
+           All three        519            Scroll Bar Right        613
+           Left Double      523            Vertical Elevator       614
+           Right Double     524            Horizontal Elevator     615
+           Middle Double    525
+
+           Mouse Up         584
+           Mouse Down       592
+           Mouse Left       589
+           Mouse Right      587
+
+
+
+         Note: the upper ASCII characters are also returned if the user holds
+         down the Alt key and presses the 3-digit ASCII code on the numeric
+         keypad, or if an international code page is active. In other words, the
+         input routines fully support international characters, line drawing,
+         and all other extended ASCII characters.
+
+
+         In most cases, you will use the global instance Key to determine user
+         input. However, if you want to use an independent instance, make sure
+         you initialize the instance by calling the INIT method.
+         The function method Extended will return true if an extended keyboard
+         is installed.
+
+         Listed below is the syntax for the user input methods:
+
+         GetInput;
+
+         Pauses program execution until a key or mouse button is pressed.
+
+         GetKey: word;
+
+         Pauses program execution until a key or mouse button is pressed, and
+         returns a word value indicating the user action, (see Table 6.1)
+
+         LastKey: word;
+
+
+
+6-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         Returns a word value indicating the last user action, (see Table 6.1)
+
+
+         LastChar: char;
+         If the action code of the LastKey was less than 256, the character
+         equivalent of the code is returned, otherwise a #0 is returned.
+
+
+         LastX: byte;
+         Returns the X Coordinate of the mouse cursor when the last key action
+         was recorded.
+
+
+         LastY: byte;
+         Returns the Y Coordinate of the mouse cursor when the last key action
+         was recorded.
+
+
+         DelayKey(Mills:longint);
+         This function is similar to GetInput, except that the method will only
+         wait for Mills milliseconds. If the user is not active in the specified
+         period, a #0 is recorded as the last key.
+
+
+         Extended:boolean;
+         This function method returns true if the system has an extended key-
+         board installed.
+
+
+         The following example shows how you might pause for some user action,
+         and then check the pressed key to decide which routines to execute
+         next:
+
+                  ...
+                  Key.GetInput
+                  case Key.LastKey of
+                    27:  EscapeRoutine;
+                    13:  EnterRoutine;
+                    513: LeftButtonRoutine(Key.LastX,Key.LastY);
+                    ...
+                  end; {case}
+                  ...
+
+         The following example, DEMIN1.PAS, repeatedly waits for some user
+         action, and displays the value of each action code:
+
+         Program DemoInputOne;
+         {DEMIN1}
+
+
+Keyboard & Mouse                                                             6-7
+--------------------------------------------------------------------------------
+
+         Uses CRT,
+              totINPUT;
+
+         begin
+            Clrscr;
+            Writeln('Press any key or mouse button combination.
+                     (Esc to quit)');
+            Key.SetDouble(true);
+            repeat
+               Key.GetInput;
+               GotoXY(1,2);
+               Write('You pressed key: ',Key.LastKey,'    ');
+            until Key.LastKey = 27;
+         end.
+
+
+
+
+           Note: The Toolkit reports double-clicking on any of the mouse but-
+           tons.
+
+           You may have used some software products which make the user
+           double-click the mouse at "lightning" speed. This problem occurs
+           because the software wants to respond as soon as possible to any
+           mouse activity. So, when a button is clicked, the software doesn't
+           wait around for very long to see if the same button has been
+           clicked again. If you are not quick enough, a double-click is
+           reported as one or two single clicks of the same button.
+
+           The Toolkit has the same design dilemma: fast response, with
+           enough time so a non-athlete can double-click a button! The Tool-
+           kit solution is to allow you to set whether the system should wait
+           for a double-click. KeyOBJ includes the method SetDouble, which is
+           passed a boolean parameter. Pass a TRUE parameter to allow a
+           little extra time for double-clicks. If you don't care about
+           double-clicks, call SetDouble(false);. You can freely switch
+           between the two states throughout the program. By default, Key
+           does not pause for double-clicks.
+
+           The function method GetDouble returns the current double-click
+           setting.
+
+           You can experiment with the impact of the SetDouble method by
+           trying the above example with SetDouble enabled and disabled.
+
+
+
+6-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+Accessing Ctrl, Alt and Shift
+
+         KeyOBJ supports a wide variety of special key combinations like Alt-
+         Backspace and Ctrl-PgUp. Sometimes, however, you may want to know if
+         one of the shifting keys is being pressed on its own. GetInput will not
+         respond when Alt, Ctrl or either Shift key is pressed. It waits for a
+         standard alphanumeric key to be pressed.
+         KeyOBJ does, however, provide the following five methods to let you
+         check the status of these special shifting keys:
+
+
+         AltPressed:boolean;
+         Returns true if the Alt key is being held down.
+
+
+         CtrlPressed: boolean;
+         Returns true if the Ctrl key is being held down.
+
+
+         LeftShiftPressed: boolean;
+         Returns true if the left Shift key is being held down.
+
+
+         RightShiftPressed: boolean;
+         Returns true if the right Shift key is being held down.
+
+
+         ShiftPressed: boolean;
+         Returns true if either Shift key is being held down.
+
+
+         These methods are useful if you want to display an indicator which
+         illuminates when the special keys are pressed. The demo program,
+         DEMIN2.PAS, discussed in the next section, illustrates this technique.
+
+Accessing Num, Scroll and Caps Lock
+
+         The KeyOBJ provides the following six methods for determining and
+         changing the status of the Num Lock, Scroll Lock and Caps Lock keys:
+
+         SetCaps(On:boolean);
+
+         Pass TRUE to turn on the Caps Lock key, or FALSE to turn it off.
+
+         SetNum(On:boolean);
+
+         Pass TRUE to turn on the Num Lock key, or FALSE to turn it off.
+
+Keyboard & Mouse                                                             6-9
+--------------------------------------------------------------------------------
+
+         SetScroll(On:boolean);
+
+         Pass TRUE to turn on the Scroll Lock key, or FALSE to turn it off.
+
+         GetCaps:boolean;
+
+         Returns TRUE if the Caps Lock is on, and FALSE if it is off.
+
+         GetNum:boolean;
+
+         Returns TRUE if the Num Lock is on, and FALSE if it is off.
+
+         GetScroll:boolean;
+
+         Returns TRUE if the Scroll Lock is on, and FALSE if it is off.
+
+
+         The following demo program, DEMIN2.PAS, shows how to use the shifting
+         and locking keys.
+         Program DemoInputTwo;
+         {DEMIN2}
+
+         Uses CRT,
+              totINPUT, totFAST;
+         begin
+            with Screen do
+            begin
+                Clear(31,' ');
+                PartClear(1,23,80,25,94,' ');
+                WritePlain(10,5,'Press Num, Scroll, Caps Lock,
+                                 or hold down the Alt,');
+                WritePlain(10,6,'Ctrl, Left/Right Shift keys.
+                                 The active keys will be');
+                WritePlain(10,7,'highlighted at the foot of the
+                                 display.');
+                WritePlain(10,9,'Any other key quits.');
+                with Key do
+                begin
+                   SetCaps(true);
+                   SetNum(true);
+                   SetScroll(true);
+                   repeat
+                      if GetCaps then
+                         WritePlain(40,24,'CAPS')
+                      else
+                         WritePlain(40,24,'    ');
+                      if GetNum then
+                         WritePlain(45,24,'NUM')
+
+
+
+6-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                      else
+                         WritePlain(45,24,'   ');
+                      if GetScroll then
+                         WritePlain(50,24,'SCROLL')
+                      else
+                         WritePlain(50,24,'      ');
+                      if AltPressed then
+                         WritePlain(60,24,'Alt')
+                      else
+                         WritePlain(60,24,'   ');
+                      if CtrlPressed then
+                         WritePlain(65,24,'Ctrl')
+                      else
+                         WritePlain(65,24,'    ');
+                      if LeftShiftPressed then
+                         WritePlain(70,24,'L-^X')
+                      else
+                         WritePlain(70,24,'   ');
+                      if RightShiftPressed then
+                         WritePlain(75,24,'R-^X')
+                      else
+                         WritePlain(75,24,'   ');
+                   until KeyPressed;
+                   SetCaps(false);
+                   SetNum(false);
+                   SetScroll(false);
+                end;
+            end;
+         end.
+
+
+
+           Note: The methods for setting and getting the status of the lock-
+           ing keys will only function on 100% IBM BIOS compatible systems.
+
+
+
+
+Setting the Keyboard Repeat Rate, and Clicking
+         The PC keyboards support a typematic effect i.e. holding a key pressed
+         down has the same effect as pressing the key multiple times. By
+         default, a key must be held down for about half a second before the
+         repetition commences, and then about ten characters per second are
+         sent. Most users think this repeat rate is too slow (especially for
+         cursor movement) and the Toolkit provides a way of changing it.
+
+
+
+Keyboard & Mouse                                                            6-11
+--------------------------------------------------------------------------------
+
+         Commencing with the IBM-AT, the ROM BIOS keyboard services provided a
+         way to change the typematic rate. The earliest ROM BIOS to feature
+         configurable typematic delays was 11/15/85. The following three KeyOBJ
+         methods can be used to modify the typematic rate on systems with the
+         required BIOS:
+
+
+         SetFast;
+         Set the typematic rate to a fast 30 characters per second, i.e. there
+         is very little delay between repeats.
+
+
+         SetSlow;
+         Sets the typematic rate to 5 characters per second.
+
+
+         SetRepeatRate(QSDelay,Rate:byte);
+         This method allows you to explicitly set the typematic rate. The first
+         parameter accepts a value between 1 and 4, and indicates the number of
+         quarter seconds delay before the key commences repeating, e.g. 3 repre-
+         sents a 750 millisecond delay. The second parameter indicates the
+         repeat rate, and accepts a value between 0 and 31. The following table
+         shows the repeat rate parameter followed by the corresponding character
+         per second repeat rate:
+
+           0   30.0    7   16.0    14  8.6     21  4.6      28  2.5
+           1   26.7    8   15.0    15  8.0     22  4.3      29  2.3
+           2   24.0    9   13.3    16  7.5     23  4.0      30  2.1
+           3   21.8    10  12.0    17  6.7     24  3.7      31  2.0
+           4   20.0    11  10.9    18  6.0     25  3.3
+           5   18.5    12  10.0    19  5.5     26  3.0
+           6   17.1    13  9.2     20  5.0     27  2.7
+
+         Note: keyboard ROM BIOS provides no way of determining the current
+         typematic rate setting.
+
+         The typematic rate is set in BIOS, and so the methods will affect the
+         typematic rate for the rest of the session, even after the program has
+         terminated.
+
+
+         Do you remember how typewriters used to click? Well, the Toolkit pro-
+         vides a way of emitting an electronic click every time a key is
+         pressed. The following method can be used to control keyboard clicking:
+
+         SetClick(On:boolean);
+
+         Pass TRUE to activate clicking, or FALSE to switch it off. By default,
+         clicking is off.
+
+
+6-12                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         The demo program DEMBR1.PAS is designed to illustrate the BrowseOBJ
+         object which is discussed in chapter 9. There are, however, some Key
+         statements included. Execute the demo program and experiment with the
+         typematic rate.
+
+
+
+Using the Keyboard Buffer
+         The KeyOBJ uses an internal buffer for storing keystrokes. The sole
+         purpose of this buffer is to allow you to force characters into the
+         buffer using the methods StuffBuffer and StuffBufferStr. GetInput (and
+         therefore GetKey/GetChar) also checks the characters in the buffer
+         before checking the keyboard.
+
+         By default, the size of the buffer is 30 characters, but this can be
+         easily modified by changing the StuffBufferSize constant at the top of
+         the totINPUT unit. Listed below is the syntax of the buffer related
+         methods:
+
+         StuffBuffer(W:word);
+
+         This forces a key into the keyboard buffer. The parameter passed is the
+         word value of the character, as detailed in Table 6.1.
+
+         StuffBufferStr(Str:string);
+
+         This stuffs characters (with ASCII values in the range 0 to 255) into
+         the keyboard buffer. This method is provided as a convenience to save
+         making multiple calls to StuffBuffer (one call for every character in
+         the string).
+
+         FlushBuffer;
+
+         Erases all the keys in the keyboard buffer.
+
+         KeyPressed: boolean;
+
+         Use this method in preference to Turbo Pascal's Keypressed function,
+         because it checks the internal buffer as well as the keyboard buffer.
+
+
+         The keyboard stuffing capabilities form the framework for a simple but
+         elegant macro facility. A full example, DEMIN3.PAS, illustrates this
+         concept and is discussed in the next section.
+
+
+
+Keyboard & Mouse                                                            6-13
+--------------------------------------------------------------------------------
+
+Assigning Keyboard Hooks
+
+         The KeyOBJ object allows you to assign a procedure which will be called
+         while the program is idle and waiting for the user to press a key.
+         Similarly, the object allows you to assign a procedure which will be
+         called every time a character is pressed. These two types of procedures
+         are referred to as an Idle Hook and a Pressed Hook, respectively.
+         IMPORTANT NOTE: If you write to the display from a hooked procedure,
+         you need to be aware that the active routine may have the display
+         window set. To avoid any problems, use the Screen method SetWinIgnore
+         to temporarily disable the window setting. Refer to page 5-17 for fur-
+         ther details.
+
+
+Idle Hook
+
+         An idle hook is an external procedure which will be repeatedly called
+         while the program is waiting for the user to input data. A good use for
+         an idle hook is to display a ticking clock that is always updated, or
+         to show the status of the "shift" and "lock" keys.
+         All you have to do is create a procedure following some specific rules,
+         and then call the method Key.AssignIdleHook to instruct the Key object
+         to call your procedure.
+
+         For a procedure to be eligible as an idle hook it must adhere to the
+         following three rules:
+         Rule 1     The procedure must be declared as a FAR procedure. This can
+                    be achieved by preceding the procedure with a {$F+} compiler
+                    directive, and following the procedure with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the procedure statement.
+
+         Rule 2     The procedure must be declared with no (nada/zero/none)
+                    passed parameters.
+         Rule 3     The procedure must be at the root level, i.e. the procedure
+                    cannot be nested within another procedure.
+
+         The following procedure declaration follows these rules:
+                  {$F+}
+                  procedure MyIdleHook;
+                  .....{procedure statements}
+                  end;
+                  {$F-}
+
+
+         The following method AssignIdleHook is then called to instruct the
+         Toolkit to call your procedure while the system is waiting for input:
+
+
+
+
+6-14                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         AssignIdleHook(PassedProc:InputIdleProc);
+
+         This method is passed the procedure name of a procedure declared using
+         the rules outlined above.
+
+
+         Your procedure will be continually called while your program is waiting
+         for user input, so make sure that the procedure is compact and effi-
+         cient. If your procedure involves too many tasks, the program will slow
+         down considerably during input. If you want to call an extended task
+         like a background print program, you must continually check the
+         Key.Keypressed function method and suspend your procedure when it
+         returns true.
+         If subsequently, you want to remove your idle hook, execute the follow-
+         ing:
+
+                  Key.AssignIdleHook(NoInputIdleHook);
+
+
+
+
+Pressed Hook
+         A pressed hook is a procedure which is called every time a key is
+         pressed or a mouse button is clicked. This is particularly useful for
+         trapping special keys like [KEYCAP] for help, or for building keyboard
+         macros.
+
+         All you have to do is create a procedure following some specific rules,
+         and then call the method Key.AssignPressedHook to instruct the Key
+         object to call your procedure each time a key is pressed.
+         For a procedure to be eligible as a pressed hook it must adhere to the
+         following three rules:
+
+         Rule 1     The procedure must be declared as a FAR procedure. This can
+                    be achieved by preceding the procedure with a {$F+} compiler
+                    directive, and following the procedure with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the procedure statement.
+         Rule 2     The procedure must be declared with one passed parameter,
+                    and this parameter must be a variable parameter of type
+                    word, e.g. (var W:word);.
+
+         Rule 3     The procedure must be at the root level, i.e. the procedure
+                    cannot be nested within another procedure.
+         The following procedure declaration follows these rules:
+
+
+Keyboard & Mouse                                                            6-15
+--------------------------------------------------------------------------------
+
+                  {$F+}
+                  procedure MyPressedHook(var K:word);
+                  .....{procedure statements}
+                  end;
+                  {$F-}
+
+
+         The following method AssignPressedHook is then called to instruct the
+         Toolkit to call your procedure when the system receives input:
+
+         AssignPressedHook(PassedProc:InputPressedProc);
+
+         This method is passed the procedure name of a procedure declared using
+         the rules outlined above.
+
+
+         The parameter passed to your procedure is the value of the key (or
+         mouse button) just pressed, as detailed in Table 6.1. Test the value of
+         the parameter, and decide what action to take. As with the idle hook,
+         keep the hooked procedure small and efficient to avoid program execu-
+         tion delays.
+         When your procedure terminates, the character is then processed in the
+         normal manner by your program. If you want the character to be ignored,
+         set the passed parameter value to 0. You can also use this facility to
+         swap the meaning of keys. For example, the following code fragment
+         intercepts the double-quote and replaces it with a single-quote.
+
+                  {$F+}
+                  procedure DoubleGrabber(var Keycode: word);
+                  begin
+                     if KeyCode = 34 then
+                        KeyCode := 39;
+                  end;
+                  {$F-}
+
+                  begin
+                     .....
+                     AssignedPressedHook(DoubleGrabber);
+                     .....
+                  end.
+
+         If you subsequently want to disable the pressed hook, use the following
+         statement:
+
+                  Key.AssignPressedHook(NoInputPressedHook);
+
+
+
+6-16                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Hook Example
+
+         The following demo program, DEMIN3.PAS, illustrates how to use the idle
+         and pressed hooks, and many other KeyOBJ features:
+         Program DemoInputThree;
+         {DEMIN3}
+
+         Uses CRT,
+              totINPUT, totFAST, totMISC;
+         {$F+}
+         procedure ClockHook;
+         {}
+         begin
+            with Screen do
+            with Key do
+            begin
+               SetWinIgnore(true);
+               if GetCaps then
+                  WritePlain(40,24,'CAPS')
+               else
+                  WritePlain(40,24,'    ');
+               if GetNum then
+                  WritePlain(45,24,'NUM')
+               else
+                  WritePlain(45,24,'   ');
+               if GetScroll then
+                  WritePlain(50,24,'SCROLL')
+               else
+                  WritePlain(50,24,'      ');
+               if KeyPressed then
+               begin
+                  SetWinIgnore(false);
+                  exit;
+               end;
+               if AltPressed then
+                  WritePlain(60,24,'Alt')
+               else
+                  WritePlain(60,24,'   ');
+               if CtrlPressed then
+                  WritePlain(65,24,'Ctrl')
+               else
+                  WritePlain(65,24,'    ');
+               if LeftShiftPressed then
+                  WritePlain(70,24,'L-^X')
+               else
+                  WritePlain(70,24,'   ');
+               if RightShiftPressed then
+                  WritePlain(75,24,'R-^X')
+
+
+Keyboard & Mouse                                                            6-17
+--------------------------------------------------------------------------------
+
+               else
+                  WritePlain(75,24,'   ');
+               if KeyPressed then
+               begin
+                  SetWinIgnore(false);
+                  exit;
+               end;
+               WritePlain(1,24,CurrentTime);
+               SetWinIgnore(false);
+            end;
+         end; {ClockHook}
+         {$F-}
+
+         {$F+}
+         procedure MacroHook(var W:word);
+         {}
+         begin
+            case W of
+               286: begin
+                       Key.StuffBufferStr(' Apple '); {Alt-A}
+                       W := 0;
+                    end;
+               304: begin
+                       Key.StuffbufferStr(' Bravo '); {Alt-B}
+                       W := 0;
+                    end;
+               301: begin
+                       Key.StuffBuffer(27);           {Alt-X}
+                       W := 0;
+                    end;
+               315: begin
+                       Key.StuffbufferStr(' No help! '); {F1}
+                       W := 0;
+                    end;
+            end; {case}
+         end; {MacroHook}
+         {$F-}
+         begin
+            with Screen do
+            begin
+               Clear(31,' ');
+               PartClear(1,23,80,25,94,' ');
+               WritePlain(5,1,'Press any alpha characters,
+                               or Alt-A,B for macros.
+                               Esc or Alt-X to quit');
+               GotoXY(1,3);
+               with Key do
+               begin
+
+
+6-18                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                  SetCaps(true);
+                  SetNum(true);
+                  SetScroll(true);
+                  AssignIdleHook(ClockHook);
+                  AssignPressedHook(MacroHook);
+                  Repeat
+                      GetInput;
+                      Write(LastChar);
+                  Until LastKey = 27;
+                  SetCaps(false);
+                  SetNum(false);
+                  SetScroll(false);
+               end;
+            end;
+         end.
+
+
+
+Using the Mouse
+         The Toolkit provides full mouse support, and any mouse activity is
+         reported by the KeyOBJ object. Normally, you will not need to access
+         the mouse directly, but in case you need to, the totINPUT unit includes
+         the global instance MOUSE of type MouseOBJ. This instance can be used
+         to control the mouse cursor and check the status of the mouse buttons.
+
+         All the Toolkit mouse support is for text mode only - the Toolkit does
+         not support the mouse in graphics mode.
+         The following methods can be used to control the mouse cursor and check
+         the mouse status:
+
+
+         Installed: boolean;
+         Returns true if a mouse and mouse driver are installed.
+
+
+         Visible: boolean;
+         Returns true if the mouse cursor is visible on the display.
+
+
+         Hide;
+         Hides the mouse cursor.
+
+
+         Show;
+         Displays the mouse cursor.
+
+
+         Move(X,Y:integer);
+
+
+
+Keyboard & Mouse                                                            6-19
+--------------------------------------------------------------------------------
+
+         Moves the mouse cursor to the coordinates (X,Y). Note this command
+         ignores the current window setting.
+
+
+         Confine(X1,Y1,X2,Y2:byte);
+         Restricts the mouse so that it can only move within the coordinates
+         (X1,Y1) to (X2,Y2).
+
+
+         Location(var X,Y:byte);
+         Updates the variables X and Y with the current location coordinates of
+         the mouse.
+
+
+         Status(var L,C,R:boolean; var X,Y);
+         Updates the L,C,R boolean variables to true if any of the Left, Center,
+         or Right mouse buttons are depressed, and updates the variables X and Y
+         with the current mouse location.
+
+
+         Pressed(Button:integer; var X,Y:byte): byte;
+         Returns the number of times the specified button has been pressed since
+         the function was last called. Button values of 0,1 and 2 represent the
+         Left, Right and Center buttons respectively. The variables X and Y are
+         updated with the coordinates of the mouse the last time the button was
+         pressed.
+
+
+         Released(Button:integer; var X,Y:byte):byte;
+         Returns the number of times the specified button has been released
+         since the function was last called. Button values of 0,1 and 2 repre-
+         sent the Left, Right and Center buttons respectively. The variables X
+         and Y are updated with the coordinates of the mouse the last time the
+         button was released.
+
+
+         GetButtons: byte;
+         Returns the number of buttons installed on the mouse.
+
+
+         SetMouseCursorStyle(OrdChar,Attr:byte);
+         Sets the mouse cursor to the character represented by the ASCII value
+         OrdChar. The second parameter controls the display attribute of the
+         mouse cursor. If a zero is specified, the Toolkit uses the standard
+         mouse device driver technique, which changes color based on the under-
+         lying screen attribute to ensure maximum contrast. If a non-zero
+         attribute value is specified, the mouse cursor will be displayed in the
+         specified attribute regardless of the screen display attributes.
+
+
+6-20                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         SetLeft(On:boolean);
+
+         The de facto standard in the industry is for the left button to be the
+         "do it" or "enter" button, and this is the Toolkit default. Use the
+         method SetLeft to control whether the left button or the right button
+         is used as the action button. Pass a TRUE parameter to use the left, or
+         a FALSE parameter to use the right.
+
+         Reset;
+
+         This method calls the mouse reset interrupt. The mouse is set back to
+         the center of the display, the cursor style is set back to the default,
+         and the mouse cursor is hidden.
+
+
+         Listed below is the mouse demo program DEMIN4.PAS, followed by figure
+         6.1 which illustrates the output from the program.
+         Program DemoInputFour;
+         {DEMIN4}
+
+         Uses CRT,
+              totINPUT, totFAST, totSTR;
+         Var
+           Ch : char;
+           L,C,R,OldL,OldC,OldR: boolean;
+           X,Y,OldX,OldY: byte;
+
+         begin
+            Clrscr;
+            with Mouse do
+            begin
+               if not Installed then
+               begin
+                  Writeln('This demo will only function
+                           on systems equipped with a mouse');
+               end
+               else
+               begin
+                  WriteLn('You have a ',GetButtons,' button mouse!');
+                  Writeln('Press: C to confine the mouse');
+                  Writeln('       U to unconfine the mouse');
+                  Writeln('       L to change the mouse cursor');
+                  Writeln('       R to reset mouse');
+                  Writeln('       H to hide the mouse');
+                  Writeln('       S to show the mouse');
+                  Writeln('       any mouse button');
+                  Writeln('       Esc to quit');
+                  Screen.FillBox(15,10,65,20,30,1);
+                  Show;
+
+Keyboard & Mouse                                                            6-21
+--------------------------------------------------------------------------------
+
+                  repeat
+                     with Screen do
+                     repeat
+                        Status(L,C,R,X,Y);
+                        if OldL <> L then
+                           if L then
+                              WriteAT(20,11,30,'Left Button')
+                           else
+                              WriteAT(20,11,30,'           ');
+                        if OldR <> R then
+                           if R then
+                              WriteAT(20,12,30,'Right Button')
+                           else
+                              WriteAT(20,12,30,'            ');
+                        if OldC <> C then
+                           if C then
+                              WriteAT(20,13,30,'Middle Button')
+                           else
+                              WriteAT(20,13,30,'             ');
+                        if OldX <> X then
+                           WriteAT(20,15,30,inttostr(X)+' ');
+                        if OldY <> Y then
+                            WriteAT(20,16,30,inttostr(Y)+' ');
+                        OldL := L;
+                        OldR := R;
+                        OldC := C;
+                        OldX := X;
+                        OldY := Y;
+                     until Key.KeyPressed;
+                     Key.GetInput;
+                     case upcase(Key.LastChar) of
+                        'C': Confine(15,10,65,20);
+                        'U': Confine(1,1,80,25);
+                        'L': SetMouseCursorStyle(random(200)+56,0);
+                        'H': Hide;
+                        'S': Show;
+                        'R': begin
+                                Hide;
+                                Reset;
+                                Show;
+                             end;
+                     end; {case}
+                  until Key.LastKey = 27;
+                  Hide;
+               end;
+               GotoXY(1,23);
+            end;
+         end.
+
+
+
+6-22                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Figure 6.1                                                              [SCREEN]
+Using the
+MOUSE Object
+

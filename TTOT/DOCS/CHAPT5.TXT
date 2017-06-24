@@ -1,0 +1,1188 @@
+                                                                         Writing
+                                                                          to the
+                                                                          Screen
+
+
+
+         "Some of the newer computer-related equipment is of considerable
+         help... Among the most useful tools is the cathode-ray-tube console, a
+         computer-connected instrument resembling a television set, which can
+         display on its screen textual information from the computer's memory in
+         easily readable form."
+
+                                          The American Heritage Dictionary, 1981
+
+         Most programs need to write output to the display, and usually this
+         needs to be done very quickly! The totFAST unit includes a variety of
+         objects for writing to the screen.
+
+         The main object ScreenOBJ is capable of writing to the physical screen
+         as well as virtual screens. A virtual screen is a screen that is not
+         visible but provides all the facilities of the physical screen. A vir-
+         tual screen can be used to keep a snapshot copy of the physical screen
+         so that it may be restored at some later date. Virtual screens can also
+         be used to prepare full screen displays "off line", which, when
+         required, can be pushed onto the visible screen using a variety of
+         effects.
+         The ScreenOBJ object provides methods for writing to the screen using
+         varied justification, as well as methods to draw lines and boxes, read
+         information from the screen, move blocks of text around the screen, and
+         control cursor location and appearance.
+
+         The totFAST unit also includes objects for controlling the appearance
+         of scroll bars and window shadows. Note: remember that the display
+         colors are always specified as the composite foreground and background
+         attribute (refer to page 3.11 for more information).
+
+
+The Writing Engine
+         Before plunging into the totFAST unit, you ought to be aware of an
+         important Toolkit feature.
+
+         At the heart of the ScreenOBJ object is another object called WriteOBJ
+         (yes, an object within an object). This object is the screen writing
+         engine, and performs all of the primary screen manipulation tasks.
+         There are methods for writing text, controlling the cursor, and for
+         making direct video memory moves.
+         You should never need to access the WriteOBJ methods; when you make
+         calls to the ScreenOBJ methods, the Toolkit makes calls to the WriteOBJ
+         engine. Ordinarily, therefore, you don't even need to be aware that
+         WriteOBJ exists. However, if you want to use some different routines
+         for accessing the display (e.g. you want to run programs on non-
+
+5-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         standard hardware, or you want to run in graphics mode), then all you
+         have to do is create your own WriteOBJ-type object, and instruct the
+         Toolkit to use it. This "back door" gives you complete control of the
+         Toolkit's engine. This feature allows you to modify the Toolkit display
+         engine without making a single change to the Toolkit source code.
+
+         This whole subject is discussed in detail in Part 2: Extending the
+         Toolkit.
+
+
+Managing the Visible Screen
+
+         One of the few parts of the Toolkit written in Assembler is the screen
+         writing code. The reason? Speed. The totFAST unit provides very high
+         performance screen writing, especially in CGA systems, which are noto-
+         rious for "snow" and slow speeds.
+         The Toolkit can write to all PC monitor types ranging from monochrome
+         to VGA. For performance reasons, totFAST bypasses DOS screen writing
+         services (BIOS) and writes directly to the video area of memory.
+
+         The Toolkit automatically switches off the mouse cursor during screen
+         writes.
+
+
+Using SCREEN
+         totFAST includes a global object SCREEN of type ScreenOBJ. SCREEN is
+         automatically initialized when you use the totFAST unit. All direct
+         screen writing should be performed using the SCREEN instance. For exam-
+         ple, to write "Hello World" at the current cursor position, you would
+         call the method Write as follows:
+
+                  Screen.Write("Hello World");
+
+         Most of the other screen writing methods must be passed the X and Y
+         coordinates where the string is to be written. Like Turbo Pascal, the
+         Toolkit uses a one-based system where the top left of the screen is at
+         coordinates (1,1) and the bottom right of the screen is normally
+         (80,25). Some routines, like the box drawing methods, need to be passed
+         a pair of coordinates. Pass the upper-left and lower-right coordinates,
+         respectively.
+
+
+
+
+Basic Screen Writing
+
+         This section explains how to use the methods for writing strings using
+         varied justification methods, how to clear all or part of the screen,
+         how to change the display attributes and how to draw lines and boxes.
+
+
+Writing to the Screen                                                        5-3
+--------------------------------------------------------------------------------
+
+            Note: unfortunately, Turbo Pascal provides no facility for writing
+            procedures or functions which can be passed different parameter
+            types or varying numbers of parameters. For this reason, the Tool-
+            kit is incapable of providing the ultra-flexible facilities similar
+            to Turbo Pascal's own Write and WriteLn procedures.
+
+            The Toolkit therefore expects a single string to be passed to its
+            main screen writing methods. If you need to write a non-string
+            item, you can use one of the string conversion functions in the
+            totSTR unit. For example, to display the value of a real variable
+            REALVAL, use the following statement:
+
+                     SCREEN.Write(RealToStr(REALVAL));
+
+            For plain screen writing, feel free to use Turbo Pascal's proce-
+            dures Write and WriteLn, e.g. Write(REALVAL);, but remember to hide
+            the mouse first.
+
+
+
+Writing Strings
+
+         The following eleven methods simplify the tasks of writing strings to
+         the screen:
+
+         Write(Str:string);
+
+         Writes a string at the current cursor position using the default dis-
+         play attributes. The display attributes are set with Turbo Pascal's CRT
+         procedures TextColor and TextBackground. The cursor is automatically
+         moved to the position following the last character of the string.
+
+         WriteLn(Str:string);
+
+         This method is the same as Write, except that the cursor is moved to
+         the beginning of the next line. If the string is written to the last
+         line of the display (or the last line of a window - discussed later),
+         the display scrolls up one line.
+
+         WriteAT(X,Y,Attr:byte; Str:string);
+
+         Writes a string at the specified X and Y coordinates using the display
+         attribute Attr. The cursor is not moved.
+
+         WriteHi(X,Y,AttrHi,Attr:byte; Str:string);
+
+
+
+5-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         This method is used to write a string with a combination of color
+         attributes. Some parts of the string may be written in attribute
+         AttrHi, and other parts in Attr. A special character must be embedded
+         into the string to indicate when to change attributes. By default, this
+         character is '~'. Any text written up to the first occurrence of '~' is
+         written using Attr, the next set of text is written in AttrHi. If
+         another '~' is encountered, the attribute is switched back to Attr, and
+         so on.
+
+         For example, the following statement would write the string 'F1 Help'
+         so that the 'F1' is highlighted:
+                  Screen.WriteHi(1,1,yellow,white,'~F1~ Help');
+
+         Similarly, the following statement would write the text so that the
+         letter H is highlighted:
+                  Screen.WriteHi(1,1,yellow,white,'F1 ~H~elp');
+
+         The method SetHiMarker can be used to instruct the Toolkit to recognize
+         a different special character. For example, the following statement
+         would change the special character to an asterisk:
+                  Screen.SetHiMarker('*');
+                  Screen.WriteHi(1,1,yellow,white,'F1 *H*elp');
+
+
+         WriteCap(X,Y,AttrCap,Attr:byte; Str:string);
+         WriteCap is similar to WriteHi. The only difference is that there are
+         no embedded markers in the string; WriteCap automatically highlights
+         the first capital letter.
+
+
+         WriteClick(X,Y,Attr:byte; Str:string);
+         This method is the functional equivalent of WriteAT. WriteClick, how-
+         ever, causes the PC speaker to emit a "click" after each character is
+         written, and the text expands onto the screen from left to right.
+
+
+         WriteCenter(Y,Attr:byte; Str:string);
+         WriteCenter is ideal for titles and headings. The string is automati-
+         cally displayed at the center of the specified line. There is no need
+         to compute the X coordinate based on the length of the string, as this
+         is all done automatically.
+
+
+         WriteBetween(X1,X2,Y1,Attr:byte; Str:string);
+         This method writes the string centered between two X coordinates. If
+         the text is too long to fit between the coordinates, the full string is
+         written starting at X1.
+
+
+
+Writing to the Screen                                                        5-5
+--------------------------------------------------------------------------------
+
+         WriteRight(X,Y,Attr:byte; Str:string);
+
+         WriteAT writes the text left-justified at the X coordinate. This
+         method, WriteRight, writes the text right-justified at the X coordi-
+         nate. The last character of the string will be positioned at (X,Y).
+
+         WriteVert(X,Y,Attr:byte; Str:string);
+
+         This method writes the string in a vertical column starting at (X,Y),
+         i.e. the second character will be drawn at coordinates (X,Y+1), and so
+         on.
+
+         WritePlain(X,Y:byte; Str:string);
+
+         Whereas Write and Writeln use the default attributes, and all the other
+         methods are passed the display attribute(s), WritePlain uses the exis-
+         ting color attributes at the location where the string is written.
+         Because the display attributes are not modified, this is the fastest
+         screen writing routine in the Toolkit.
+         Listed below is the demo program DEMWR1.PAS and a screen shot of the
+         resultant output.
+
+
+Figure 5.1                                                              [SCREEN]
+The Screen Writing
+Methods
+
+
+         Program DemoWriteOne;
+         {DEMWR1}
+
+         USES DOS,CRT, totFAST;
+         begin
+            ClrScr;
+            with Screen do
+            begin
+               WriteCenter(1,attr(white,red),'TechnoJock''s Object Toolkit');
+               WriteCenter(2,79,'Write Demo One');
+               WriteAT(5,5,lightgreen,'Written using WriteAT');
+               WriteHi(5,7,white,cyan,'Written with the Write~Hi~ method');
+               WriteRight(80,9,yellow,'Written with WriteRight');
+               WriteCap(5,11,white,cyan,'Written with WriteCap');
+               WriteCap(5,13,white,cyan,'also written with WriteCap');
+               WriteVert(40,5,12,'Writevert');
+               WriteBetween(1,40,15,lightgreen,'Left Half');
+               WriteBetween(41,80,15,lightgreen,'Right Half');
+               WritePlain(5,17,'This is written with WritePlain');
+               GotoXY(5,19);
+
+
+
+5-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+               Write('Good Old Write! ');
+               Writeln('And ...');
+               Writeln('Good old Writeln');
+               Writeln('');
+               System.Writeln('This ','is',' Turbo''s Writeln');
+               WriteClick(33,24,white,'That''s all Folks!');
+               GotoXY(1,25);
+            end;
+         end.
+
+
+
+
+Clearing the Screen
+         In addition to Turbo's ClrScr function, the Toolkit provides the fol-
+         lowing screen clearing methods in ScreenOBJ:
+
+
+
+         Clear(Attr:byte; Ch:char);
+
+         This method erases the entire screen and fills the screen with the
+         character Ch, using the specified attribute.
+
+         PartClear(X1,Y1,X2,Y2,Attr:byte; Ch:char);
+
+         This method is similar to Clear, except that only the rectangular area
+         between (X1,Y1) and (X2,Y2) is cleared.
+
+         ClearText(X1,Y1,X2,Y2:byte);
+
+         The method ClearText erases all the characters in the specified region,
+         but does not change the display attribute.
+
+
+Changing Display Attributes
+
+         The ScreenOBJ object includes the following method, Attrib, for chang-
+         ing the display attribute of a rectangular area of the screen:
+
+         Attrib(X1,Y1,X2,Y2,Attr:byte);
+
+         Changes the display in the region between coordinates (X1,Y1) to
+         (X2,Y2) to the specified attribute. The displayed characters in this
+         region are unscathed except for their color being changed.
+
+
+
+Writing to the Screen                                                        5-7
+--------------------------------------------------------------------------------
+
+Drawing Lines and Boxes
+
+         ScreenOBJ includes a host of methods for drawing lines and boxes. The
+         boxes may optionally have left, center or right justified title posi-
+         tion at the top, bottom, or in a drop box.
+         Using the standard (upper ASCII) characters, lines may be drawn using
+         either a single or double line. Each line drawing method requires a
+         style parameter, of type byte. A style of 1 indicates a single line,
+         and 2 a double line. When drawing boxes, the following styles should be
+         used:
+
+              0     no box border
+              1     single line box
+              2     double line box
+              3     double sides, single top and bottom
+              4     single sides, double top and bottom
+              5     single left and upper, double lower and right
+              6     menu box style
+         If a style value of 7 or greater is specified, the lines are drawn
+         using the ASCII character represented by the style value. Figure 5.2
+         graphically illustrates the impact of the style parameter, and was
+         generated from the file DEMBX1.PAS.
+
+
+Drawing Boxes
+
+         The following three methods are included in the ScreenOBJ:
+
+         Box(X1,Y1,X2,Y2,attr,style:byte);
+
+         This method draws a rectangular box from (X1,Y1) to (X2,Y2) in the
+         specified attribute and style. Only the box border is drawn -- the area
+         within the box perimeter is not affected.
+
+
+Figure 5.2                                                              [SCREEN]
+Line Drawing Styles
+
+         FillBox(X1,Y1,X2,Y2,attr,style:byte);
+
+         This method is the same as Box, except that the interior of the box is
+         erased (or filled).
+
+         ShadFillBox(X1,Y1,X2,Y2,attr,style:byte);
+
+         This method is the same as FillBox, except that a shadow is also drawn.
+         The shadow characteristics are defined with the global instance Shadow-
+         TOT^ (see page 3-12).
+
+
+5-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+Boxes with Titles
+
+         Often times, you will want to add a title to the box. The method Title-
+         Box will draw a filled box with a title. The syntax of the method is as
+         follows:
+
+         TitledBox(X1,Y1,X2,Y2,Battr,Tattr,Mattr,style: byte;
+                   Title:string);
+
+         This method will draw a box from (X1,Y1) to (X2,Y2) using the style
+         specified. The box border will be drawn with attribute Battr, the inte-
+         rior of the box will be filled using the attribute Mattr, and the title
+         string will be drawn in the attribute Tattr.
+         By default, the title will be displayed in the center of the top box
+         border. However, by embedding some special characters at the beginning
+         of the string, you can control precisely where the title is positioned.
+         The title can be prefixed with two special character codes to control
+         the justification and position of the title.
+
+         The justification special characters are as follows:
+              '<'   Left Justify
+              '>'   Right Justify
+              '+'   Center (default)
+
+         The position special characters are as follows:
+              '^'   Top of box
+              '|'   In a drop box
+              '_'   Bottom of box
+
+         These special characters should be inserted at the beginning of the
+         title string. It does not matter in which order the justification and
+         position characters are specified. For example, either '<_Hello' or
+         '_<Hello' will result in the title 'Hello' being drawn left-justified
+         on the bottom box border.
+         Listed below is the demo file DEMBX2.PAS, followed by figure 5.3 show-
+         ing the resultant output.
+
+         Program DemoBoxTwo;
+         {DEMBX2}
+         USES DOS,CRT, totFAST;
+
+         begin
+            with Screen do
+            begin
+               Clear(white,chr(178));
+               TitledBox(1,1,19,10,27,31,30,1,'Default');
+               TitledBox(21,1,39,10,27,31,30,1,'_Bottom');
+               TitledBox(41,1,59,10,27,31,30,1,'|Drop Box');
+               TitledBox(61,1,80,10,27,31,30,1,'<Left');
+
+
+Writing to the Screen                                                        5-9
+--------------------------------------------------------------------------------
+
+               TitledBox(1,12,19,22,27,31,30,1,'>Right');
+               TitledBox(21,12,39,22,27,31,30,1,'_<Bottom Left');
+               TitledBox(41,12,59,22,27,31,30,1,'>|Drop Right');
+               TitledBox(61,12,80,22,27,31,30,1,'< Spaced Left ');
+               WriteCenter(24,white,'You get the idea!');
+               GotoXY(1,25);
+            end;
+         end.
+
+
+
+Figure 5.3                                                              [SCREEN]
+Box Title Positions
+
+
+
+Drawing Lines
+         ScreenOBJ includes the two following methods for drawing simple
+         straight lines:
+
+
+         HorizLine(X1,X2,Y,Attr,Style:byte);
+         This procedure draws a horizontal straight line from (X1,Y) to (X2,Y)
+         in the specified attribute. If a style of 1 or 3 is used, a single line
+         is drawn. Styles 2 and 4 result in a double line. Any other style
+         results in a line being drawn using the ASCII character represented by
+         the style number.
+
+
+         VertLine(X,Y1,Y2,Attr,Style:byte);
+         This method is similar to HorizLine, except that the line is drawn
+         vertically from (X,Y1) to (X,Y2).
+
+
+
+Intelligent Lines!
+         There are two line drawing methods designed to help you draw irregular
+         shapes from individual lines. The methods SmartHorizLine and SmartVert-
+         Line are similar to HorizLine and VertLine, but smarter! These smart
+         methods automatically add joints and corners if the line crosses or
+         butts up against another line.
+
+         The syntax of the smart line drawing methods is as follows:
+
+         SmartHorizLine(X1,X2,Y,Attr,Style:byte);
+
+         Draws a horizontal line between (X1,Y) and (X2,Y), using line joining
+         characters as necessary.
+
+
+
+5-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         SmartVertLine(X,Y1,Y2,Attr,Style:byte);
+
+         Draws a vertical line between (X,Y1) and (X,Y2), using line joining
+         characters as necessary.
+
+
+         Listed below is the demo program DEMBX3, followed by figure 5.4 illus-
+         trating the output.
+         Program DemoBoxThree;
+         {DEMBX3}
+
+         USES DOS,CRT, totFAST;
+         begin
+            with Screen do
+            begin
+               TitledBox(1,1,80,25,27,31,30,1,' Smart Line Drawing ');
+               FillBox(30,7,50,18,27,2);
+               SmartVertLine(10,1,25,27,2);
+               SmartVertLine(70,1,25,27,1);
+               SmartVertLine(40,7,18,27,2);
+               SmartHorizLine(1,80,10,27,1);
+               SmartHorizLine(1,80,20,27,2);
+               SmartHorizLine(30,50,13,27,1);
+               GotoXY(1,25);
+            end;
+         end.
+
+
+
+Figure 5.4                                                              [SCREEN]
+Smart Line Drawing
+
+
+
+Reading the Screen
+         ScreenOBJ includes the following methods to help you read characters
+         and attributes directly from the screen:
+
+
+         ReadChar(X,Y:byte):char;
+         This function method returns the character read from the screen at
+         location (X,Y).
+
+
+         ReadAttr(X,Y:byte):byte;
+         This function method returns the display attribute at the screen loca-
+         tion (X,Y).
+
+
+
+Writing to the Screen                                                       5-11
+--------------------------------------------------------------------------------
+
+         ReadWord(X,Y:byte; var Attr:byte; var Ch:char);
+
+         This method is a combination of the ReadChar and ReadAttr functions. It
+         updates the passed parameters Attr and Ch with the attribute and char-
+         acter found at location (X,Y).
+
+         ReadStr(X1,X2,Y:byte):string;
+
+         The ReadStr method function reads the characters from (X1,Y) to (X2,Y)
+         and returns the characters concatenated as a string.
+
+
+Drawing Scroll Bars
+
+         The totFAST unit includes a global instance pointer ScrollTOT^, which
+         defines the cosmetic appearance of all scroll bars used by the Toolkit.
+         Refer to page 3-14 for further information on how to change the Scroll-
+         TOT^ settings.
+         The totWIN unit includes window objects which draw horizontal and ver-
+         tical scroll bars. However, the following two ScreenOBJ methods are
+         available if you need to draw independent scroll bars. In both methods,
+         two values must be passed which control the position of the elevator on
+         the slide bar.
+
+
+         WriteHScrollBar(X1,X2,Y,Attr:byte; Current,Max:longint);
+         This method draws a horizontal scroll bar from (X1,Y) to (X2,Y) in the
+         specified attribute. The location of the elevator is controlled by the
+         percentage Current is of Max.
+
+
+         WriteVScrollBar(X,Y1,Y2,Attr:byte; Current,Max:longint);
+         This method draws a vertical scroll bar from (X,Y1) to (X,Y2) in the
+         specified attribute. The location of the elevator is controlled by the
+         percentage Current is of Max.
+
+
+         Listed below is the demo program DEMSC1.PAS which generates the output
+         shown in figure 5.5.
+
+         Program DemoScrollOne;
+         {DEMSC1}
+         USES DOS,CRT, totFAST;
+
+         begin
+            Clrscr;
+            with Screen do
+            begin
+               WriteHScrollBar(1,80,1,31,1,1000);
+
+5-12                                                                User's Guide
+--------------------------------------------------------------------------------
+
+               WriteHScrollBar(1,80,3,31,950,1000);
+               WriteHScrollBar(1,39,5,31,500,1000);
+               WriteHScrollBar(41,80,5,31,25,100);
+               WriteVScrollBar(1,7,23,31,1,50);
+               WriteVScrollBar(3,7,23,31,50,50);
+               WriteVScrollBar(5,7,23,31,2,4);
+               ScrollTOT^.SetScrollChars(chr(30),chr(31),chr(17),
+                                         chr(16),chr(4),chr(219));
+               WriteHScrollBar(10,70,11,27,5,10);
+               WriteVScrollBar(50,13,23,27,8,10);
+               GotoXY(1,24);
+            end;
+         end.
+
+
+Figure 5.5                                                              [SCREEN]
+Scroll Bars
+
+
+
+Moving Screen Blocks
+         ScreenOBJ includes the following three methods to help you manage rect-
+         angular areas of the screen:
+
+
+         Scroll(Way:tDirection; X1,Y1,X2,Y2:byte);
+         The totFAST unit includes the declaration of an enumerated type tDirec-
+         tion, which has the members Up, Down, Left, Right, Vert, Horiz. The
+         Scroll method can be used to scroll a rectangular portion of the screen
+         in any of the first four directions, e.g. Up, Down, Left, or Right. The
+         area between the coordinates (X1,Y1) and (X2,Y2) is scrolled in the
+         direction specified. One line or column of the display area is removed
+         and the opposite line or column is replaced with blanks. For example,
+         if the text is scrolled Up, all the text is moved up one line; the
+         first line of the area is replaced by the second, and the gap vacated
+         by the last line is left blank.
+
+
+         CopyScreenBlock(X1,Y1,X2,Y2,X,Y:byte);
+         This method takes a rectangular portion of the screen bounded by the
+         coordinates (X1,Y1) to (X2,Y2) and copies both the characters and the
+         attributes to another location on the screen. The top left coordinates
+         of the newly copied block are located at coordinates (X,Y).
+
+
+         MoveScreenBlock(X1,Y1,X2,Y2,X,Y:byte);
+
+
+
+Writing to the Screen                                                       5-13
+--------------------------------------------------------------------------------
+
+         This method is similar to CopyScreenBlock, except that the text is
+         moved, i.e. it is removed from the original location and repositioned
+         so the new top left coordinate is (X,Y).
+
+Controlling the Cursor
+         The ScreenOBJ object includes a variety of methods for determining the
+         cursor location and style, as well as routines to re-position and re-
+         size it. Listed below are the public methods related to cursor control.
+
+
+         GotoXY(X,Y:byte);
+         This method relocates the cursor to the position (X,Y).
+
+
+         WhereX:byte;
+         This function method returns the X coordinate of the current cursor
+         location.
+
+
+         WhereY: byte;
+         This function method returns the Y coordinate of the current cursor
+         location.
+
+
+         CursOff;
+         This method makes the cursor invisible.
+
+
+         CursOn;
+         This method makes the cursor visible and sets it to the DOS default
+         shape, i.e. a blinking line at the bottom of the character.
+
+
+         CursHalf;
+         This method makes the cursor a block filling the lower half of the
+         character field.
+
+
+         CursFull;
+         This method makes the cursor a full block filling the entire character
+         field.
+
+
+         CursReset;
+         CursReset moves the cursor to the top left of the display and sets it
+         to the DOS default shape.
+
+5-14                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         CharHeight:integer;
+
+         In text mode, an individual character is comprised of a number of scan
+         lines. Usually, the cursor is located on one or two scan lines near the
+         bottom of the character. Different display systems use varying numbers
+         of scan lines. For example, a monochrome display usually has fourteen
+         scan lines, as does an EGA system, but a CGA has only eight. This
+         method, CharHeight, is a function which returns the actual number of
+         scan lines per character. You will need to use this function if you
+         want to manually set the cursor shape using CursSize (discussed next).
+
+         CursSize(T,B:byte);
+
+         This method sets the cursor to the specified top and bottom scan lines.
+         The top scan line (e.g. the top bar of the letter "T") is scan line
+         zero. As an example, to set the cursor on an EGA system to a half block
+         filling the upper half of the character, call CursSize(0,7).
+
+         CursTop:byte;
+
+         This function method returns the scan line of the uppermost part of the
+         cursor.
+
+         CursBot: byte;
+
+         This function returns the scan line of the lowermost part of the cur-
+         sor.
+
+         The following program, DEMCU1.PAS, illustrates the main cursor control-
+         ling methods. Execute the program to see how the cursor shape changes.
+
+         program DemoCursorOne;
+         uses DOS,CRT,
+              totSYS, totFAST;
+
+         var
+           Ch : char;
+           Temp: byte;
+         procedure Msg;
+         {}
+         begin
+            writeln('Character height: ',Screen.CharHeight);
+            writeln('Press N-on O-off F-full H-half C-condensed S-25 lines Esc-
+         quit');
+         end; {Msg}
+
+
+
+Writing to the Screen                                                       5-15
+--------------------------------------------------------------------------------
+
+         begin
+            Msg;
+            repeat
+               Ch := ReadKey;
+               case upcase(Ch) of
+               'N': Screen.CursOn;
+               'O': Screen.CursOff;
+               'F': Screen.CursFull;
+               'H': Screen.CursHalf;
+               'C': begin
+                        Temp := Monitor^.SetCondensed;
+                        Msg;
+                    end;
+               'S': begin
+                        Monitor^.Set25;
+                        Clrscr;
+                        Msg;
+                    end;
+               end; {case}
+            until Ch = #027;
+            Screen.CursOn;
+            Monitor^.Set25;
+         end.
+
+
+
+
+The Impact of Windows
+         You may be familiar with the Turbo Pascal CRT Window command which
+         confines writing to a specific area of the screen. The Toolkit also
+         supports this basic windowing feature.
+
+         Use the method SetWindow to confine screen writing to one area of the
+         screen. The method ResetWindow can be used to "remove" the window set-
+         tings, i.e. set the window back to the entire display. The method Win-
+         dowOFF can be used to temporarily disable the window confinement.
+         WindowON is used to reactivate the window settings. Alternatively, the
+         method SetWinIgnore will instruct all screen writing operations to
+         ignore the current window settings. The full syntax of the window
+         related methods are as follows:
+
+         SetWindow(X1,Y1,X2,Y2: byte);
+
+         Restricts all screen writing to the area within the region (X1,Y1) and
+         (X2,Y2). The top left corner of the window area is set to coordinates
+         (1,1). Any attempt to write data outside of the window area is ignored,
+         and strings which are too long to fit are truncated, i.e. only the
+         element of the string which will fit within the window is written.
+
+
+
+5-16                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         ResetWindow;
+
+         Removes the window setting.
+
+         WindowActive: boolean;
+
+         Returns true if the screen writing is currently restricted within a
+         window.
+
+         WindowOff: boolean;
+
+         Temporarily disables the window settings, and returns true if a window
+         was active. This is useful if you want most of the screen writes to be
+         confined within a window, but you also want to briefly write some text
+         outside the window boundary. For example, the following code fragment
+         could be used to write the time at the lower right of the screen:
+                  var
+                    WinWasActive: boolean;
+                  ....
+                  WinWasActive := WindowOff;
+                  WriteRight(1,25,white,CurrentTime);
+                  if WinWasActive then
+                     WindowOn;
+                  ...
+
+
+
+         WindowOn;
+         Reactivates the window settings. This method should only be used after
+         a call to WindowOff.
+
+
+         WindowCoords(var Coords: tByteCoords);
+         The totFAST unit includes a type, tByteCoords, which is declared as
+         follows:
+
+                  tByteCoords = record
+                     X1,Y1,X2,Y2: byte;
+                  end;
+         This method will update the passed parameter Coords with the current
+         window settings.
+
+
+         SetWinIgnore(On:boolean);
+         When passed a True parameter, this method instructs the Toolkit screen
+         writing methods to ignore the current window settings, and assume that
+         the coordinates (1,1) refer to the top left of the display. Passing a
+         False parameter instructs the Toolkit to adjust all screen writes rela-
+
+
+Writing to the Screen                                                       5-17
+--------------------------------------------------------------------------------
+
+         tive to the current method. This method is designed for use in hooked
+         procedures when the procedure wants to ignore any window settings which
+         may have been effective when it was invoked.
+
+
+         Listed below is the demo program DEMFS1.PAS, which illustrates the
+         impact of the window commands on screen writing. Figure 5.6 shows the
+         screen display generated by the program.
+         Program DemoFastOne;
+         {DEMFS1}
+
+         USES DOS,CRT, totFAST;
+         var
+           WasOn: boolean;
+         begin
+            Clrscr;
+            with Screen do
+            begin
+               WriteAt(1,1,white,'* 1,1 (original)');
+               WriteAt(5,5,white,'* 5,5 (original)');
+               SetWindow(20,8,60,15);
+               Clear(31,' ');
+               WriteAt(1,1,lightcyan,'* 1,1 (in window)');
+               WriteAt(5,5,lightcyan,'* 5,5 (in window)');
+               WriteAt(20,7,Lightcyan,'This text is too long to fit!');
+               GotoXY(1,2);
+               TextColor(Lightcyan);
+               System.Writeln('Written with Turbo''s Writeln');
+               WasOn := WindowOff;   {disable the window}
+               WriteRight(80,23,white,'Written with WindowOff');
+               WindowOn;
+               WriteAt(1,8,lightcyan,'Window enabled again');
+               ResetWindow;
+               GotoXY(1,24);
+            end;
+         end.
+
+
+
+Figure 5.6                                                              [SCREEN]
+ScreenOBJ Window
+Commands
+
+
+         Please note that the totWIN unit (discussed in chapter 7) provides
+         formatted window support. The window features described in this section
+
+
+
+5-18                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         simply influence the coordinates of where text is written. The rich
+         windows implemented in totWIN save the underlying screen and restore
+         the original contents when the window is removed.
+
+
+
+Using Virtual Screens
+         So far in this chapter, only the physical or visible screen has been
+         discussed. Here we see that the totFAST unit also supports virtual
+         screens.
+
+         A virtual screen can be considered as an invisible screen - you may
+         write to the virtual screen, but the changes are not visible on the
+         display. A virtual screen can be copied (i.e. displayed) to the visible
+         screen at any time.
+         Virtual screens allow a programmer to build a number of "out of sight"
+         screens which can be popped into view at a moment's notice. A good
+         application is the preparation of help screens.
+
+         After a virtual screen instance has been initialized with INIT, it must
+         be created. A virtual screen can be created by one of two methods. A
+         copy can be taken of the physical screen  using the method SAVE, or a
+         new blank screen can be created with the method CREATE.
+         Once you have created a virtual screen, you can write to it using the
+         ScreenOBJ methods as described previously in this chapter. You can also
+         set the screen windows and change the cursor location and shape. In
+         fact, you can use all the ScreenOBJ methods described in the previous
+         section - instead of affecting the visible screen, the virtual screen
+         is updated. For example, the following code fragment creates a virtual
+         screen, MyScreen, and writes to it:
+
+                  with MyScreen do
+                  begin
+                     Init;
+                     Create(80,25,' ');
+                     WritePlain(1,1,'This is written to the virtual');
+                     WritePlain(1,2,'screen, not the visible screen.');
+                     GotoXY(20,20);
+                     ....
+                  end;
+
+
+Saving the Visible Screen
+         To create a screen which is a copy of the physical screen, initialize
+         the instance and then call the Save method. For example:
+
+
+
+Writing to the Screen                                                       5-19
+--------------------------------------------------------------------------------
+
+                  var Screen1: ScreenOBJ
+
+                  begin
+                     Screen1.Init;
+                     Screen1.Save;
+                     ....
+                  end.
+
+         All the text being displayed on the screen, together with the display
+         attributes, is copied to the virtual screen. The virtual screen cursor
+         is initially positioned in the same location as the real cursor.
+
+
+Creating New Virtual Screens
+
+         The Create method is used to create a new virtual screen without copy-
+         ing the physical screen. The syntax of the Create method is as follows:
+
+         Create(Width,Depth,Attr:byte);
+
+         This method creates a virtual screen. The screen will be created Width
+         characters wide and Depth lines deep. Any values in the range 1 to 255
+         are acceptable. The screen is cleared or blanked, and the display
+         attribute is set to Attr.
+         The following code fragment shows how to create a virtual screen:
+
+                  var Screen1: ScreenOBJ
+
+                  begin
+                     Screen1.Init;
+                     Screen1.Create(100,150,white);
+                     ....
+                  end.
+         Although normally you wouldn't need to call them, there are four func-
+         tion methods which return information about the virtual screen. The
+         syntax of these methods is as follows:
+
+
+         ScreenPtr:pointer;
+         Returns a pointer to the heap location of the virtual screen.
+
+
+         Width:byte;
+         Returns the width of the virtual screen in characters.
+
+
+         Depth:byte;
+         Returns how many lines deep the virtual screen is.
+
+
+5-20                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Exists: boolean;
+
+         Only returns true when the virtual screen has been created.
+
+
+Displaying a Virtual Screen
+
+         The ScreenOBJ provides a number of methods for displaying all or part
+         of a virtual screen, i.e. transferring the information from the virtual
+         screen to the physical screen. A virtual screen can be instantly dis-
+         played, or slid onto the display with interesting visual effects. Note
+         that the coordinates specified in these methods are global coordinates,
+         i.e. the methods ignore the current window settings.
+         The syntax of the screen displaying methods is as follows:
+
+
+         Display;
+         This method instantly transfers the image stored on the virtual screen
+         to the physical screen. If the virtual screen is smaller than the phys-
+         ical screen, the virtual screen will be drawn at the top left of the
+         display. If the virtual screen is larger than the physical screen, the
+         upper-left portion of the virtual screen will be displayed.
+
+
+         SlideDisplay(Way:tDirection);
+         This method operates the same as Display, except the virtual screen
+         sl i  d   e    s ... onto the screen -- just for the fun of it! The
+         method is passed a single enumerated type parameter which may have one
+         of the following values:
+
+         Up         slides up onto the screen from the bottom
+         Down       slides down onto the screen from the top
+
+         Left       slides left onto the screen from the right
+         Right      slides right onto the screen from the left
+
+         Vert       slides inwards from the left and the right simultaneously
+                    (like some drapes closing)
+         Horiz      slides inwards from the top and the bottom simultaneously
+                    (like teeth closing)
+
+
+         PartDisplay(X1,Y1,X2,Y2,X,Y:byte);
+         This method restores a rectangular portion of the virtual screen from
+         virtual coordinates (X1,Y1) to (X2,Y2) and positions this information
+         with the upper-left corner of the image position at physical coordi-
+         nates (X,Y).
+
+
+Writing to the Screen                                                       5-21
+--------------------------------------------------------------------------------
+
+         PartSlideDisplay(X1,Y1,X2,Y2:byte; Way:tDirection);
+
+         This method is similar to PartDisplay, except that the image slides
+         onto the display, and the image cannot be relocated, i.e. the image
+         will be placed at coordinates (X1,Y1) on the physical screen.
+
+
+Disposing of a Virtual Screen
+
+         As with all Toolkit objects, the DONE method must be called when the
+         virtual screen instance is no longer required. When Done is called, the
+         memory reserved for the virtual screen is automatically released.
+         Always call Done!
+
+
+A Virtual Screen Example
+
+         Listed below is an abbreviation of the demo program DEMVI1.PAS, which
+         illustrates how to manage virtual screens and create interesting visual
+         effects. We can't show the effects in a manual, so just run the pro-
+         gram!
+         Program DemoVirtualOne;
+
+         Uses CRT, totFast;
+         Var
+           Screen1,
+           Screen2,
+           Screen3 : ScreenObj;   {screen objects}
+           HeadCol,
+           MsgCol,
+           NormCol : byte;
+
+         procedure Pause;
+         {}
+         var Ch : char;
+         begin
+            Ch := ReadKey;
+         end; {of proc pause}
+         procedure Initialize;
+         {}
+         begin
+            Screen1.Init;
+            Screen2.Init;
+            Screen3.Init;
+            HeadCol := Attr(yellow,blue);
+            MsgCol  := Attr(yellow,red);
+            NormCol := Attr(white,blue);
+         end; {proc Initialize}
+
+
+
+
+5-22                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         procedure IntroScreen;
+         {}
+         const
+             Tab = 8;
+         begin
+            HeadCol := Attr(yellow,blue);
+            MsgCol  := Attr(yellow,red);
+            NormCol := Attr(white,blue);
+            with Screen do {manipulate the visible screen}
+            begin
+               Clear(NormCol,' ');
+               WriteCenter(1,HeadCol,'TechnoJock''s Object Toolkit');
+               WritePlain(Tab,18,'the display.');
+               WriteRight(80,25,MsgCol,'Press any key to continue ....');
+            end;
+         end; {of proc IntroScreen}
+
+         procedure BuildScreen2;
+         {}
+         const
+            Tab = 8; Tab1 = 10;
+         begin
+            HeadCol := Attr(yellow,red);
+            MsgCol  := Attr(yellow,red);
+            NormCol := Attr(white,red);
+            with Screen2 do
+            begin
+               Create(80,25,NormCol);
+               WriteCenter(1,HeadCol,'Screen Writing');
+               WritePlain(Tab,6,'methods, including the following:');
+               GotoXY(57,23);
+            end;
+         end; {of proc BuildScreen2}
+         procedure BuildScreen3;
+         {}
+         const
+            Tab = 8;
+         begin
+            HeadCol := Attr(yellow,blue);
+            MsgCol  := Attr(yellow,red);
+            NormCol := Attr(white,blue);
+            with Screen3 do
+            begin
+               Create(80,25,NormCol);
+               TitledBox(1,1,80,25,NormCol,HeadCol,NormCol,4,'|Box drawing');
+               CursOff;
+            end;
+         end; {of proc BuildScreen3}
+
+
+
+Writing to the Screen                                                       5-23
+--------------------------------------------------------------------------------
+
+         begin
+            Initialize;
+            IntroScreen;
+            BuildScreen2;
+            BuildScreen3;
+            Pause;
+            Screen1.Save;
+            Screen2.SlideDisplay(horiz);
+            Pause;
+            Screen3.SlideDisplay(vert);
+            Pause;
+            with Screen do
+            begin
+               SmartHorizLine(1,80,14,white,1);
+               SmartVertLine(35,8,19,white,2);
+               SmartVertLine(64,10,19,white,2);
+               WriteCenter(25,attr(black,white),'That''s all Folks!');
+            end;
+            Pause;
+            Screen1.Done;
+            Screen2.Done;
+            Screen3.Done;
+            ClrScr;
+            Screen.CursOn;
+         end.
+

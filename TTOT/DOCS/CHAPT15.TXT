@@ -1,0 +1,178 @@
+                                                                   Miscellaneous
+
+
+         "I got the bill for my surgery. Now I know why those doctors were
+         wearing masks."
+
+                                                                 James H. Barrie
+
+
+         The totMISC unit contains a grab-bag of miscellaneous procedures and
+         functions that don't logically fit anywhere else in the Toolkit! One
+         day they may grow up to have their own units. Some of these routines
+         are required by other parts of the Toolkit, and may be of little value
+         to you. Nonetheless, they are here if you need them. The procedures and
+         functions are organized into three categories: File, Printer and Misc.
+
+
+File Routines
+
+         The following file related functions are included in the unit:
+
+         Exist(Filename:string):boolean;
+
+         This function returns true if a file can be found. The function is
+         passed one parameter indicating the name of the file to look for. The
+         filename may include an optional drive or path, and even filemasks are
+         supported.
+
+         Copyfile(Sourcefile,Targetfile:string):byte;
+
+         This function physically copies a file like the DOS copy command. The
+         function is passed two string parameters: the first string is the name
+         of the source file, and the second is the name of the target file. If a
+         file with the same name as Target already exists, it will be overwrit-
+         ten. The function returns one of the following byte values:
+              0     successful
+              1     source and target the same
+              2     cannot open source
+              3     unable to create target
+              4     error during copy
+
+         The function uses a small 2048 byte buffer to copy the file. If you
+         want faster file copying, increase the buffer size by modifying the
+         variable declaration in the CopyFile function.
+
+         FSize(Filename:string): longint;
+
+         This function returns a longint indicating the size of a file in bytes.
+         The function is passed a single string parameter indicating the name of
+         the file. The name may optionally include a drive or path qualifier. If
+         the file is not found, a -1 is returned.
+
+15-2                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         FileDrive(Full:string): string;
+
+         This function extracts and returns the drive letter (without the colon)
+         from a filename. The function is passed one string parameter indicating
+         the name of the file. If the name does not include a drive, a null is
+         returned, i.e. ''.
+
+         FileDirectory(Full:string): string;
+
+         This function extracts the directory path (without the drive letter)
+         from a filename. The function is passed one string parameter indicating
+         the name of the file. If the name does not include a path, a null is
+         returned, i.e. ''. The trailing backslash is always removed.
+
+
+         FileName(Full:string): string;
+
+         This function extracts the file name (excluding the extension) from a
+         filename. The function is passed one string parameter indicating the
+         name of the file. If the string does not include a name, a null is
+         returned, i.e. ''.
+
+         FileExt(Full:string): string;
+
+         This function extracts the file extension (excluding the period) from a
+         filename. The function is passed one string parameter indicating the
+         name of the file. If the string does not include an extension, a null
+         is returned, i.e. ''.
+
+
+         SlashedDirectory(Dir:string): string;
+
+         This function is useful for building fully-qualified filenames. The
+         function is passed one string parameter indicating the directory. The
+         same directory is returned, with a backslash added if the string did
+         not already terminate with a backslash or colon.
+
+
+Printer Routines
+
+         The unit includes the following printer-related procedures and func-
+         tions:
+
+         PrinterStatus: byte;
+
+
+
+Miscellaneous                                                               15-3
+--------------------------------------------------------------------------------
+
+         This function is designed to indicate if a parallel printer is attached
+         and on-line. The global variable LPTport indicates which port to test.
+         Set LPTport to 0 for LPT1 (default), 1 for LPT2, etc. The function
+         returns one of the following byte values to indicate the status of the
+         printer:
+
+              0     printer ready
+              1     no paper
+              2     off line
+              3     busy
+              4     undetermined error
+
+         AlternatePrinterStatus: byte;
+
+         This function is very similar in operation to PrinterStatus but uses a
+         slightly different technique. If you have problems using PrinterStatus
+         with some wierdo printer, try this function instead.
+
+         PrinterReady: boolean;
+
+         This functions returns true if a printer is detected as being on-line
+         and ready.
+
+         ResetPrinter;
+
+         These procedure should reset any printer back to its default (boot-up)
+         settings.
+
+         PrintScreen;
+
+         This procedure emulates the user pressing the PrtScr key, and dumps the
+         visible display to the printer port.
+
+
+Misc. Routines
+
+         You know you're in trouble when you are reading the Miscellaneous sec-
+         tion in the Miscellaneous chapter!
+         Listed below are the remaining Toolkit procedures and functions:
+
+
+         Beep;
+         You guessed! This function emits a brief, but nonetheless irritating,
+         beep from the PC speaker.
+
+
+         CurrentTime: string;
+
+
+
+15-4                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         This function returns a formatted string representing the current time
+         according to the PCs internal clock. The string uses the twelve hour
+         format HH:MM:SS a.m./p.m.
+
+
+         Swap(var A,B:longint);
+         This procedure is passed two longint variable parameters. The procedure
+         swaps the contents of the two variables, i.e. A is assigned the value
+         of B, and B is assigned the value of A.
+
+
+         WithinRange(Min,Max,Test:longint):boolean;
+         This function is passed three longint parameters. The function returns
+         true if the third value is greater than or equal to the first parameter
+         and less than or equal to the second parameter.
+
+
+         Be sure to check the README file for any routines that may have been
+         added to totMISC since the manual was printed.
+

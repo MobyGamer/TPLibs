@@ -1,0 +1,1059 @@
+                                                                  Toolkit Basics
+
+
+
+         "No, what I said was 'No new taxis'"        Georgio Bush, 1990
+
+
+
+
+An Object Primer
+
+         Let's talk cars. We all know that you don't need to be a combustion
+         mechanic to drive a car (that's a veeehickle if you're from Texas), but
+         most good drivers know a few basic principles about how a car works.
+         The same philosophy is true for object oriented programming: you don't
+         need to be an OOP guru to use the Toolkit but a little understanding is
+         helpful. The modest goal of this section is to explain some of the
+         object oriented principles to help you get up and running with the
+         Toolkit as soon as possible. Over time, you will gain OOP expertise
+         without even trying! If you are already familiar with OOP, skip to the
+         next section.
+         For now, we will concentrate on those aspects of OOP you will need in
+         order to understand how to use the Toolkit. In Part 2: Extending the
+         Toolkit, the more advanced concepts of inheritance and extensibility
+         are addressed.
+
+
+         In plain Pascal, there are types like integer, real, string, etc. and
+         you declare variables to be of a specific type. You can even define new
+         types. For example, the following declaration defines a new type
+         Address:
+
+                  TYPE
+                  Address = record
+                     Name: string[20];
+                     Street: string[30];
+                     CityStZip: string[20];
+                  end;
+
+         Having defined the type Address, you can then create variables of this
+         type, e.g.
+
+                  VAR
+                  BobsHouse: Address;
+
+         In most programs, you will write procedures and functions that can
+         manipulate the data stored in these variables, e.g.
+
+                  procedure PrintLabel(Addr: address);
+                  function  Zip(Addr:address): string;
+
+
+
+3-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         But most of you know this stuff anyway. Things aren't so very different
+         with OOP. The primary difference is that, with OOP, the data and the
+         procedures and functions which manipulate the data are combined into a
+         single type, called an object. This concept of combining data and
+         procedures/functions is referred to as encapsulation. Listed below is a
+         way to create an object type called AddressOBJ:
+
+                  TYPE
+                  AddressOBJ = object
+                     Name: string[20];
+                     Street: string[30];
+                     CityStZip: string[20];
+                     {methods ...}
+                     procedure PrintLabel;
+                     function  Zip: string;
+                  end; {object}
+
+                  VAR
+                  BobsHouse: AddressOBJ;
+
+         Notice that the object type declaration is very similar to a record
+         declaration, but the keyword object is used instead of record. The
+         procedure and function declaration are included in the object declara-
+         tion, and are referred to (in OOP nomenclature) as methods. The methods
+         are not passed the address record as a parameter, because the procedure
+         and functions in an object can directly access the data in the object,
+         and so don't need to be passed the data. The "variable" BobsHouse,
+         which is of type AddressOBJ, is referred to as an instance - in other
+         words, object variables are called instances! All object type declara-
+         tions in the Toolkit end with the characters "OBJ".
+
+         The individual elements of an object (just like a record) can be
+         accessed by using the "dot" notation. For example, to print a label,
+         you would use the following statement:
+                  BobsHouse.PrintLabel
+
+
+         You can also use the "with identifier do" shortcut, e.g.
+                  with BobsHouse do
+                  begin
+                     PrintLabel
+                     .....
+                  end; {with}
+
+
+         In theory, you could also access the data elements using the dot
+         method, e.g. BobsHouse.Street := '12 Paradise Drive', but you
+         shouldn't! While it is syntactically correct and will compile, this is
+         bad practice. A basic precept of encapsulation is that you never access
+
+
+Toolkit Basics                                                               3-3
+--------------------------------------------------------------------------------
+
+         the data elements of an instance directly. You should create methods
+         within the object to access the object's data. In the above example,
+         there is no way to access the data in the object (other than breaking
+         the rules) so a data update method would need to be created. Listed
+         below is an improved type declaration of the AddressOBJ:
+
+                  TYPE
+                  AddressOBJ = object
+                     Name: string[20];
+                     Street: string[30];
+                     CityStZip: string[20];
+                     {methods ...}
+                     procedure Adddata(Nam,St,Ci,St,Zp:string);
+                     procedure PrintLabel;
+                     function  Zip: string;
+                  end; {object}
+
+         The new AddData method would be used to set the values of the Name,
+         Street and CityStZip elements. For example, the following two state-
+         ments would print the label:
+
+                  with BobsHouse do
+                  begin
+                     AddData('Bobbo','12 Paradise Drive',
+                             'Dome','TX','77186');
+                     Printlabel;
+                  end;
+
+         If you are curious, each method identified in an object must be
+         included in the body of the program or unit. For example, later in the
+         program there might be the following method definition:
+
+                  ...
+
+                  procedure AddressOBJ.Adddata(Nam,St,Ci,St,Zp:string);
+                  {}
+                  begin
+                     Name := copy(Nam,1,20);
+                     Street := copy(St,1,30);
+                     ...
+                  end; {of proc}
+
+                  ...
+
+         Now, back to the main discussion. The advantage of using methods to
+         access the object data is that the object user (that's you) does not
+         need to know or care about how the data is stored within the object.
+         The internal data structure might be modified at some stage to use
+
+
+
+3-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         pointers or to store ASCIIZ strings, etc, but the same method AddData
+         can still be called in the same way as previously. What Adddata does
+         (behind the scenes) may have changed, but your program still compiles
+         and runs without modification.
+
+         For various reasons, many objects need to be initialized before they
+         can be used. For example, some memory may need to be allocated on the
+         heap. When you have finished with such an object, the memory will need
+         to be disposed of. Just because the procedure in which you declared an
+         object instance (i.e. variable) has terminated, it does not necessarily
+         mean that the object data has been removed.
+         Although not mandatory, a de facto OOP standard is to have two special
+         methods for all objects. Namely, INIT and DONE. These special methods
+         are used to initialize an object and dispose of an object, respec-
+         tively. Throughout the Toolkit, every object has INIT and DONE methods.
+         Always call INIT before any other object methods, and always call DONE
+         when you have finished with an object. In some instances the INIT
+         method may require some parameters.
+
+         In our example, the object is useless if no data has been assigned.
+         Adopting the new convention, it might be more appropriate to rename the
+         AddData method INIT, since you will always want to assign values before
+         calling other object methods. We should also add a DONE method which
+         will provide a way of disposing of any dynamic data we might incorpo-
+         rate at a later stage. The revised object declaration would be as fol-
+         lows:
+                  TYPE
+                  AddressOBJ = object
+                     Name: string[20]
+                     Street: string[30]
+                     CityStZip: string[20]
+                     {methods ...}
+                     procedure Init(Nam,St,Ci,St,Zp:string);
+                     procedure PrintLabel;
+                     function  Zip: string;
+                     procedure Done;
+                  end; {object}
+
+
+         For now, the DONE procedure will probably be empty, i.e. it performs no
+         action. This is referred to as an abstract method. The following code
+         fragment shows how to use this revised object:
+                  with BobsHouse do
+                  begin
+                     Init('Bobbo','12 Paradise Drive','Dome','TX','77186');
+                     Printlabel;
+                     Done;
+                  end;
+
+
+
+Toolkit Basics                                                               3-5
+--------------------------------------------------------------------------------
+
+         Note: there is an even more compelling reason to have INIT and DONE
+         methods. One of the most powerful features of OOP is polymorphism,
+         which allows you to declare virtual methods (discussed in part 2). In
+         general, objects which use virtual methods must have a constructor and
+         a destructor, and these are normally called INIT and DONE.
+
+
+         To recap, the following key points should be remembered:
+
+         q     All Toolkit objects end with the characters OBJ.
+         q     Use the "dot" notation to access object methods.
+
+         q     When using the Toolkit always initialize an instance with INIT,
+               and dispose of it with DONE.
+
+
+         Having covered the OOP basics as they relate to the Toolkit, it is
+         worthwhile reviewing the message demo program that was discussed in
+         chapter 2:
+
+                 program DemoMessage1;
+                 {demms1}
+
+                 Uses DOS, CRT,
+                      totFAST, totMSG;
+                 Var  MsgWin : MessageOBJ;
+
+                 begin
+                    Screen.Clear(white,'°'); {paint the screen}
+                    with MsgWin do
+                    begin
+                       Init(1,' Message ');
+                       AddLine('');
+                       AddLine('The message unit provides a');
+                       AddLine('very easy way of displaying');
+                       AddLine('pop-up messages in a move-');
+                       AddLine('able window.');
+                       AddLine('');
+                       Show;
+                       Done;
+                    end;
+                 end.
+
+         Hopefully, the statements make more sense now!
+
+
+
+3-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         "So what?" and "Why bother?" you may ask. It is not appropriate, at
+         this stage, to explore the advantages of encapsulation. Just use the
+         Toolkit a little, and you will see what can be done with OOP! We have
+         covered everything you need to know about OOP to use the  Toolkit (and
+         then some), but as a programmer it is always good to explore "under the
+         hood". A great way to learn practical insights into OOP is to explore
+         the Toolkit source code. When you are ready to extend the Toolkit to
+         meet your specific needs, refer to Part 2. Also, read some of the OOP
+         literature in magazines and books - OOP is here to stay.
+
+         Meanwhile, be happy with the "how" for now. The "why" will become all
+         too clear in time.
+
+
+Building the Toolkit TPUs
+
+         The file TOTBUILD.PAS is an "empty" file which USES all the Toolkit
+         units. Its sole purpose is to provide an easy way of re-compiling the
+         Toolkit units.
+         If you ever need to rebuild all the TPUs, load the TOTBUILD.PAS file
+         from the C:\TURBO\TOT directory (or wherever you installed the source
+         files), and select Compile Build. If the program does not successfully
+         compile, refer to the problems section at the end of chapter 2.
+
+
+
+Compiler Directives
+         Every unit in the Toolkit has an include statement to include the file
+         TOTFLAGS.INC. This file is designed to specify all the common compiler
+         directives that you want to apply to every unit in your program.
+
+         The compiler directives added to your main program apply only to that
+         module and not to any of the units used by the program. So if you
+         wanted to ensure that a specific compiler directive is operative in
+         every unit, you would have to edit every unit source code file and add
+         the appropriate directive. (Yes, you could add them to the IDE options
+         menu, but if you work on multiple projects, you would have to keep
+         swapping the directives in and out as necessary.)
+         Whenever you develop a program using the Toolkit, you should add an
+         include directive to your main program and any other units you develop,
+         as follows:
+
+                  {$I TOTFLAGS.INC}
+
+         Any compiler directives you set in the file TOTFLAGS.INC file will then
+         affect your code and the Toolkit code.
+
+
+
+Toolkit Basics                                                               3-7
+--------------------------------------------------------------------------------
+
+         The TOTFLAGS.INC file contains a host of standard Turbo Pascal compiler
+         directives which are controlled with four special compiler directives:
+         FINAL, OVERLAY, FLOAT and FLOATEM. These four compiler directives are
+         located at the top of the file in an enabled or disabled state. For
+         example, in the disabled state the $DEFINE directive is broken up with
+         spaces, e.g.
+
+                    { $ DEFINE OVERLAY}
+
+         To activate a directive simply remove the leading spaces, e.g.
+
+                    {$DEFINE OVERLAY}
+
+         To disable the directive again just put the spaces back!
+
+         The four compiler directives have a significant impact on the final
+         program code, and are discussed in detail below.
+
+
+FINAL
+         During program development it is a good idea to switch on range check-
+         ing and stack checking, etc. These directives keep you honest and
+         reduce the likelihood of a machine "hang" or lock-up. For example, if
+         you try to assign a value of 300 to a byte, the compiler will identify
+         the problem before it goes too far. The bad news is that programs
+         compiled in the check everything state tend to be slower and larger
+         than their carefree brethren. So, once you have debugged and tested
+         your program and you are confident that the checking is no longer nec-
+         essary, you should switch off the appropriate directives.
+
+         The FINAL compiler directive is designed to simplify this task. During
+         program development, you should disable the FINAL compiler directive,
+         and then enable it when you are ready to build and distribute your
+         production program.
+         At the time of printing, the following compiler directives are
+         influenced by the FINAL directive:
+
+         FINAL enabled        {$S-} no stack checking
+                              {$R-} no range checking
+                              {SD-} no debug information
+                              {$L-} no local symbols
+         FINAL disabled       {$S+} stack checking on
+                              {$R+} range checking on
+                              {SD+} debug information on
+                              {$L+} local symbols on
+
+
+
+3-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         When FINAL is disabled, another Toolkit directive is defined: CHECK.
+         When CHECK is enabled, the Toolkit uses some additional code to check
+         parameters passed to methods. For example, in the WINOBJ method
+         SetSize, a check is made to ensure the window coordinates fit on the
+         screen. When the FINAL directive is enabled, CHECK is automatically
+         disabled to reduce program size. If a program runs fine until you set
+         the FINAL directive, check the parameters you are using in the problem
+         area of the code.
+
+         Remember that if you want to use the IDE or stand alone debugger on
+         your application, you must disable the FINAL directive.
+
+
+OVERLAY
+
+         Any of the Toolkit units can be overlaid.
+         Turbo Pascal requires that all overlaid units include a {$O+} compiler
+         directive, and that all methods, procedures and functions use the far
+         call method, i.e. they are compiled in the {$F+} state. By activating
+         the {$DEFINE OVERLAY} statement in the TOTFLAGS.INC file, all the Tool-
+         kit units will be compiled in the {$F+,O+} state.
+
+         It is important to note that Turbo Pascal imposes an important restric-
+         tion on an overlaid unit - there must be no initialization statements
+         at the end of the unit. Every Toolkit unit has an initialization
+         procedure, and this procedure name is consistently the unit name minus
+         the TOT prefix plus the characters "INIT". For example, the initializa-
+         tion procedures for the TOTFAST and TOTSYS units are FASTINIT and SYSI-
+         NIT, respectively.
+         IMPORTANT: When the OVERLAY compiler directive is activated, you must
+         call each overlay unit's INIT procedure as the first statements in your
+         main program.
+
+         Listed below is a small demo program, DEMOV1.PAS, which is an overlaid
+         version of the DEMMS1.PAS file reviewed earlier.
+              program DemoOverlay1;
+              {demov1.pas - make sure the OVERLAY compiler directive
+              is enabled in the TOTFLAGS.INC file before compiling}
+
+              {$I TOTFLAGS.INC}
+              Uses OVERLAY, DOS, CRT,
+                   totSYS, totLOOK, totINPUT, totFAST, totWIN, totIO1, totMSG;
+
+              {$O totSYS}
+              {$O TOTLOOK}
+              {$O totINPUT}
+              {$O totFAST}
+
+
+
+Toolkit Basics                                                               3-9
+--------------------------------------------------------------------------------
+
+              {$O totWIN}
+              {$O totIO1}
+              {$O totMSG}
+
+              Var
+                 MsgWin : MessageOBJ;
+              begin
+                 OvrInit('DEMOV1.OVR');{initialize the overlay}
+                 OvrInitEMS;
+                 SYSInit;          {initialize the Toolkit units}
+                 LOOKInit;
+                 INPUTInit;
+                 FASTInit;
+                 WINInit;
+                 IO1Init;
+                 MSGInit;
+                 Screen.Clear(white,'°'); {paint the screen}
+                 with MsgWin do
+                 begin
+                    Init(1,' Message ');
+                    AddLine('');
+                    AddLine('The message unit provides a');
+                    AddLine('very easy way of displaying');
+                    AddLine('pop-up messages in a move-');
+                    AddLine('able window.');
+                    AddLine('');
+                    Show;
+                    Done;
+                 end;
+              end.
+
+
+         Note that all the units used directly or indirectly by the totMSG unit
+         are used and the appropriate INIT procedure is called. The order of the
+         INIT procedure calls is important. If you are using any Toolkit units
+         which write to the screen and poll the keyboard, then you should, as a
+         minimum, call the following procedures in the specified order:
+               SYSInit;
+               LOOKInit;
+               INPUTInit;
+               FASTInit;
+               WINInit;
+
+         If you execute the DEMOV1 program you will notice it is unbearably
+         slow! As the demo ably illustrates, you should not overlay the primary
+         Toolkit units totSYS, totINPUT, and totFAST. Routines from these units
+         are called very frequently, and placing them in overlays will really
+         slooooow your application down. DEMOV2.PAS, listed below, is a more
+         practical overlay solution:
+
+
+3-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+               program DemoOverlay2;
+               {demov2 - make sure the OVERLAY compiler directive
+                is enabled in the TOTFLAGS.INC file before compiling}
+
+               {$I TOTFLAGS.INC}
+               Uses OVERLAY, DOS, CRT,
+                    totSYS, totLOOK, totINPUT, totFAST, totWIN, totIO1, totMSG;
+
+               {$O totWIN}
+               {$O totIO1}
+               {$O totMSG}
+               Var
+                  MsgWin : MessageOBJ;
+
+               begin
+                  OvrInit('DEMOV2.OVR');{initialize the overlay}
+                  OvrInitEMS;
+                  SYSInit;         {initialize the Toolkit units}
+                  LOOKInit;
+                  INPUTInit;
+                  FASTInit;
+                  WINInit;
+                  IO1Init;
+                  MSGInit;
+                  Screen.Clear(white,'°'); {paint the screen}
+                  with MsgWin do
+                  begin
+                     Init(1,' Message ');
+                     AddLine('');
+                     AddLine('The message unit provides a');
+                     AddLine('very easy way of displaying');
+                     AddLine('pop-up messages in a move-');
+                     AddLine('able window.');
+                     AddLine('');
+                     Show;
+                     Done;
+                  end;
+               end.
+
+         In this example, only the three units totWIN, totIO1 and totMSG are
+         overlaid, and performance is almost as good as a non-overlaid version.
+         It is important to note the OVERLAY compiler directive disables all the
+         Toolkit initialization procedures regardless of whether each unit is
+         actually overlaid or not. For this reason, the second demo still ini-
+         tializes all of the Toolkit units. Refer to the Flash cards for a list
+         of unit dependencies, i.e. which files to INIT when you use a unit.
+
+
+
+Toolkit Basics                                                              3-11
+--------------------------------------------------------------------------------
+
+         Finally, if you are new to overlays, don't forget that the overlay file
+         (.OVR) can be combined back into the EXE file using the following DOS
+         command:
+
+                  COPY/B progname.EXE + progname.OVR
+         The OvrInit procedure must initialize the overlay file from the EXE
+         file, and this can be achieved with the following command:
+
+                  OvrInit(ParamStr(0));
+
+
+FLOAT
+
+         Turbo Pascal and the Toolkit support extended reals. By default, Turbo
+         Pascal uses six byte reals, but using compiler directives high preci-
+         sion Single, Double, Extended and Comp reals can be used.
+         If you want to use the higher precision reals, activate the FLOAT com-
+         piler directive. The Toolkit will automatically set the necessary Turbo
+         Pascal compiler directives. When FLOAT is enabled, the Toolkit supports
+         all real types. When FLOAT is disabled, all the real types are type-
+         cast to the base REAL type. In other words, the types SINGLE, DOUBLE,
+         EXTENDED and COMP appear to the compiler as plain old REAL. This
+         type-casting is performed in the small totREAL unit.
+
+         If the software compiled in the FLOAT state is to be run on a computer
+         without a math co-processor, the FLOATEM compiler directive (discussed
+         next) must also be enabled. Note that the totSYS unit provides an
+         object for checking the presence of a math co-processor.
+
+
+FLOATEM
+
+         Turbo Pascal is capable of emulating an 8087 math co-processor if the
+         PC does not have one installed. Enable the FLOAT and FLOATEM (short for
+         float emulation) directives if you want to use high precision reals on
+         PCs with no math co-processor.
+         Note that the use of FLOATEM will increase the size of the program,
+         because Turbo Pascal links in the 8087 emulation code. Only use this
+         directive when necessary.
+
+
+
+Using Standard Objects
+         Virtually all programs built with the Toolkit perform some basic tasks
+         such as writing to the screen and polling the keyboard. The Toolkit
+         provides a number of object instances (i.e. object variables) that are
+         automatically initialized when you use the related unit. For example,
+         the totFAST unit includes an instance of a ScreenOBJ called SCREEN.
+
+
+
+3-12                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Listed below are each of the instances which provide the basic program-
+         ming facilities:
+
+         SCREEN           The SCREEN instance is of type ScreenOBJ and is
+                          declared in the totFAST unit. SCREEN should be used
+                          for all writing to the screen. For more details, refer
+                          to chapter 5: Writing to the Screen.
+         MOUSE            The MOUSE instance is of type MouseOBJ and is declared
+                          in the totINPUT unit. The primary purpose of MOUSE is
+                          to provide a convenient way of controlling the mouse
+                          cursor. The methods HIDE and SHOW control whether the
+                          mouse is visible, and the method function VISIBLE
+                          returns true if the mouse is on display. Note that the
+                          Toolkit automatically hides the mouse while screen
+                          writing occurs. For further information, refer to
+                          chapter 6: Keyboard and Mouse Input.
+
+         KEY              The KEY instance is of type KeyOBJ and is also
+                          declared in the totINPUT unit. This instance provides
+                          all the methods for accessing the user's keyboard and
+                          mouse input. The main method is Getkey, which waits
+                          for the user to press a key or click a mouse button.
+                          More details are described in chapter 6.
+         MONITOR^         The MONITOR instance is a pointer to a DisplayOBJ and
+                          is declared in the totSYS unit. MONITOR^ can be used
+                          to ascertain the width and depth of the display, as
+                          well as set condensed mode display on or off. Refer to
+                          chapter 4: Determining and Controlling Hardware for
+                          more information.
+
+
+
+Controlling a Program's Look & Feel
+         As well as the global instances described in the last section, the
+         Toolkit includes a variety of object instances which can be used to
+         control the overall look and feel of a program. For example, the
+         SCROLLTOT^ instance controls the way that scroll bars are drawn.
+
+         To change the look of your application, all you have to do is modify
+         the appropriate instance. To save data space, all these instances are
+         dynamically created on the heap and must be referenced with the pointer
+         symbol (^). For example, to call the SCROLLTOT method SetScrollChars,
+         you would use the following syntax:
+                  ScrollTOT^.SetScrollChars(....);
+
+
+
+Toolkit Basics                                                              3-13
+--------------------------------------------------------------------------------
+
+         Listed below is a full description of each global instance which con-
+         trols the look and feel of your application. All these instances are
+         automatically initialized by the Toolkit, and a set of more than
+         adequate defaults (!) are assigned.
+
+         In addition to these instances, there is a byte variable LPTPORT, in
+         the totMISC unit, which is used to indicate the default printer port
+         (set to 0 for LPT1, 1 for LPT2, etc.).
+
+
+            Note: the Toolkit uses a single byte to indicate the display
+            attribute or color - that is, the foreground and background bytes
+            combined into a single attribute byte. The totFAST unit provides
+            three functions to help you manipulate color attributes. The CATTR
+            function is passed a foreground and background color and returns a
+            single combined attribute byte. The FATTR function is passed an
+            attribute byte and returns the foreground color component. The
+            BATTR function is passed an attribute byte and returns the back-
+            ground color component.
+
+            For example, the expression CAttr(white,blue); returns the value of
+            31, and the expression FAttr(31) returns 15, which is white.
+
+            In all, there are 256 different foreground and background color
+            combinations; the Flash Cards include a chart which details them
+            all.
+
+            When assigning colors, be sure to check the Monitor^.ColorOn bool-
+            ean function method to determine whether the system is using a
+            color or a monochrome device.
+
+
+
+LookTOT
+
+         The unit totLOOK is designed specifically to provide you with an easy
+         way to change the overall cosmetic appearance of your programs. The
+         unit includes a single instance LookTOT which is a pointer to a LookOBJ
+         object. LookTOT controls the window, menu and list default display
+         characteristics. If you want to change the overall color and style of
+         your program, change the LookTOT settings, and these will be inherited
+         by the window, menu and list objects.
+         Listed below are the methods for setting the various defaults:
+
+
+         SetWindow(Border,Body,Icons,Title: byte);
+
+
+
+3-14                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         This method sets the display attributes for the window border (where
+         the box is drawn), the central part of the window, the close and zoom
+         characters, and the window title. The defaults depend on whether the
+         host PC is using a color or a monchrome display.
+
+
+         SetWinKeys(Move,Stretch,Zoom: word);
+         This method sets the values of the keys which will invoke the window
+         move, stretch and zoom commands. The defaults are [KEYCAP], [KEYCAP],
+         and [KEYCAP].
+
+
+         SetListKeys(Endkey,Esc,Toggle,Tag,UnTag: word);
+         SetListKeys sets the values of the keys which are used with a ListOBJ
+         instance. The EndKey and Esc keys are used to remove the list window,
+         and the defaults are [KEYCAP] and [KEYCAP]. The Toggle key is used to
+         select or deselect individual items in the list and the default is the
+         [KEYCAP]. The Tag and UnTag keys are used to globally select or dese-
+         lect all items in the list, and the defaults are [KEYCAP] and [KEYCAP].
+
+
+         SetListChars(LeftChar,RightChar,ToggleOnChar,ToggleOffChar:char);
+         Sets the display characters which are used to emphasize the highlighted
+         topic in a list, as well as the characters used to indicate whether an
+         item in a list is selected or not.
+
+
+         SetMenu(Bor,Tit,Icon,HiHot,HiNorm,LoHot,LoNorm,Off:byte)
+         Sets the display characteristics of the pop-up and pull-down menus. The
+         method is passed eight (count 'em) parameters to give you complete
+         control of all the menu display colors. The first three parameters set
+         the attribute of the menu window border, title and close icon. The next
+         four parameters specify the attributes for the highlighted and normal
+         menu items. (Each menu item may be displayed in two colors to emphasize
+         a specific letter or word.) The last parameter is the attribute for
+         non-selectable (i.e. turned-off) menu items.
+
+
+         SetDefaults;
+         Call this method with no parameters if you want to reset all the Look-
+         TOT settings to the Toolkit defaults.
+
+
+
+Toolkit Basics                                                              3-15
+--------------------------------------------------------------------------------
+
+ShadowTOT
+
+         ShadowTOT is a pointer to an instance of type ShadowOBJ, and is
+         declared in the totFAST unit. ShadowTOT is used to control the size,
+         color and perspective of the shadows used by pop-up windows, lists,
+         menus and the like.
+         An enumerated type ShadowPosition is used to describe the shadow per-
+         spective, and the elements are defined as UpLeft, UpRight, DownLeft,
+         and DownRight. Shadows can be set as see-through or solid characters,
+         the choice is yours! You can even set how wide and deep the shadow will
+         be.
+
+         The following methods are used to set the shadow characteristics:
+
+         SetShadowStyle(ShadP:ShadowPosition;ShadA:byte;ShadC:char);
+
+         The first parameter indicates the direction of the shadow using a mem-
+         ber of the ShadowPosition enumerated type. The second parameter is the
+         display attribute of the shadow, and the third is the character used to
+         draw the shadow. If a space (' ') is passed, the shadow will be see-
+         through, otherwise the shadow will be drawn using the specified charac-
+         ter.
+
+         SetShadowSize(ShadW,ShadD:byte);
+
+         This method controls the size of the shadow. Pass the number of charac-
+         ters wide and deep that you want the shadow to be. If the width and
+         depth are set to zero, no shadows will be drawn.
+
+         SetDefaults;
+
+         Call this method with no parameters if you want to reset all the Shad-
+         owTOT settings to the Toolkit defaults.
+
+         The following program, DEMSH1.PAS, illustrates how to change the shadow
+         settings, and figure 3.1 shows the resultant output when the program is
+         executed.
+
+         program DemoShadow1;
+         {demsh1}
+         Uses DOS, CRT,
+              totFAST;
+
+         begin
+            with Screen do
+            begin
+               Clear(white,'°'); {paint the screen}
+               ShadFillBox(3,3,20,8,31,1);
+               ShadowTOT^.SetShadowStyle(Upleft,lightgray,' ');
+
+
+3-16                                                                User's Guide
+--------------------------------------------------------------------------------
+
+               ShadFillBox(3,12,20,19,47,2);
+               ShadowTOT^.SetShadowStyle(Downleft,lightblue,' ');
+               ShadowTOT^.SetShadowSize(4,1);
+               ShadFillBox(35,2,70,10,94,3);
+               ShadowTOT^.SetShadowStyle(DownLeft,white,'!');
+               ShadFillBox(40,13,60,18,15,4);
+               ShadowTOT^.SetDefaults;
+               ShadFillBox(5,21,75,23,78,5);
+            end; {with}
+         end.
+
+
+
+Figure 3.1                                                              [SCREEN]
+The Shadow Demo
+Program
+
+
+
+ScrollTOT
+         ScrollTOT is a pointer to an instance of type ScrollOBJ, and is
+         declared in the totFAST unit. ScrollTOT is used to control the charac-
+         ters used to build the scroll bars displayed in scrolling windows.
+
+         There are basically four different characters used to create a scroll
+         bar. There is the directional arrow at each end, the background charac-
+         ter, and the elevator (or slider) character. These characters are con-
+         trolled with the following two methods:
+
+         SetScrollChars(U,D,L,R,E,B:char);
+
+         These six parameters represent the up and down directional arrows on
+         vertical scroll bars, the left and right directional arrows on horizon-
+         tal scroll bars, the elevator character and the background character.
+
+         SetDefaults;
+
+         Call this method with no parameters if you want to reset all the
+         ScrollTOT settings to the Toolkit defaults.
+
+
+         ScrollTOT does not affect the display attributes of the scroll bars.
+         The window border attribute is normally used.
+         SCREEN provides two methods for writing scroll bars anywhere on the
+         display: WriteHScrollBar, WriteVScrollBar. Refer to Chapter 5 for fur-
+         ther information.
+
+
+
+Toolkit Basics                                                              3-17
+--------------------------------------------------------------------------------
+
+IOTOT
+
+         Using consistent color schemes is particularly important during full-
+         screen input. The totIO1 unit includes IOTOT which is designed to con-
+         trol all the IO display attributes. IOTOT is a pointer to an object of
+         type InputOBJ. The uses of IOTOT are discussed in detail in chapter 11.
+
+
+FmtNumberTOT
+
+         The totIO2 unit provides routines for the input of REAL and INTEGER
+         values. These values can be optionally formatted when the user moves to
+         the next field, i.e. when the user is editing, the number is unfor-
+         matted, but when the user exits the field, the number can be formatted
+         in a variety of styles. For example, the number 123456.78 might be
+         formatted as $123,456.78.
+         The totIO2 unit includes FmtNumberTOT, a pointer to an object instance
+         of type FmtNumberOBJ. This instance defines the default formatting that
+         will be applied to real and integer fields during full-screen input.
+         Any of the format defaults can be overridden for individual fields.
+         Field formatting is discussed in detail in chapter 11: Controlling User
+         Input.
+
+
+
+DateTOT
+         The totDATE unit provides functions for manipulating and converting
+         Julian and Gregorian dates. A number of default values, e.g. the char-
+         acter used to separate the month from the day and the year (like '  /
+         /  '), are defined in DateTOT, a pointer to an object instance of type
+         DateOBJ. These defaults are used in both the totDATE and totIO2 units.
+         Refer to chapter 13: Managing Dates for further details.
+
+
+
+AlphabetTOT
+         The totINPUT unit includes the object AlphabetOBJ for managing upper-
+         and lower-case characters, and the global instance AlphabetTOT is a
+         pointer to an AlphabetOBJ object.
+
+         AlphabetTOT controls how the Toolkit determines/changes the case of
+         alpha-characters. It is designed for international Toolkit users who
+         want to use a non-English alphabet. If you are writing "English-
+         speaking" programs, you do not need to tamper with this object.
+         The object contains a list of all valid upper-case letters, lower-case
+         letters and punctuation characters. The totLOOK unit includes the type
+         declaration CharSet, which is equal to a set of char. Some methods are
+
+
+
+3-18                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         passed a parameter of type CharSet. You may specify multiple characters
+         and/or ranges of characters, provided that they are enclosed in square
+         brackets []. For example, the following expressions are valid CharSets:
+
+                    ['a','b','f'..'z']
+                    ['A'..'Z',#129..#148]
+                    ['a'..'z']
+                    [',','.']
+         AlphabetTOT methods can be called using the syntax AlphabetTOT^.method,
+         and the following methods are supported:
+
+
+         SetUpper(Letters:CharSet);
+         Defines which characters comprise the upper-case alphabet. The method
+         is passed one parameter of type CharSet, e.g. SetUpper(['A'..'Z']);.
+
+
+         SetLower(Letters:CharSet);
+         Defines which characters comprise the lower-case alphabet. The method
+         is passed one parameter of type CharSet, e.g. SetLower(['a'..'z']);.
+
+
+         SetPunctuation(Letters:CharSet);
+         Defines which characters are used in normal punctuation. The method is
+         passed one parameter of type CharSet, e.g. SetPunctua-
+         tion([',',';','.',':',' ']);.
+
+
+         IsUpper(K:word): boolean;
+         This function method is passed one parameter, representing the ordinal
+         value of a character, and returns true if the character is listed in
+         the upper-case alphabet, e.g. IsUpper(ord('A'));.
+
+
+         IsLower(K:word): boolean;
+         This function method is passed one parameter, representing the ordinal
+         value of a character, and returns true if the character is listed in
+         the lower-case alphabet, e.g. IsLower(107);.
+
+
+         IsLetter(K:word): boolean;
+         This function method is passed one parameter, representing the ordinal
+         value of a character, and returns true if the character is listed in
+         either the upper- or lower-case alphabet.
+
+
+         IsPunctuation(K:word): boolean;
+
+
+
+Toolkit Basics                                                              3-19
+--------------------------------------------------------------------------------
+
+         This function method is passed one parameter, representing the ordinal
+         value of a character, and returns true if the character is listed as a
+         punctuation character.
+
+
+
+         On occasion, the Toolkit needs to convert the case of alpha characters.
+         To accommodate international users, the Toolkit uses AlphabetTOT to
+         convert character case, rather than rely on the English-specific rou-
+         tines provided with Turbo Pascal. The Toolkit calls the following two
+         methods to convert character case:
+
+
+         GetUpCase(Ch:char):char;
+         This method is passed a character, and returns the upper-case equiva-
+         lent of the character.
+
+
+         GetLoCase(Ch:char):char;
+         This method is passed a character, and returns the lower-case equiva-
+         lent of the character.
+
+
+         You can control precisely how characters are converted by creating your
+         own conversion routines. All you have to do is create two functions
+         following some specific rules, and then call the methods Alphabet-
+         TOT^.AssignUpCaseFunc and AlphabetTOT^.AssignLoCaseFunc to instruct the
+         Toolkit to use your functions.
+         For a function to be eligible as a character case converter it must
+         adhere to the following three rules:
+
+         Rule 1     The function must be declared as a FAR function. This can be
+                    achieved by preceding the function with a {$F+} compiler
+                    directive, and following the function with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the procedure statement.
+         Rule 2     The function must be declared with one passed parameter of
+                    type char, and it must return a char.
+
+         Rule 3     The function must be at the root level, i.e. the function
+                    cannot be nested within another procedure or function.
+         The following function declaration follows these rules:
+
+                  {$F+}
+                  function MyUpConverter(Ch:char):char;
+                  .....{statements}
+                  end;
+                  {$F-}
+
+
+
+3-20                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Internally, these functions should check the value of the passed char-
+         acter, and return the character converted to the appropriate case. If
+         the character is not suited to conversion, e.g. '1', simply return the
+         character that was passed. Once you have created two functions (one for
+         upper-case conversion and one for lower-case conversion), you should
+         call the following assignment methods to instruct AlphabetTOT to use
+         your routines:
+
+
+         AssignUpCaseFunc(Func:CaseFunc);
+         This method is passed the name of the function used to convert charac-
+         ters to upper case. The procedure must adhere to the rules outlined
+         above.
+
+
+         AssignLoCaseFunc(Func:CaseFunc);
+         This method is passed the name of the function used to convert charac-
+         ters to lower case. The procedure must adhere to the rules outlined
+         above.
+
+
+         In summary, AlphabetTOT provides you with complete control over how the
+         Toolkit determines and changes the case of alpha characters.
+
+
+Program Size
+
+         A constant battle during the development of the Toolkit was to minimize
+         the size of programs developed with the Toolkit. A valid criticism of
+         OOP is that it tends to swell the final program size, which makes it a
+         subject of concern to most developers (that's you folks).
+         With a hierarchical object organization even small applications tend to
+         attract a high code overhead. However, the more features of the Toolkit
+         you use, the more efficient your program will be. For example, listed
+         below are the EXE file sizes of three of the demo programs:
+
+                DemFM8           114k
+                DemDR1           92k
+                DemMS1           56k
+         The combined file size of the three programs is 262k. However, if these
+         three examples are combined into a single example, the file size is
+         actually 141k. The reason for the reduction is that each of the small
+         programs uses common routines which can be shared in the combined
+         program.
+
+
+
+Toolkit Basics                                                              3-21
+--------------------------------------------------------------------------------
+
+         In real life, your fledgling program will start out bigger than you
+         expected, but it will grow much less than anticipated as your program
+         expands. Remember that compiler directives have a significant impact on
+         program size, and you should enable the FINAL compiler directive for
+         the production build of your application.
+
+         If EXE file size is your concern, rather than code size, consider com-
+         pressing the EXE file with a compression utility like PKlite from
+         PKWare, Inc., or LZEXE by Fabrice Bellard.
+

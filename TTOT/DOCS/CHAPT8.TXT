@@ -1,0 +1,396 @@
+                                                                      Displaying
+                                                                        Messages
+                                                                               &
+                                                                         Prompts
+
+
+
+         "As Miss America, my goal is to bring peace to the entire world and
+         then to get my own apartment."
+
+                                                                        Jay Leno
+
+
+
+Introduction
+         The totMSG unit includes a variety of easy-to-use objects for display-
+         ing messages and prompts. A message is simply a pop-up window which is
+         displayed until the user presses [KEYCAP], [KEYCAP], or clicks the
+         mouse on the close icon/button. Similarly, a prompt is a pop-up window,
+         but the user must select one of the options displayed at the bottom of
+         the window. A prompt window can have two or three buttons. The buttons
+         come in two varieties: strip-buttons like the ones used in the Turbo
+         Pascal IDE, and box-buttons like the ones used by PC Tools and the
+         Norton Utilities.
+
+
+
+The Object Hierarchy
+         Figure 8.1 illustrates the object hierarchy for the totMSG unit. The
+         base (or primitive) object is BaseMessageOBJ, and all the other messag-
+         ing objects descend from it. You should never declare an instance of
+         type BaseMessageOBJ, as it is an abstract object. Use one of the
+         following four descendant objects:
+
+         MessageOBJ         This is the basic message displaying object. Between
+                            one and twenty lines of text can be displayed in a
+                            moveable window. At the bottom of the window is a
+                            single strip-button, which defaults to the text
+                            "OK".  The user removes the window by clicking the
+                            mouse on the button or close icon, or by pressing
+                            [KEYCAP] or [KEYCAP].
+         ButtonMessageOBJ   This object is a descendant of MessageOBJ and
+                            operates in the same way. The only difference is
+                            that the button is a box-button.
+
+         PromptOBJ          The PromptOBJ object is descendant from the BaseMes-
+                            sageOBJ, and should be used when you want to prompt
+                            the user to choose a specific option. A message is
+                            displayed in a moveable window, and two or three
+                            strip-buttons are displayed. The user removes the
+                            window by clicking on one of the buttons or the
+                            close icon, or by pressing [KEYCAP]. The buttons can
+
+8-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+                            be selected in one of three ways: clicking on the
+                            button, tabbing to a button and pressing [KEYCAP],
+                            or pressing a button hotkey.
+
+         ButtonPromptOBJ    This objects displays box-buttons, but in all other
+                            aspects it operates like PromptOBJ.
+
+
+Figure 8.1                                                             [PICTURE]
+Message
+Object Hierarchy
+         This combination of objects provides you with ways of displaying
+         single, double and triple button messages, using strip- or box-buttons.
+         The decision to use strip- or box-buttons is solely cosmetic. The
+         strip-buttons are more "elegant", but the box-buttons are larger and
+         easier to select with the mouse.
+
+Common Methods
+
+         Since all the objects are derived from the BaseMessageOBJ, they share a
+         set of common methods. The following three methods can (and should) be
+         used with any of the messaging objects:
+
+         Init(Style:byte;Tit:string);
+
+         The Init method is passed two parameters. The first is the window box
+         style, and the second, the window title. Refer to 5-7 for a discussion
+         of box styles and titles. As always, this method must be called before
+         any other.
+
+         AddLine(Str:string);
+
+         Call this method to add a line of text to the method. For example, if
+         you want to display five lines of text, call AddLine five times. Up to
+         twenty lines of text can be displayed in a message. The text should be
+         no more than seventy characters long. The first line of text is always
+         displayed on the first line of the window, i.e. immediately below the
+         title. To force a space between the title and the text, call AddLine
+         with an empty string, e.g. AddLine('');.  Similarly, the buttons are
+         positioned directly below the last line of text. Just call Addline with
+         an empty string to force a gap between the text and the buttons. The
+         Toolkit automatically computes the size of the message window based on
+         the number of lines added, the width of the longest line, and the style
+         of button selected.
+
+         WinForm: WinFormPtr;
+
+
+
+Messages & Prompts                                                           8-3
+--------------------------------------------------------------------------------
+
+         This function method returns a pointer to the Toolkit WinFormOBJ object
+         which is used to manage user input while the message is being dis-
+         played. You can use this function method to directly access the WinFor-
+         mOBJ methods with the following syntax: WinForm^.method. Refer to
+         chapter 11: Controlling User Input for a full discussion of WinFormOBJ.
+
+
+
+           Note: the colors used by the message objects are derived from two
+           sources. The display of the window border and the message text is
+           controlled by the window settings used by the WinForm object.
+           Although this object is not discussed until chapter 11, it is
+           worthwhile noting that you can modify the window colors with the
+           following method call: WinForm^.Win^.SetColors. For example:
+                    MyMsg.WinForm^.Win^.SetColors(23,31,30,28);
+           The display color of the message buttons are controlled by the
+           default colors set in the global instance IOTOT. The following
+           method can be used to change the button colors: IOTOT^.SetColBut-
+           ton. For example:
+                    IOTOT^.SetColButton(32,46,47,46);
+           Refer to chapter 11 for further information.
+
+
+
+8-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         Done;
+
+         This method disposes of all the memory used by the object instance, and
+         should always be called.
+
+
+
+Simple Messages
+
+         The MessageOBJ and ButtonMessageOBJ objects are used for displaying
+         simple messages, i.e. an informational message where you don't want the
+         user to make a selection. The user just reads the message and removes
+         it.
+         Both these objects include the following method:
+
+
+         Show;
+         This method instructs the Toolkit to display the message window.
+
+
+         Listed below is the (by now familiar) example DEMMS1.PAS, followed by
+         figure 8.2 which illustrates the generated display.
+         program DemoMessageOne;
+         {demms1 - simple message}
+
+         Uses DOS, CRT,
+              totFAST, totMSG;
+         Var
+            MsgWin : MessageOBJ;
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MsgWin do
+            begin
+               Init(1,' Message ');
+               AddLine('');
+               AddLine('The message unit provides a');
+               AddLine('very easy way of displaying');
+               AddLine('pop-up messages in a move-');
+               AddLine('able window.');
+               AddLine('');
+               Show;
+               Done;
+            end;
+         end.
+
+Figure 8.2                                                              [SCREEN]
+A Simple Message
+
+
+
+Messages & Prompts                                                           8-5
+--------------------------------------------------------------------------------
+
+         By simply changing the instance declaration to MsgWin: ButtonMessa-
+         geOBJ; the message will be displayed using a box-button. The example
+         DEMMS2.PAS contains this simple modification, and the output is shown
+         in figure 8.3.
+
+
+Figure 8.3                                                              [SCREEN]
+A Simple Message
+with a Box-Button
+
+
+         By default, the button text is "OK", and the button has a hotkey of
+         "O", i.e. the user can select the button, and thereby clear the mes-
+         sage, by pressing [KEYCAP]. The following method provides a way of
+         changing the button text and hotkey:
+
+
+         SetOption(Str:string;Hotkey:word);
+         This method changes the button settings. The first parameter identifies
+         the text to be displayed, and the second is the keycode of the hotkey
+         used to select the button. A code of 0 (zero) signifies no hotkey.
+
+
+
+           Note: the totIO1 unit includes a constant MaxButtonWidth which
+           sets the maximum button string length. By default, the maximum
+           string length is 30. However, it can be modified. This subject is
+           fully addressed in chapter 11: Controlling User Input.
+
+
+
+         Listed below is the example file DEMMS3, which is similar to
+         DEMMS1.PAS. The only difference is that the SetOption method was used
+         to change the default button settings. Notice that the "~" symbol is
+         used to highlight specific letters in the button text. This concept was
+         discussed in chapter 5: Writing to the Screen on page 5-3 (WriteHi).
+
+
+         program DemoMessageThree;
+         {demms3 - using SetOption to change button text}
+
+         Uses DOS, CRT,
+              totFAST, totMSG;
+         Var
+            MsgWin : MessageOBJ;
+
+
+
+8-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MsgWin do
+            begin
+               Init(1,' Message ');
+               AddLine('');
+               AddLine('The message unit provides a');
+               AddLine('very easy way of displaying');
+               AddLine('pop-up messages in a move-');
+               AddLine('able window.');
+               AddLine('');
+               SetOption(' A very ~l~ong button ',76);
+               Show;
+               Done;
+            end;
+         end.
+
+
+Figure 8.4                                                              [SCREEN]
+Changing the
+Button Text
+
+
+Multi-Button Prompts
+
+         The PromptOBJ and ButtonPromptOBJ objects are used for displaying mes-
+         sages with two or three buttons. The user removes a message by select-
+         ing one of the buttons.
+         By default, Prompt objects have two buttons, with the text "OK" and
+         "Cancel". The function method Show is used to instruct the Toolkit to
+         display the message. This function returns a member of the enumerated
+         type tAction to indicate which option the user selected. The enumerated
+         type tAction is declared in the totIO1 unit as follows:
+
+                  Type
+                  tAction = (None,NextField,PrevField,Finished,Escaped,
+                             Refresh,Signal,Enter,Help,Stop1,Stop2,
+                             Stop3,Stop4,Stop5,Stop6,Stop7,Stop8,Stop9);
+         The majority of these members are for use in full screen editing
+         (discussed in chapter 11), and the only ones that should be used with
+         messaging are: Finished, Escaped, or Stop1 through Stop9. By default,
+         if the user selects the OK button, the member "Finished" is returned,
+         and if the user selects the Cancel button or presses [KEYCAP], the
+         member "Escaped" is returned. The syntax of the Show method is as
+         follows:
+
+
+         Show:tAction;
+
+
+
+Messages & Prompts                                                           8-7
+--------------------------------------------------------------------------------
+
+         Displays the message window, and returns a member of the enumerated
+         type tAction, to indicate which button the user selected.
+
+
+         The on-disk example DEMMS4.PAS illustrates how to display a PromptOBJ
+         using the default button settings. The following method, SetOption,
+         provides a way of changing the button text and hotkeys:
+
+         SetOption(ID:byte; Str:StringBut;Hotkey:word;Act:tAction);
+
+         The first parameter indicates which button you want to define, and can
+         have a value of 1, 2 or 3. The second parameter is the text to be
+         displayed in the button. The third button is a key code identifying a
+         hotkey which can be used to select the button. Finally, the fourth
+         parameter is a member of the enumerated type tAction. This is the mem-
+         ber which will be returned by the method Show if this button is
+         selected. Only use the members Finished, Escaped, or Stop1 through
+         Stop9, and assign a different value to each button!
+
+         Remember that the objects also have the methods Init, Done and AddLine
+         which were discussed previously. Listed below is the demo program
+         DEMMS5.PAS which illustrates the use of the SetOption method. Figure
+         8.5 illustrates the resultant display.
+
+         program DemoMessageFive;
+         {demms5 - two strip-buttons with specific text}
+         Uses DOS, CRT,
+              totFAST, totMSG, totIO1;
+
+         Var
+            MsgWin : PromptOBJ;
+            ActionCode: tAction;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MsgWin do
+            begin
+               Init(1,' Warning ');
+               AddLine('');
+               AddLine(' The file already exists on disk, and ');
+               AddLine(' the contents will be over-written.');
+               AddLine('');
+               SetOption(1,' ~P~roceed ',80,Finished);
+               SetOption(2,' ~A~bort ',65,Escaped);
+               ActionCode := Show;
+               Done;
+            end;
+         end.
+
+
+
+8-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+Figure 8.5                                                              [SCREEN]
+Using PromptOBJ
+
+
+         The message could have been generated with box-buttons simply by using
+         the object ButtonPromptOBJ instead of PromptOBJ - see the on-disk exam-
+         ple DEMMS6.PAS.
+
+
+         The SetOption method is also the way to add a third button. Just pass a
+         button ID of 3 and a third button will be displayed. The listing of
+         DEMMS7.PAS followed by figure 8.6 illustrates this technique:
+
+         program DemoMessageSeven;
+         {demms7 - three buttons}
+         Uses DOS, CRT,
+              totFAST, totMSG, totIO1;
+
+         Var
+            MsgWin : PromptOBJ;
+            ActionCode: tAction;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MsgWin do
+            begin
+               Init(1,' Warning ');
+               AddLine('');
+               AddLine(' The file already exists on disk, and ');
+               AddLine(' the contents will be over-written.');
+               AddLine('');
+               SetOption(1,' ~P~roceed ',80,Finished);
+               SetOption(2,' ~A~bort ',65,Escaped);
+               SetOption(3,' ~H~elp ',72,Stop1);
+               ActionCode := Show;
+               Done;
+            end;
+         end.
+
+
+
+
+Figure 8.6                                                              [SCREEN]
+Using Three
+Buttons
+
+
+         The on-disk example DEMMS8.PAS shows how to use ButtonPromptOBJ to dis-
+         play three box-buttons.
+

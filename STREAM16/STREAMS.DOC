@@ -1,0 +1,1506 @@
+STREAMS - TP/BP/TPW unit to supplement TurboVision/ObjectWindows streams
+
+     Version 1.6.  Copyright D.J. Murdoch (1992,1994).
+
+DESCRIPTION
+
+     "Wierd Stream Tricks" might be a good name for this unit.  It
+     contains a miscellaneous collection of objects and procedures, all
+     on a theme of adding functionality to the streams in Borland's
+     Turbo Pascal libraries TurboVision and ObjectWindows.
+
+     Most of my testing has been in TP 6 and BP 7 real mode; the code
+     and demos also appear to work in BP 7 protected mode, and compile
+     under Windows, but use it with care in those "foreign"
+     environments.
+
+
+LICENSE
+
+     This unit is *not* public domain code.  You may use it for
+     no charge if credit is granted to the author, but you may not sell
+     it, nor may you claim copyright on it.  You may make copies of this
+     unit and give them to people, but may not charge more than $5 for
+     the distribution media.  In particular, it may not be distributed
+     on a CD ROM costing more than $5 without prior written permission
+     from D.J. Murdoch.  The Garbo and Simtel CD ROM collections have
+     permission to distribute it.
+
+     A lot of the code in this unit is code that's been made freely
+     available by others, some of it under their copyright, other parts
+     public domain.  As far as I know, all code included here may be
+     used for free, provided you acknowledge the author.  See the list of
+     credits at the end for all the (known) authors.
+
+     This is the fourth release of the STREAMS unit.  There are probably
+     still bugs; I would really appreciate reports of any, or other
+     suggestions for improvement.  Please send either one to me at one
+     of the following addresses:
+
+       dmurdoch@mast.queensu.ca (Internet)
+       71631,122 (Compuserve)
+       DJ Murdoch at 1:249/1.5 (Fidonet)
+
+       D. J. Murdoch
+       337 Willingdon Ave.
+       Kingston, Ontario, Canada
+       K7L 4J3
+
+
+SUMMARY
+
+Hierarchy
+
+   TStream                  (from Objects)
+     TFilter                Base type for filters
+       TEncryptFilter       Encrypts as it writes; decrypts as it reads
+       TLZWFilter           Compresses as it writes; expands as it reads
+       TTextFilter          Provides text file interface to stream
+       TLogFilter           Provides logging of text file activity
+       TBitFilter           Allows bit-oriented I/O
+       TDupFilter           Duplicates output, checks for matching input
+       TConcatFilter        Concatenates two streams together
+       TLimitFilter         Limits I/O to a certain byte range
+         TLoopFilter        Makes stream look like a tape loop
+       TReverseFilter       Reads and writes a stream in reverse order
+       TSequential          Filter that doesn't allow Seek
+         TChksumFilter      Calculates 8 or 16 bit checksum for reads/writes
+         TCRC16Filter       Calculates XMODEM style 16 bit CRC
+         TCRCARCFilter      Calculates ARC style 16 bit CRC
+         TCRC32Filter       Calculates ZIP & Zmodem style 32 bit CRC
+     TNulStream             Eats writes, returns constant on reads
+     TRAMStream             Stream in memory
+     TEMSStream2            Workaround stream to avoid Borland bug
+     TXMSStream             Stream in XMS (extended) memory
+     TDOSStream             (from Objects)
+       TBufStream           (from Objects)
+         TNamedBufStream    Buffered file stream that knows its name
+           TTempBufStream   Buffered file stream that erases itself when done
+     TWorkStream            Stream that grows as needed
+
+Procedures & functions:
+
+   TempStream      allocates a temporary stream
+   StreamName      returns a stream type name (for debugging)
+   OvrInitStream   like OvrInitEMS, but buffers overlays on a stream
+                   May be called several times to buffer different
+                   segments on different streams.
+   OvrDetachStream detaches stream from overlay system
+   OvrDisposeStreams detaches all streams from overlay system and disposes of
+                   them
+   OvrSizeNeeded   Calculates the size needed to load the rest of the segments
+                   to a stream
+   OvrLoadAll      immediately copies as many overlay segments to the stream
+                   as will fit
+   xms_MemAvail    returns the number of bytes of XMS memory available
+   xms_MaxAvail    returns size in bytes of the largest block of XMS memory
+   ems_MemAvail    returns the number of bytes of EMS memory available
+   ems_MaxAvail    returns size in bytes of the largest block of EMS memory
+   disk_MemAvail   returns the number of bytes of temp disk space available
+   disk_MaxAvail   returns size in bytes of the largest block of disk space
+   FastCopy        Like TStream.CopyFrom, but uses a larger buffer
+
+Reassuring Note:
+
+     One concern I've heard from people about using this unit:  it's
+     big. Won't 110K of source add a lot of code to my program, even if I
+     only need one little part of it?  The simple answer is no.  I've
+     tried very hard to write Streams so that cross-links between code
+     are minimized.  If all you need are the XMS routines, that's all
+     that TP's "smart linker" will link into your .EXE.  Same for most
+     of the other objects and functions. One exception is the TempStream
+     function (Chapter 20).  Because it makes explicit references to 4
+     types of streams, one call to it will necessarily pull in support
+     code for all 4 types.  That's only about 6K, though.  StreamName is
+     much worse: it pulls in code for *every* stream type.  It should
+     only be used for debugging.
+
+
+CONTENTS
+     0.  Files in archive
+             a list of the files that should accompany this one
+     1.  TFilter
+             a generic object to act as a filter to a stream
+     2.  TEncryptFilter
+             a filter which does simple encryption/decryption
+     3.  TLZWFilter
+             a filter which does LZW compression/decompression
+     4.  TTextFilter
+             a filter to provide the Read/ReadLn/Write/WriteLn
+             interface to a stream
+     5.  TLogFilter
+             a filter to allow logging of activity on text files
+     6.  TBitFilter
+             a filter to allow bit level I/O to a stream
+     7.  TDupFilter
+             a filter to duplicate output, check for duplicate input
+     8.  TConcatFilter
+             a filter to concatenate two streams
+     9.  TLimitFilter
+             a filter to limit I/O to a certain byte range
+    10.  TLoopFilter
+             a filter to make a stream look like a tape loop: things wrap
+             around when they reach the ends
+    11.  TReverseFilter and ReverseBytes
+             a filter to reverse the apparent byte order of a stream and
+             a procedure to reverse the byte order of a buffer
+    12.  TSequential
+             a generic filter that can't Seek
+    13.  Checksum/CRC filters:
+             a collection of filters which calculate checksums and CRC
+             values as the data goes by
+    14.  TNulStream
+             a stream which counts data written to it, and which
+             returns a constant if you read
+    15.  TRAMStream
+             a stream which resides entirely in RAM
+    16.  TXMSStream
+             a stream which keeps its data in XMS memory
+    17.  xxx_MemAvail and xxx_MaxAvail
+             procedures to show how much memory is free
+    18.  TNamedBufStream
+             a buffered file stream which knows its own name
+    19.  TTempBufStream
+             a temporary buffered file stream, which deletes itself when
+             done
+    20.  TempStream
+             a procedure to allocate a temporary stream, in RAM, EMS, or
+             on disk, according to a specified preference
+    21.  TWorkStream
+             a temporary stream, which allocates new blocks of mixed
+             types as it grows
+    22.  OvrInitStream and related procedures
+             procedures to allow overlays to be buffered on any
+             stream or combination of streams
+    23.  TEMSStream2
+             EMS stream with fix for bug in TEMSStream.done
+    24.  FastCopy
+             fast copy from one stream to another
+    25.  Miscellaneous constants and types
+
+    26.  Release history and credits
+
+0.  FILES IN ARCHIVE
+
+  Streams.doc   - this file
+  Streams.pas   - main source file for unit
+  Lzwstrea.asm  - source for LZW compression
+  StDefine.inc  - a few conditional compiler defines
+  Xmsstrm.inc   - source for XMS stream
+  Crc16.asm     - source for 16 bit CRC
+  Crc32.asm     - source for 32 bit CRC
+  Crcarc.asm    - source for ARC-style 16 bit CRC
+  Lzwstrea.obj  - assembled code for external linking
+  Crc16.obj     -     "      "    "     "        "
+  Crcarc.obj    -     "      "    "     "        "
+  Crc32.obj     -     "      "    "     "        "
+
+  Demo programs:
+
+  Encrypt.pas   -  encryption program, using TEncryptFilter
+  Compress.pas  -  file compressor, using TLZWFilter
+  Huffman.pas   -  defines a Huffman encoding filter, using TBitFilter
+  HuffComp.pas  -  file compressor using THuffmanFilter
+  Logdemo.pas   -  simple demo of TLogFilter
+  Ovrdemo.pas   -  simple demo of multiple overlay files
+   ovr1.pas     -  one overlaid unit
+   ovr2.pas     -  a second overlaid unit
+  Textdemo.pas  -  simple demo of TTextFilter
+
+
+1.  TFilter = object(TStream)
+
+     "Filters" are programs which take a file as input and produce a new
+     file as output.  TFilter is an adaptation of this idea to streams.
+     Every TFilter has a base stream, which can be any kind of stream.
+     Every TFilter is itself a stream, which means you can read and
+     write to it.  When you do, it just relays your request to the base
+     stream.
+
+     One use of this is in the fact that you can make descendants
+     of TFilter which massage the data on the way to and from the Base.
+     Just override the Read and Write (and possibly other) methods, and
+     you can make changes to the data flowing to or from *any* kind of
+     stream.  No need for special coding for an TEMSStream, or for a
+     TDOSStream, or whatever.  Your code can act on any of them.
+     Examples of things to do are in the Streams unit:  encryption
+     (TEncryptFilter) and LZW compression (TLZWFilter).
+
+     The other main use is to add other kinds of functionality to a
+     stream.  You can't use the formatting capabilities of ReadLn and
+     WriteLn with standard streams, but if you use a TTextFilter (see
+     below) you can.
+
+     FIELDS
+
+     Base : PStream;
+
+       TFilter.Base holds the pointer to the base stream.
+
+     StartOfs : longint;
+
+       TFilter.StartOfs holds the offset in the base stream of offset 0
+       in the filter.  This allows multiple filters to work on the same
+       stream; one could work at offset 0, another at offset 1000, etc.
+       Just position the base to the desired starting offset before
+       initializing the filter.
+
+     OwnsBase: Boolean;
+
+       If false, then the Base stream is assumed to be owned by some
+       other part of the program, so that when Done is called, it won't
+       be disposed of. Normally OwnsBase is true, and it's assumed
+       that all management of the Base stream will be done by the
+       TFilter.
+
+     METHODS
+
+     Constructor Init(ABase: PStream);
+
+       TFilter.Init sets Base to point to ABase^, and sets StartOfs to
+       the current position of the base stream.  Sets ByReference to
+       false.
+
+     Destructor Done; virtual;
+
+       If Base is not nil, then TFilter.Done calls Flush, then if
+       OwnsBase is true, disposes of the base stream before calling
+       TStream.Done for itself.
+
+     Function CheckStatus : boolean; virtual;
+
+       Returns true if status is stOK.  If it is, but the base status is
+       not stOK, then it assumes that someone has called a Reset for the
+       filter, so it calls Reset for the base stream.  Borland should
+       have made Reset virtual, and this kludge wouldn't have been
+       necessary!
+
+     Procedure CheckBase;
+
+       Checks the base stream for an error.  If Base^.status is not
+       stOK, then it calls Error with Code=stBaseError and
+       Info=Base^.status.
+
+     Function GetPos  : longint; virtual;
+     Function GetSize : longint; virtual;
+     Procedure Read(var buf; count : word); virtual;
+     Procedure Seek(pos: longint); virtual;
+     Procedure Truncate; virtual;
+     Procedure Write(var buf; count: word); virtual;
+     Procedure Flush; virtual;
+
+       These methods all call the corresponding method in the base
+       stream.  Offsets are translated using StartOfs.  Before the call,
+       CheckStatus is called to propagate any Reset to the base; after
+       the call, CheckBase is called to propagate any errors to the
+       filter from the base.
+
+2.  TEncryptFilter = object(TFilter)
+
+       This is a filter which does simple encryption/decryption on the
+       base stream.  The encryption method is to XOR each byte with a
+       Random(256) value; the starting RandSeed is the key for the
+       encryption.
+
+     FIELD
+
+     key : longint;
+
+       The key is used as a Randseed replacement value.  Randseed itself
+       is left unmodified by Read and Write.
+
+     METHODS
+
+     Constructor Init(Akey:longint; ABase:PStream);
+
+       The value AKey is used as the starting key for byte 0 of the
+       filter.  Anything read from ABase is decrypted using this key;
+       anything written to it is encrypted.
+
+     Procedure Read(var buf; count : word); virtual;
+     Procedure Seek(pos : longint); virtual;
+     Procedure Write(var buf; count: word); virtual;
+
+       These methods all encrypt/decrypt and update the value of Key to
+       correspond to the new position in the stream.  The encryption
+       method uses the same algorithm for encryption as for decryption.
+       TEncryptFilter.Seek is fairly slow, because it updates the Key
+       once for every byte difference between the current position and
+       the new position.  Moving backwards is slower, because the update
+       algorithm is written in Pascal, not assembler as is the forward
+       algorithm.
+
+3.  TLZWFilter = object(TFilter)
+
+       This is a filter which does LZW compression as it writes to and
+       decompression as it reads from the base stream.  The LZW code is
+       an adaptation of Wilbert van Leijen's implementation of the 12
+       bit LZW algorithm.  It's quite fast, though not as fast as
+       Wilbert's version; it gets slowed down a lot by having to save
+       its state after every Read and Write operation.  You're best off
+       writing large chunks to it to take advantage of Wilbert's
+       excellent code.  (Historical note:  Trying to rewrite this was
+       what inspired me to write FULLDB, a program which allows source
+       level debugging of external .ASM files. -djm)
+
+       Each TLZWFilter takes over 28700 bytes of memory, because it
+       keeps extensive tables to record the current state.
+
+       One limitation of the TLZWFilter is that it can only be opened in
+       read or write mode, and Seek cannot be used in write mode.  If
+       this doesn't suit your application, you might want to flesh out
+       the demo Huffman encoder (HUFFMAN.PAS), since it does allow
+       random access.
+
+     FIELDS
+
+     Mode : word;
+
+       One of stOpenRead or stOpenWrite; the mode under which this
+       filter was opened.
+
+     Size : longint;
+
+       The size of the expanded stream.  This is the size that users of
+       the filter will see; if compression is working, it will generally
+       be bigger than Base^.GetSize.
+
+     Position : longint;
+
+       This is the position in the expanded stream.
+
+     Tables : PLZWTables;
+
+       This is a pointer to the tables used by the compression engine.
+       They're automatically allocated on the heap.
+
+     METHODS
+
+     Constructor Init(ABase:PStream; AMode:TOpenMode);
+
+       Allocates Tables from the heap, and opens the compressor in
+       a mode of either stOpenRead or stOpenWrite.  If reading, a
+       signature and record of the uncompressed filesize is read from
+       the base to confirm that it is compressed by LZW, and to prime
+       the Tables.  If writing, the signature is written to the stream.
+
+     Destructor Done; virtual;
+
+       Flushes all data to the stream, and writes the uncompressed
+       filesize to the head of it before calling TFilter.done.
+
+     Procedure Flush; virtual;
+     Function  GetPos: longint; virtual;
+     Function  GetSize:longint; virtual;
+     Procedure Read(var buf; count:word); virtual;
+     Procedure Seek(pos:longint); virtual;
+     Procedure Truncate; virtual;
+     Procedure Write(var buf; count: word); virtual;
+
+       These methods all override the basic filter methods and
+       compress/decompress the data.  They check whether the operation
+       requested can be performed in the current mode, and call Error
+       with Code=stBadMode and Info=Mode if the operation is not
+       supported.
+
+       Seek is not supported at all in Write mode.  In Read mode, it is
+       slow for seeking forwards, and very slow for seeking backwards:
+       it rewinds the file to the start and seeks forward from there by
+       expanding everything.
+
+       Truncate is not supported in either mode, and always causes a
+       call to Error.
+
+       Flush may only be called once; it changes Mode to 0, so any
+       further operations will fail.
+
+4.  TTextFilter = object(TFilter)
+
+       This is a filter which provides a Read/ReadLn/Write/WriteLn
+       interface to a stream through its Textfile field or through any
+       other Text variable.  Once the filter is initialized, the
+       Textfile field acts exactly like a text file in the standard I/O
+       procedures, but reads come from the stream, and writes go to it.
+       All of the standard stream methods work as well.
+
+       You can also use the AssignStream method to redirect I/O for
+       another Text variable (e.g. System.Input or System.Output)
+       through the filter.
+
+       Warning:  The mechanism for reporting errors on the stream uses
+       the standard Turbo run-time I/O errors.  I've tried to map the
+       stream errors onto corresponding file errors, but sometimes the
+       error message may be a little misleading.
+
+     FIELD
+
+     Textfile : Text;
+
+       This is the dummy text file used by default in
+       Read/ReadLn/Write/WriteLn.
+
+     TextPtr : ^Text;
+
+       This points to the currently assigned text file; typically that
+       will be TextFile, but if you use the AssignStream method, it may
+       be different.
+
+     METHODS
+
+     Constructor Init(ABase:PStream; AName:String);
+
+       Initializes the filter with base ABase.  The name AName is stored
+       as the name in the Textfile variable.
+
+     Destructor Done; virtual;
+
+       Closes the TextFile variable to flush any remaining data to the
+       stream, and then disposes of the base stream.
+
+     Procedure AssignStream(var NewText:text; AName:string);
+
+       Closes the current file attached to the stream, then assigns the
+       new one.  You'll still need to open it for reading or writing, as
+       with the standard Assign procedure.
+
+     Procedure Flush; virtual;
+
+       Flushes the TextPtr^ variable to the base stream, then flushes the
+       base stream.
+
+     function GetPos : LongInt; virtual;
+     function GetSize : LongInt; virtual;
+     procedure Read(var Buf; Count : Word); virtual;
+     procedure Seek(Pos : LongInt); virtual;
+     procedure Truncate; virtual;
+     procedure Write(var Buf; Count : Word); virtual;
+
+       Versions of the standard filter functions.  These may be
+       intermixed with text access to the Text variable.
+
+5.  TLogFilter = object(TFilter)
+
+       This filter allows logging of activity on text files to a stream.
+       Logging is done very transparently.  Once the TTextFilter is
+       initialized, you call the Log method to start logging a
+       particular text file, and the UnLog method to stop.  When logging
+       is in effect, any data read from or written to the text file is
+       copied to the stream.
+
+       Multiple files may be logged to the same stream.  For example,
+       you can log both Input and Output, and keep a record of an
+       interactive session on the stream.
+
+       It's also possible to log the same file to multiple streams.
+       Just create the different TLogFilter objects, and call their Log
+       methods with the same file as an argument.  If you then call
+       Unlog, you must do it in the *reverse* order to the order you
+       called Log, e.g.
+         S1^.log(output);
+         S2^.log(output);
+         S2^.unlog(output);
+         S1^.unlog(output);
+       is the correct order to log and unlog.
+
+       One detail of the implementation may cause some trouble.  The
+       data is logged to the stream at the time it is written to disk by
+       the text file.  Since text files are buffered, this may not be
+       the time at which you write to the text file, and multiple text
+       files logged to the same stream may not have all data appearing
+       in the correct order.  If this is a problem for you, call the
+       System unit Flush() procedure to flush output from the text file
+       to disk.
+
+     FIELD
+
+     LogList : ^Text;
+
+       This is a pointer to the first text file currently being logged.
+
+     METHODS
+
+     Constructor Init(ABase:PStream);
+
+       Initializes the filter with a LogList of nil.
+
+     Destructor done; virtual;
+
+       Stops logging all text files by calling UnLog for each, and
+       closes and disposes of the base stream.
+
+     Procedure Log(var F:text);
+
+       Starts logging the text file F.  Continues until the UnLog method
+       is called or the file is closed or Assign'd.
+
+     Function UnLog(var F:text):boolean;
+
+       Stops logging the text file F.  Returns true if successful, false
+       if not.  Will fail if an Assign has been done to F, or F has been
+       closed, or F has already been Unlogged, or another stream has
+       started logging F and hasn't been UnLog'd yet.
+
+6.  TBitFilter = object(TFilter)
+
+       This filter allows you to do bit-oriented I/O to a stream,
+       instead of the usual byte-oriented I/O.  A typical use might be
+       for a compression scheme:  if a word only takes the values 0 or
+       1, you can use a TBitFilter to be sure that it only takes up one
+       bit of the output file.
+
+       If you use this filter, you can mix standard byte-oriented I/O
+       (Read, Write) with bit-oriented I/O (GetBit, GetBits, ReadBits,
+       PutBit, PutBits, WriteBits).  There's a substantial performance
+       penalty however, if the bytes you write to the stream aren't
+       aligned with the actual bytes in the base stream.
+
+       One arbitrary choice was made:  the order of bits in a byte.
+       This object follows the 80x86 convention of least significant
+       part first, and considers the least significant bit (low bit) to
+       come before the most significant bit (high bit) within a byte.
+
+     FIELDS
+
+     BitPos : shortint;
+
+       Position of stream relative to base file.  Negative values signal
+       that the buffer is unchanged from the file, positive values signal
+       that the file needs to be updated.  Zero signals an empty buffer.
+
+     Mask : byte;
+
+       The mask to use to extract the next bit from the buffer.
+
+     Buffer : byte;
+
+       A buffer to hold 8 bits.
+
+     AtEnd : boolean;
+
+       This flag is an efficiency hack.  A TBitFilter can write a single
+       bit anywhere in a file; this means that it has to read the
+       existing byte before writing a new one.  If it's doing a lot of
+       small writes at the end of the file, this can be incredibly slow,
+       because every one of those reads will fail.  The AtEnd flag
+       signals that the current position of the stream is the end of the
+       file, and a read isn't necessary.
+
+       Normally, AtEnd is maintained internally, and you don't need to
+       worry about it.  However, if you increase the length of the base
+       stream other than by writes through the TBitFilter, you
+       *must* set AtEnd to false, so that the bit buffer is properly
+       initialized.  Calling Flush on the TBitFilter is sufficient to do
+       this, and would probably be a good idea before you fiddled with
+       the base anyways.
+
+     METHODS
+
+     Function GetBit : TBit;
+
+       Type TBit is a 0 or a 1.  This function reads a single bit from
+       the stream.
+
+     Function GetBits(count : byte): longint;
+
+       This function reads up to 32 bits, and returns them in the
+       longint value.  The first bit read ends up in the least
+       significant bit of the result, and bits higher than the count
+       are zeroed.
+
+     Procedure ReadBits(var buf; count : longint);
+
+       This procedure reads up to 524288 bits (64K bytes) from the
+       stream into the buffer.  Reads are faster when they start on a
+       byte boundary.  Only the bytes that are affected by the
+       read will be modified, with the high bits of the last byte zeroed
+       if necessary.  For example, if you read fewer than 9 bits into a
+       word variable, the high byte of the word will be left untouched.
+
+     Procedure PutBit(ABit : TBit);
+
+       Write one bit to the stream.
+
+     Procedure PutBits(Abits : longint; count : byte);
+
+       Writes up to 32 bits to the stream.  Since ABits is a value
+       parameter, you can write the value of an expression directly to
+       the stream without storing it in an intermediate variable.
+
+     Procedure WriteBits(var buf; count : longint);
+
+       This procedure writes up to 524288 bits (64K bytes) to the
+       stream.  Writes are *much* faster if the starting bit is byte
+       aligned.
+
+     Procedure SeekBit(bitpos:longint);
+
+       Seek to a particular bit in the stream.
+
+     Function GetBitPos : longint;
+
+       Get the current stream position accurate to the nearest bit.
+
+     Procedure CopyBits(var S:TBitFilter; Count:longint);
+
+       Like CopyFrom, but for bits:  copies Count bits from S.
+
+     Procedure ByteAlign;
+
+       Seeks forward to the next byte boundary.  If the last byte
+       of the stream is only partially filled, it will be padded with
+       zero bits.
+
+     Procedure Read(var Buf; Count : Word); virtual;
+     Procedure Write(var Buf; Count : Word); virtual;
+     Procedure Seek(Pos : LongInt); virtual;
+     Procedure Flush; virtual;
+
+       Implement the standard byte-oriented functions.  Note that if the
+       base stream is not byte-aligned at the start or a read/write,
+       they will split each byte between two in the output stream.
+
+     Procedure PrepareBuffer(ForRead:boolean);
+
+       Internal method to prepare the buffer for a read or a write.
+
+7.  TDupFilter = object(TFilter)
+
+       A filter which duplicates writes to two base streams, and checks
+       that data read from the two base streams matches.  The match test
+       is a virtual method, so a descendant could implement a different
+       test if desired.
+
+     FIELDS
+
+     Base2 : PStream;
+
+        This is a pointer to the second base stream.  I/O is done first
+        to Base^, then to Base2^.
+
+     Startofs2 : Longint;
+
+        Corresponds to TFilter.StartOfs, but applies to Base2^:  gives
+        the offset corresponding to the filter's offset of 0.
+
+     METHODS
+
+     constructor Init(ABase, Abase2 : PStream);
+
+        Sets the two base streams and the start offset variables.
+
+     destructor Done; virtual;
+
+        Flushes the filter, then disposes of both bases if they're not
+        nil.
+
+     function MisMatch(var buf1,buf2; count:word):word; virtual;
+
+        Checks for a mismatch between the two buffers.  Returns
+        the byte number of the mismatch (1 based), or 0 if they
+        test equal.  This default method checks for an exact match.
+
+     procedure Read(var Buf; Count : Word); virtual;
+
+        Reads from Base into the buffer, then does a corresponding read
+        from Base2 into a local buffer calling MisMatch to check for a
+        mismatch.  If one is found, calls the Error method to signal an
+        stMisMatch error, with the Info word equal to the position of
+        the mismatch in the current buffer.
+
+        Unless a base error occurs, the two bases will be left
+        synchronized at the position following the data just read.
+
+      procedure Seek(Pos : LongInt); virtual;
+      procedure Truncate; virtual;
+      procedure Write(var Buf; Count : Word); virtual;
+      procedure Flush; virtual;
+
+        Standard methods applied to both bases.
+
+      function CheckStatus : Boolean; virtual;
+
+        Checks the status of the filter, and assures that both bases are
+        okay if status is stOK.
+
+      procedure CheckBase2;
+
+        Like TFilter.CheckBase, but operates on base2 and signals
+        stBase2Error.
+
+8.  TConcatFilter = object(TFilter)
+
+        This is another two-base filter.  Unlike TDupFilter, however,
+        instead of treating the two bases as overlapping, this one
+        treats Base2 as if it follows directly after the end of Base.
+        Both reads and writes are directed to the appropriate base
+        stream.
+
+      FIELDS
+
+      Base2 : PStream;
+
+        This is a pointer to the second base stream, whose contents will
+        appear to follow those of the Base stream.
+
+      Startofs2 : Longint;
+
+        Corresponds to TFilter.StartOfs, but applies to Base2^:  gives
+        the offset corresponding to the filter's offset of 0.
+
+      Position : Longint;
+
+        This is the current position of the TConcatFilter.  The
+        corresponding base stream to this position is kept synchronized
+        with it.
+
+      Base1Size : Longint;
+
+        This is the size of the first base stream upon initialization,
+        and is used in determining when to switch.  The first base will
+        never change in size; all writes to positions bigger than
+        Base1Size will be directed to the second stream.
+
+      METHODS
+
+      constructor Init(ABase, Abase2 : PStream);
+
+        Sets the two base streams and the fields.  The initial position
+        of the stream is set to the beginning of Base2.
+
+      destructor Done; virtual;
+
+        Flushes the filter, then disposes of both bases if they're not
+        nil.
+
+      procedure Flush; virtual;
+      function GetPos:longint; virtual;
+      function GetSize:longint; virtual;
+      procedure Read(var Buf; Count : Word); virtual;
+      procedure Seek(Pos : LongInt); virtual;
+      procedure Truncate; virtual;
+      procedure Write(var Buf; Count : Word); virtual;
+
+        These methods work directly on Base until its size is reached,
+        then switch over to Base2.  Base will *never* grow from the size
+        at stream initialization.
+
+     function CheckStatus : Boolean; virtual;
+
+        Checks the status of the filter, and assures that both bases are
+        okay if status is stOK.
+
+      procedure CheckBase2;
+
+        Like TFilter.CheckBase, but operates on base2 and signals
+        stBase2Error.
+
+9.  TLimitFilter = object(TFilter)
+
+        This is a filter that applies upper and lower limits to the
+        bytes that may be accessed from the base stream.  You can use it
+        in debugging, to detect out of range access; in programs that
+        allocate workspace, to limit their impact on the system; and
+        in other situations where you want to undo stream
+        concatenations.
+
+      FIELDS
+
+        LoLimit, HiLimit : longint;
+
+          These two fields define the limits for accesses.  The current
+          position of the filter will always satisfy
+              LoLimit <= GetPos <= HiLimit
+          attempt to move it outside these limits will cause an error.
+
+      METHODS
+
+      constructor Init(ABase:PStream; ALoLimit,AHiLimit:Longint);
+
+        Does the usual TFilter.Init, sets the limits, then does a Seek
+        to ALoLimit if it is non-zero.
+
+      function GetSize:Longint;
+
+        Returns the smaller of HiLimit and TFilter.GetSize.
+
+      procedure Read(var Buf; Count : Word); virtual;
+      procedure Seek(Pos : LongInt); virtual;
+      procedure Write(var Buf; Count : Word); virtual;
+
+        These check that the request won't move the current position
+        outside the limits, and raise an error if so.  If not, the
+        request is passed on to the TFilter method.
+
+10.  TLoopFilter = object(TLimitFilter)
+
+        This filter makes a stream look like a tape loop:  if you read
+        or write beyond the end, it loops back to the beginning.  It's
+        descended from a TLimitFilter and uses the LoLimit and the
+        HiLimit as the ends of the part of the base stream that you can
+        see.
+
+      METHODS
+
+      function GetSize:Longint;
+
+        Returns the smaller of the length between the limits, or the
+        length from the lower limit to the end of the base stream.
+
+      procedure Read(var Buf; Count : Word); virtual;
+      procedure Seek(Pos : LongInt); virtual;
+      procedure Write(var Buf; Count : Word); virtual;
+
+        These all act as though on an infinitely repeating stream, by
+        mapping all requests back into the stream range.
+
+11.  TReverseFilter = object(TFilter) and ReverseBytes
+
+        This filter lets you read or write a stream in reverse order:
+        both Read and Write act on the block of bytes *before* the
+        current file position.  The GetPos and Seek methods also work in
+        the reversed byte order, i.e. counting bytes from the end of the
+        stream instead of from the beginning.
+
+      FIELD
+
+      ReverseBlocks : Boolean;
+
+        When you use a TReverseFilter, the question comes up as to
+        whether you want to read structures in the order in which they
+        were written, or whether you actually want to reverse the byte
+        order within each structure.  This field is used to determine that.
+        If ReverseBlocks is true, then the byte order appears completely
+        reversed.  If it's false, then when you do a read of more than 1
+        byte, the buffer gets the bytes in their original order.
+
+      METHODS
+
+      constructor init(ABase:PStream; AReverseBlocks:boolean);
+
+        The constructor calls the standard TFilter.Init constructor,
+        and initializes the AReverseBlocks field.
+
+      function GetPos:longint;
+      procedure Read(var Buf; Count : Word);
+      procedure Write(var Buf; Count : Word);
+      procedure Seek(Pos : LongInt);
+
+        These methods all act on the stream in the reverse byte order.
+        The action of Read and Write depends on the ReverseBlocks field
+        described above.
+
+      procedure Truncate;
+
+        Truncation is not supported, and a call to this method will
+        trigger an stUnsupported error.
+
+      PROCEDURE
+
+      procedure ReverseBytes(var Buf; Count : Word);
+
+        This procedure reverses the byte order within the buffer Buf.
+        It's not a TReverseFilter method, just a standard procedure.
+
+12.  TSequential = object(TFilter)
+
+        This is a very simple descendant of TFilter:  the only
+        difference is that it signals stUnsupported if the Seek method
+        is called.  It's used as a base for the filters below, which can
+        only work sequentially.
+
+      METHOD
+
+      procedure Seek(pos:longint); virtual;
+
+        Signals stUnsupported by calling Error if ever called.
+
+13.  Checksum/CRC filters
+
+        These are four filters, TChkSumFilter, TCRC16Filter,
+        TCRCARCFilter, and TCRC32Filter, which can be used to calculate
+        checksums and cyclic redundancy checks (CRCs) on the stream of
+        data passing through the filter in either reads or writes.
+
+        All three CRC filters are based on code by a collection of
+        authors:  Stephen Satchell, Chuck Forsberg, Mark G. Mendel, R.
+        P. Byrne, J. R. Louvau and probably others.  Edwin T. Floyd
+        collected them together and translated them to TASM.  The
+        CRC*.ASM files include more comments about sources and usage.
+
+        The basic calculations are also available in the interfaced
+        procedures UpdateChksum, UpdateCRC16, UpdateCRCARC, UpdateCRC32.
+        See the source code for the calling details.
+
+      TChkSumFilter = object(TSequential)
+
+        TChkSumFilter calculates a 16 bit sum of all the bytes read from
+        or written to the stream.
+
+      TCRC16Filter = object(TSequential)
+
+        This filter calculates the same 16 bit CRC as used in XModem and
+        its descendants.
+
+      TCRCARCFilter = object(TSequential)
+
+        This filter calculates the 16 bit CRC used by ARC.
+
+      TCRC32Filter = object(TSequential)
+
+        This filter calculates the 32 bit CRC used by PKZIP and ZModem.
+
+      FIELDS
+
+      TChkSumFilter.Chksum : word;
+
+        The 16 bit sum of all bytes passing through the filter.  If an 8
+        bit checksum is required, get the low byte of Chksum by using
+        Byte(Chksum).
+
+      TCRC16Filter.CRC16 : word;
+
+        The XModem-style 16 bit CRC of all bytes passing through the
+        filter.
+
+      TCRCARCFilter.CRCARC : word;
+
+        The ARC-style 16 bit CRC of all bytes passing through the
+        filter.
+
+      TCRC32Filter.CRC32 : longint;
+
+        The PKZIP and ZModem-style 32 bit CRC of all bytes passing
+        through the filter.  Note that the value should be inverted
+        before use (i.e. use "not CRC32" rather than "CRC32") for
+        compatibility with those programs.
+
+      METHODS
+
+      constructor TChkSumFilter.Init(ABase : PStream;AChksum:word);
+      constructor  TCRC16Filter.Init(ABase : PStream;ACRC16:word);
+      constructor TCRCARCFilter.Init(ABase : PStream;ACRCARC:word);
+      constructor  TCRC32Filter.Init(ABase : PStream;ACRC32:word);
+
+        These constructors all initialize the filter, and set the
+        sum or CRC to the given value.  Typically the first three would
+        start with a value of 0; PKZIP and ZModem start the 32 bit CRC
+        with a value of $FFFFFFFF.
+
+      procedure Read(var Buf; Count : Word); virtual;
+      procedure Write(var Buf; Count : Word); virtual;
+
+        All four filters override just these two methods.  Both update
+        the sum or CRC if the Read/Write is successful.
+
+14.  TNulStream = object(TStream)
+
+       A stream which eats your writes, and returns a constant if you
+       read from it.  (Suggested by Stefan Boether.)
+
+       I can see two uses for this stream.  Stefan suggested using it to
+       count bytes:  if you're not sure how much space something will
+       take when written out, write it to a TNulStream, and then read
+       the size to find out.  I use it differently in the TempStream
+       code:  there, it's used to initialize another stream to a fixed
+       value.  I just copy as many bytes as I need from a TNulStream.
+
+     FIELDS
+
+     position : longint;
+
+       The current position of the stream.  This is increased by both
+       reads and writes.  It's also used as the current size of the
+       stream.
+
+     value : byte;
+
+       The value which will be used to fill any read request.
+
+     METHODS
+
+     Constructor init(Avalue : byte);
+
+       Initialize the stream with value=Avalue.
+
+     Destructor done; virtual;
+
+       Dispose of the stream.
+
+     Function getpos : longint; virtual;
+     Function getsize : longint; virtual;
+     Procedure read(var buf; count : word); virtual;
+     Procedure seek(pos: longint); virtual;
+     Procedure write(var buf; count: word); virtual;
+
+       Implement the basic stream functions.
+
+
+15.  TRAMStream = object(TStream)
+
+       A stream which resides entirely in RAM, either maintaining its
+       own buffer, or using a predefined buffer.  The maximum length
+       is 65520 bytes.
+
+     FIELDS
+
+     cp : word;
+
+       The current pointer for the stream.
+
+     size : word;
+
+       The current size of the stream.
+
+     alloc : word;
+
+       The size of the allocated block of memory.
+
+     buffer : Pbyte_array;
+
+       A pointer to the block of memory holding the stream data.
+
+     OwnMem : Boolean;
+
+       Indicates whether the stream "owns" the buffer, and should dispose
+       of it in the Done destructor.
+
+     METHODS
+
+     Constructor init(ASize : word);
+
+       Attempt to initialize the stream to a block size of Asize;
+       initial stream size and position are 0.
+
+     Constructor UseBuf(Abuffer : pointer; Asize : word);
+
+       Set up the stream using the given buffer; OwnMem is set to false,
+       so that the memory will not be disposed when done.  Initial
+       position is 0 and size is Asize.
+
+     Destructor done; virtual;
+
+       Dispose of the stream, and if OwnMem is true, the data buffer.
+
+     Function getpos : longint; virtual;
+     Function getsize : longint; virtual;
+     Procedure read(var buf; count : word); virtual;
+     Procedure seek(pos: longint); virtual;
+     Procedure truncate; virtual;
+     Procedure write(var buf; count: word); virtual;
+
+       Implement the basic stream functions.
+
+
+16.  TXMSStream = object(TStream)
+
+       A stream which keeps its data in XMS (extended) memory.
+
+     FIELDS
+
+     Handle : word;
+
+       The handle used by the XMS memory manager for the stream's block
+       of data.
+
+     MaxBlocks : word;
+
+       The maximum number of 1K blocks of memory to allocate.
+
+     BlocksUsed : word;
+
+       The number of 1K blocks of memory currently allocated.  Always
+       allocates at least 1 byte more than Size.
+
+     Size : longint;
+
+       The current size of the stream.
+
+     Position : longint;
+
+       The current position of the stream.
+
+     METHODS
+
+     Constructor init(MinSize,MaxSize : longint);
+
+       Attempts to allocate a block of XMS memory of at least MinSize
+       bytes.  MaxSize is treated like the MaxSize parameter of
+       TEMSStream.Init:  the Init will try to allocate a block that can
+       grow to MaxSize, but won't signal an error if it gets a smaller
+       one.  If you definitely need a certain size, specify it as
+       MinSize.
+
+     Destructor done; virtual;
+
+       Dispose of the stream, and release the XMS memory.
+
+     Function getpos : longint; virtual;
+     Function getsize : longint; virtual;
+     Procedure read(var buf; count : word); virtual;
+     Procedure seek(pos: longint); virtual;
+     Procedure truncate; virtual;
+     Procedure write(var buf; count: word); virtual;
+
+       Implement the basic stream functions.
+
+     Procedure NewBlock;
+
+       Internal method to increase the stream's allocation by one block.
+
+     Procedure FreeBlock;
+
+       Internal method to decrease the stream's allocation by one block.
+       Doesn't check if the allocated size falls below Size.
+
+
+17.  xms_MemAvail, xms_MaxAvail, ems_MemAvail, ems_MaxAvail,
+     disk_MemAvail, disk_MaxAvail
+
+       These procedures are analogous to the MemAvail and MaxAvail
+       procedures in the System unit.  They report on available XMS and
+       EMS memory, and disk space on the drives mentioned in the
+       TempEnvVar directories.  As of release 1.4, they report in bytes,
+       just as the standard functions do.
+
+18.  TNamedBufStream = object(TBufStream)
+
+       A simple descendant of TBufStream which knows its own name.
+
+     FIELD
+
+     filename : PString  { PChar in TPW };
+
+       The name of the stream.
+
+     METHODS
+
+     Constructor Init(name:FNameStr;mode:TOpenMode;abufsize:word);
+
+       Open the file with the given name, and save the name.
+
+     Destructor Done; virtual;
+
+       Close the file.
+
+19.  TTempBufStream = object(TNamedBufStream)
+
+       A temporary buffered file stream, which deletes itself when done.
+       It's allocated in one of the directories specified by TempEnvVar.
+
+     METHODS
+
+     Constructor init(abufsize:word;InitSize,MaxSize : Longint);
+
+       Create a temporary file with a unique name, in a directory
+       pointed to by the environment variable named in TempEnvVar or in
+       the current directory, and open it in read/write mode.  The
+       constructor will only be successful if the file can be set to
+       InitSize bytes.  The directory chosen will be the first with
+       at least MaxSize bytes available, or, if none has that much
+       space, the one with the largest space available.
+
+     Destructor done; virtual;
+
+       Close and delete the temporary file.
+
+20.  Function TempStream(InitSize,MaxSize : longint;
+                        Preference:TStreamRanking):PStream;
+
+       This procedure returns a pointer to a temporary stream from a
+       choice of 4, specified in the Preference array.  The first stream
+       type listed in the Preference array which can be successfully
+       created with the given sizes will be returned, or Nil if none can
+       be made.
+
+     ARGUMENTS
+
+     Initsize : longint;
+
+       The initial size to allocate to the stream.  This many nulls will
+       be written to the stream, and then the position will be set to
+       byte 0.
+
+     MaxSize : longint;
+
+       The maximum size to which the stream should be allowed to grow.
+       The stream will be allocated to a particular type only if there
+       are at least MaxSize bytes available at the time of the call to
+       TempStream.  However, the space isn't reserved; there's no
+       guarantee that the space will still be available at the time your
+       stream grows to that size.
+
+     Preference : TStreamRanking;
+
+       An array of 4 entries specifying what sort of temporary stream is
+       desired.  Supplied constants include:
+
+        ForSpeed = (RAMStream, EMSStream, XMSStream, FileStream);
+        ForSize  = (FileStream,EMSStream, XMSStream, RAMStream);
+        ForSizeInMem = (EMSStream, XMSStream, RAMStream, NoStream);
+        ForOverlays =  (EMSStream, XMSStream, FileStream, NoStream);
+
+21. TWorkStream = object(TFilter)
+
+       This is a stream that can grow as you write to it. You can
+       allocate it small at first, and then if it turns out that you
+       need more space, it'll allocate additional blocks.  The nice
+       feature of this stream as compared to the other kinds of stream
+       is that when it runs out of one kind of memory (RAM, EMS, XMS, or
+       disk) it'll move continue in the next.
+
+       Though a descendant of TFilter, this type is more of a stream
+       than a filter, because it manages its own base.  It starts out by
+       allocating one block of the size you specify (see the Init method
+       for the details).  If it has a write error on that block, it
+       allocates a new one, and uses a TConcatFilter to attach them
+       together.  In effect, this creates a linked list of streams.
+
+     FIELDS
+
+     Allocate : TAllocator;
+
+       This is a procedural parameter pointing to the function which
+       will be used to allocate the next block.  Typically TempStream
+       would be used for the allocations.
+
+     BlockMin,
+     BlockMax : longint;
+     Preference : TStreamRanking;
+
+       These are the parameters which will be passed to Allocate when a
+       new block is needed.  If you don't use TempStream, your allocator
+       can interpret them however it likes.
+
+       The field Blockmax is also used by the TWorkStream when it does
+       its writes.  It splits up any write that might cross offset
+       Blockmax in the current block into two writes, one on either
+       side.  This means that any stream like a TRamStream that really
+       has a known physical size limit will be completely filled before
+       a write fails and a new block needs to be allocated.
+
+     BlockStart: longint;
+
+       This is the offset in the stream where the last block (the only
+       one which can be expanded) starts.
+
+     METHODS
+
+     constructor Init(Allocator:TAllocator;ABlockmin,ABlockMax:Longint;
+                      APreference : TStreamRanking);
+
+       The arguments to Init serve as initial values to the fields with
+       corresponding names, described above.  After those are set, Init
+       does the first allocation using Allocate, and sets the result as
+       the base stream.
+
+     procedure Write(var Buf; Count:Word); virtual;
+
+       This is the only TFilter method which TWorkStream overrides.  It
+       passes most writes through to the base stream, but if an error
+       occurs, it allocates a new block, concatenates it on to the
+       existing part of the stream using TConcatFilter, and does the
+       write there.  The only writes which don't go directly to the Base
+       first are those which would cross the ABlockMax byte of the
+       current block; they're split up into two parts.
+
+22. Stream overlay procedures
+
+       These procedures allow overlays to be buffered on any stream or
+       combination of streams.  Some overlays can be loaded into EMS,
+       others kept on disk, and others can be put onto any other
+       available stream.
+
+     PROCEDURES/FUNCTIONS
+
+     Procedure OvrInitStream(S:PStream);
+
+       Copies overlay segment code to S as new segments are loaded, and
+       does reloads from there.  You may call OvrInitStream multiple
+       times, and different segments will be buffered on different
+       streams, depending on the order in which they are loaded by the
+       overlay loader.
+
+       On the first call, an exit handler is installed which will call
+       OvrDisposeStreams upon program termination.
+
+     Procedure OvrDetachStream(BadS:PStream);
+
+       Makes sure that the overlay system makes no references to BadS.
+       Call this before disposing of a stream which has been passed to
+       OvrInitStream, or you're very likely to crash.
+
+     Procedure OvrDisposeStreams;
+
+       Detaches and disposes of all streams being used by the overlay
+       system.
+
+     Function OvrSizeNeeded:longint;
+
+       Returns the additional size required to load any segments which
+       still haven't been loaded to a stream.
+
+     Function OvrLoadAll:boolean;
+
+       Forces all overlay segments to be copied into the stream; if
+       successful (true) then no more references to the overlay file
+       will be made.
+
+       Warning:  This function calls OvrClearBuf, so that any overlay
+       files which are already in the regular overlay buffer will need
+       to be reloaded.
+
+23.  TEMSStream2 = object(TEMSStream)
+
+       Borland made a small mistake when they wrote TEMSStream.  The
+       done destructor can leave the global variable EMSCurHandle
+       with the handle of a page that has been freed.  If the next
+       EMS stream happens to get the same handle, TEMSStream won't
+       bother mapping it into the page frame, because it thinks it's
+       already there.
+
+       TEMSStream2 overrides the Done destructor to fix this problem.
+
+     Destructor Done;
+
+       Calls TEMSStream.done, then sets EMSCurhandle to $FFFF to signal
+       that the current page is no longer valid.
+
+24.  procedure FastCopy(var src,dest: TStream; size:longint);
+
+       This procedure behaves just like dest.copyfrom(src,size), but
+       will be quite a bit faster on large copies, because it tries to
+       use a large buffer on the heap.  (Copyfrom uses a 512 byte buffer
+       on the stack.)  If the heap space isn't there, it falls back to
+       using CopyFrom.
+
+25.  Miscellaneous constants and types
+
+     CONSTANTS
+
+     stBadMode = 1;
+
+       Error signalled when an operation is not permitted in the current
+       mode.
+
+     stStreamFail = 2;
+
+       Error signalled when a stream Init failed.
+
+     stBaseError = 3;
+
+       Error signalled by a TFilter when the base stream has an error;
+       the base stream's error number is put in the Info field.
+
+     stMemError = 4;
+
+       Not enough memory for operation.
+
+     stSigError = 5;
+
+       Problem with LZW file signature.
+
+     stUsedAll = 6;
+
+       XMS stream has used all of its allowed blocks.
+
+     stUnsupported = 7;
+
+       Operation unsupported in this stream.  TSequential signals this
+       error if Seek is called.
+
+     stBase2Error = 8;
+
+       Error in second base in a TDupFilter; Info gets the Base2^.Error
+       value.
+
+     stMisMatch = 9;
+
+       The two bases don't match on a read.  The Info field is set to
+       the position of the mismatch in the current read buffer.
+
+     BufSize : word = 2048;
+
+       Buffer size to use when creating a buffered file stream in
+       TempStream.
+
+     TempEnvVar : String[12] = 'TEMP';
+
+       This is the name of the environment variable to look in for a
+       list of directories when creating a TTempBufStream, or when
+       reporting on available space with disk_MaxAvail or disk_MemAvail.
+       If the environment variable doesn't exist, all the procedures
+       treat it as though it specifies the current directory.
+
+
+     TYPES
+
+     TOpenMode = $3C00..$3DFF;
+
+       This is the widest possible range of open modes for a TDOSStream
+       descendant.  Values outside this range can cause very serious bugs in
+       programs, since the high byte is used as the DOS service number
+       when the file is opened.
+
+     PLZWTables = ^TLZWTables;
+     TLZWTables = record ...
+
+       These tables are used internally to maintain the state of a
+       TLZWFilter.
+
+     PByte_Array = ^TByte_Array;
+     TByte_Array = array[0..65520] of byte;
+
+       An array type used as a buffer in several places.
+
+     TStreamType = (NoStream, RAMStream, EMSStream, XMSStream, FileStream);
+
+       The types of streams that TempStream can create.
+
+     TStreamRanking = array[1..NumTypes] of TStreamType;
+
+       An array giving the order from most preferred to least preferred
+       for a temporary stream.
+
+     TAllocator = function (InitSize, MaxSize : LongInt;
+                            Preference : TStreamRanking) : PStream;
+
+       A function like TempStream which allocates new streams.  One of
+       these is used by TWorkStream to allocate new blocks.  It should
+       create a stream which is at least InitSize bytes, and likely
+       capable of growing to MaxSize bytes, if condition don't change.
+       The Preference array indicates the desired strategy for
+       allocating.
+
+26.  Release history and credits
+
+     1.0 - First release, missing LZW.  Immediately replaced by
+     1.1 - First correct release: TFilter, TEncryptFilter, TTextFilter,
+           TLogFilter, TRAMStream, TNamedBufStream, TTempBufStream,
+           TempStream, overlay procedures (my ideas), TLZWFilter
+           (from code by Wilbert van Leijen)
+     1.2 - TNulStream, TXMSStream added (from Stefan Boether)
+           TBitFilter added (suggestion of Rene Seguin)
+           TFilter.Done calls Flush
+           TRAMStream.UseBuf and OwnMem added.
+     1.3 - TDupFilter, TSequential, TChksumFilter added (my ideas),
+           TCRC16Filter, TCRCARCFilter, TCRC32Filter and related procedures
+           added (from code by Edwin T. Floyd, Stephen Satchell, Chuck
+           Forsberg, Mark G. Mendel, R. P. Byrne, J. R. Louvau and
+           probably others); TFilter.Flush added; HUFFMAN demo added.
+     1.4 - Recoded several of the TRAMStream methods in assembler for
+           more speed; fixed numerous TTextFilter bugs and added
+           TTextFilter.AssignStream and TextDemo.pas; fixed
+           TXMSStream.Seek bug.  Changed xms_Memavail and xms_Maxavail
+           to report in bytes, and added ems_Memavail and ems_Maxavail
+           (based on code sent to me by Eyal Doron) and disk_Memavail
+           and disk_Maxavail. Changed TXMSStream.Init to match
+           TEMSStream.Init. Added TConcatFilter, TLimitFilter,
+           TLoopFilter, TReverseFilter and TWorkStream.  Added OwnsBase
+           field to TFilter.  Did some testing to assure that the unit
+           works in BP 7 protected mode.  Thanks to Max Maschein, Eyal
+           Doron, and others for bug fix help.
+     1.5 - The first public release of the 1.4 enhancements.
+     1.6 - Fixed bugs:  Getmem returning nil, Reversebytes, termination
+           of TLZWStream, workaround for Borland's TEMSStream bug,
+           improved speed of TTextFilter, added FastCopy
+

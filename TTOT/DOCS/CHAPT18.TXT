@@ -1,0 +1,334 @@
+                                                                       Extending
+                                                                         Windows
+
+
+         "The success hasn't gone to our price."          Peugeot Motor Company
+
+
+
+         Earlier, in chapter 7: Using Windows (page 7-12) a template for
+         stretchable windows was presented. This template illustrated how, with
+         just a few procedures, you could build customized windows. In this
+         chapter you will learn how to use OOP techniques to extend window
+         objects, and gain even more flexibility. To illustrate the concepts,
+         the StretchWinOBJ object will be extended to provide a generic object
+         for scrolling virtual screens.
+
+
+Window Object Structure
+
+         Before trying to extend the window objects, you need to have an under-
+         standing of how the window objects function. The table below describes
+         the data declared in each window object.
+
+
+                                       WinOBJ
+                 Variable                         Description
+           vBorder: tCoords     The (X1,Y1,X2,Y2) coordinates of the window
+                                border.
+           vOuter: tCoords      The (X1,Y1,X2,Y2) coordinates of the saved
+                                screen area, i.e. window and shadow.
+           vUnderneathPtr:      A pointer to the saved image overlaid by the
+           pointer              window.
+           vSavedSize: longint  The size, in bytes, of the saved area.
+           vTitle: string       The window title.
+           vBorderAttr          The window display attributes.
+           vTitleAttr
+           vBodyAttr
+           vIconsAttr: byte
+           vStyle:byte          The window style.
+           vRemove: boolean     A boolean to indicate whether the window will
+                                be removed when the object is Done.
+           vCursX,vCursY,       The cursor settings at the time the window was
+           vCursTop,            displayed.
+           vCursBot: byte
+           vOldWin: tByteCoords The window settings at the time the window was
+                                displayed.
+           vOldWinConfine:      A boolean to indicate whether window settings
+           boolean              were active when the window was displayed.
+           vMVisible: boolean   A boolean to indicate whether the mouse was
+                                visible when the window was displayed.
+
+18-2                                                       Extending the Toolkit
+
+--------------------------------------------------------------------------------
+                                       MoveWinOBJ
+                 Variable                         Description
+
+
+           vBoundary:tCoords    The (X1,Y1,X2,Y2) coordinates of the area in
+                                which the window can be moved.
+           vMoveKey: word       The key to press to invoke a manual (non-mouse)
+                                move.
+           vAllowMove:boolean   A boolean to indicate whether the user is
+                                allowed to move the window.
+
+                                       ScrollWinOBJ
+                 Variable                         Description
+           vScrollV:boolean;    A boolean to indicate whether the vertical
+                                scroll bar is visible.
+           vScrollH:boolean;    A boolean to indicate whether the horizontal
+                                scroll bar is visible.
+
+
+
+                                       StretchWinOBJ
+                 Variable                         Description
+           vZoomed:boolean      A boolean to indicate whether the window is
+                                currently zoomed.
+           vPreZoom:tCoords     The coordinates of the window border prior to
+                                zooming.
+           vMinWidth:byte       The minimum width of the window.
+           vMinDepth:byte       The minimum depth of the window.
+           vStretchKey:word     The key to press to invoke a manual (non-mouse)
+                                stretch.
+           vZoomKey:word        The key to press to invoke a manual (non-mouse)
+                                zoom.
+           vAllowStretch:       A boolean to indicate whether the user is
+           boolean              allowed to stretch the window.
+           vSmartStretch:       A boolean to indicate whether the window will
+           boolean              be updated during a stretch operation.
+
+
+         Note that the type tCoords is defined as follows:
+                  tCoords = record
+                     X1,Y1,X2,Y2: shortint;
+                  end;
+
+
+         By now, you should already know most of the window methods in the file
+         TOTWIN.PAS. Review the declaration of all four windows objects for a
+         complete list of the methods. From an object extension perspective, the
+         following methods are important:
+         constructor Init;
+
+         Initializes the object.
+
+Extending Windows                                                           18-3
+--------------------------------------------------------------------------------
+
+         procedure WinKey(var K:word; var X,Y: byte); VIRTUAL;
+
+         WinKey is passed keystroke details as variable parameters. If the key-
+         stroke is window specific, e.g. a click on the close icon, a zoom, a
+         window stretch etc., the method will process the key and modify the
+         relevant window characteristic. The value of K is then updated to indi-
+         cate the type of activity, e.g. set to 602 to indicate that the window
+         has been re-sized.
+         procedure StretchRefresh; VIRTUAL;
+
+         While the user is stretching the lower right window, the method Stret-
+         chRefresh is continuously called. This is the mechanism for dynamically
+         showing the user how the window will appear while it is being
+         stretched. The method is only called if the boolean vSmartStretch is
+         set to true. There are two important items to consider. Firstly, this
+         method will only be called while the window settings are suspended, so
+         any screen writing statements in the procedure must use the full-screen
+         coordinate system. Secondly, this method must complete its display
+         update very quickly. It will be called continuously during a stretch
+         operation, and if the procedure takes too long, the user will notice a
+         sluggish response.
+         procedure Draw; VIRTUAL;
+
+         Draw saves the contents of the portion of the screen which will be
+         overlaid by the window, and then draws the window and shadow.
+         destructor Done; VIRTUAL;
+
+         Disposes of the window object memory, and removes the window (if it is
+         still visible and the vRemove variable is set to true).
+
+         If you extend any window object, you will probably modify most of these
+         methods, since they control the window display and input processing
+         routines.
+
+
+
+Extending StretchWinOBJ
+         To illustrate the principles of window extension, a new window object
+         for displaying and scrolling virtual screens will be created. You may
+         recall that a virtual screen is a screen which has all the properties
+         of the physical screen, but is not visible. A virtual screen can be up
+         to 255 characters wide and 255 lines deep - quite a screen! The Screen-
+         OBJ method PartDisplay can be used to transfer a portion of the virtual
+         screen to the visible screen.
+
+
+
+18-4                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         The first task in designing the new object is to decide what additional
+         data will be needed. Obviously, the object will need to know the
+         address of the virtual screen, i.e. a pointer to a ScreenOBJ instance.
+         Two additional variables will be required to keep track of which part
+         of the virtual screen is on display. In other words, the coordinates of
+         the top-left corner of the visible part of the virtual screen. To make
+         sure that the user doesn't scroll beyond the bottom-edge or past the
+         right-edge of the virtual screen, the object will need to know the
+         width and depth of the virtual screen. The preliminary object declara-
+         tion might therefore be as follows:
+
+         VirtualWinOBJ = object (StretchWinOBJ)
+            vScreen: ScreenPtr;
+            vTopLine: integer;   {line number of first visible line}
+            vFirstChar: integer; {number of left-most visible character}
+            vScreenWidth: byte;
+            vScreenDepth: byte;
+            {Methods...}
+            constructor Init;
+            procedure   AssignVirtualScreen(var Scr:ScreenOBJ);
+            destructor  Done;                                    VIRTUAL;
+         end; {VirtualWinOBJ}
+
+         So far so good, but the method Draw, inherited from StretchWinOBJ, will
+         only draw the window border and then clear the central area of the
+         window. VirtualWinOBJ needs to have its own Draw method. This method
+         will first call StretchWinOBJ.Draw to display the basic window, and
+         will then draw the visible part of the virtual window by calling the
+         virtual window's method PartDisplay. The new Draw method will then need
+         to update the vertical and horizontal scroll bars to accurately reflect
+         which portion of the virtual screen is visible.
+
+         The inherited methods DrawHorizbar and DrawVertBar can be used to draw
+         the scroll bars. These methods are passed two longint parameters repre-
+         senting the current position and maximum possible position. For exam-
+         ple, the following statements will correctly update the StretchWinOBJ
+         scroll bars:
+                  DrawHorizBar(vFirstChar,vScreenWidth);
+                  DrawVertBar(vTopLine,vScreenDepth
+
+         Since the virtual screen method PartDisplay is mega-fast, we should be
+         able to refresh the window display during a stretch. This is achieved
+         by adding the method StretchRefresh. All StretchRefresh needs to do is
+         restore the visible portion of the virtual screen, and paint any area
+         of the window which may be beyond the virtual window boundary.
+
+
+
+Extending Windows                                                           18-5
+--------------------------------------------------------------------------------
+
+         The inherit WinKey method will only process keystrokes which close,
+         move or stretch the window. StretchWinOBJ needs to have its own WinKey
+         method which calls the inherited one, and then processes any of the
+         scrolling keys like End, Home, PgUp, PgDn, etc. as well as any mouse
+         clicks on the scroll bars.
+
+         Finally, a Go method could be added. This method would continuously get
+         user input and call WinKey until the user escaped or clicked on the
+         close icon.
+         After all these enhancements, the declaration of the full-blown Virtu-
+         alWinOBJ would be as follows:
+
+         VirtualWinOBJ = object (StretchWinOBJ)
+            vScreen: ScreenPtr;
+            vTopLine: integer;
+            vFirstChar: integer;
+            vScreenWidth: byte;
+            vScreenDepth: byte;
+            {Methods...}
+            constructor Init;
+            procedure   SetScreenXY(X,Y:byte);
+            procedure   AssignVirtualScreen(var Scr:ScreenOBJ);
+            procedure   RefreshWindow;
+            procedure   ScrollDown;
+            procedure   ScrollUp;
+            procedure   ScrollLeft;
+            procedure   ScrollRight;
+            procedure   ScrollTop;
+            procedure   ScrollBottom;
+            procedure   ScrollHome;
+            procedure   ScrollEnd;
+            procedure   ScrollJump(Vert:boolean; X,Y:byte);
+            procedure   ScrollPgUp;
+            procedure   ScrollPgDn;
+            procedure   Go;
+            procedure   StretchRefresh;                       VIRTUAL;
+            procedure   Winkey(var K:word;var X,Y:byte);      VIRTUAL;
+            procedure   Draw;                                 VIRTUAL;
+            destructor  Done;                                 VIRTUAL;
+         end; {VirtualWinOBJ}
+
+         The on-disk unit file EXTWIN.PAS contains the complete implementation
+         of the VirtualWinOBJ method. You might print out this unit and review
+         the detailed statements to gain a thorough understanding of how Virtu-
+         alWinOBJ functions. Since all the work has been done for you, you might
+         consider creating a descendant of VirtualWinOBJ which includes on-line
+         help, printing, etc.
+
+
+
+
+18-6                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+Using VirtualWinOBJ
+
+         Using the new VirtualWinOBJ object is a snap. The demo program EXT-
+         DEM4.PAS, listed below, shows how the object could be used to display
+         the good 'ole ASCII table. Figure 18.1 shows the display generated by
+         the demo program.
+
+
+         Program ExtendedDemoFour;
+         {EXTDEM4}
+         Uses DOS,CRT,
+              totINPUT, totFAST, totSTR, extWIN;
+
+         var
+            ASCIIdata: ScreenOBJ;
+            AscWin: VirtualWinOBJ;
+         procedure BuildASCIIscreen;
+         {creates the virtual screen}
+         var
+            I,J : integer;
+            Str:string;
+         begin
+            with ASCIIdata do
+            begin
+               Init;
+               Create(65,32,71);
+               for I := 0 to 31 do
+               begin
+                  Str := '';
+                  for J := 0 to 7 do
+                  begin
+                     Str := Str+' '+
+                            padright(inttostr(I+32*J),3,'0')+
+                            ' '+char(I+32*J)+' ';
+                     if J <> 7 then
+                        Str := Str + '³';
+                  end;
+                  WritePlain(1,succ(I),Str);
+               end;
+               for J := 0 to 7 do
+                   Attrib(6+J*8,1,6+J*8,32,78);
+            end;
+         end; {BuildASCIIscreen}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            Key.SetFast;
+            BuildASCIIscreen;
+            with AscWin do
+
+
+
+Extending Windows                                                           18-7
+--------------------------------------------------------------------------------
+
+            begin
+               Init;
+               SetTitle(' ASCII Table ');
+               AssignVirtualScreen(ASCIIdata);
+               Go;
+               ASCIIdata.Done;
+               Done;
+            end;
+         end.
+
+
+Figure 18.1                                                             [SCREEN]
+Using
+VirtualWinOBJ
+

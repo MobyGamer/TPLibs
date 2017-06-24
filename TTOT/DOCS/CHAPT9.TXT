@@ -1,0 +1,2168 @@
+                                                                        Managing
+                                                                           Lists
+
+
+         "Three questions are essential... What is the author's object? How far
+         has he accomplished it? How far is that object worthy of approbation?
+
+                                                              Nathanial P Willis
+
+
+
+Introduction
+         Lists, lists, lists. Our lives and our software are often dominated by
+         lists. The Toolkit provides three powerful units to help you manage
+         software lists. (Your lives are your own responsibility!)
+
+         In this chapter, the totLINK and totLIST units are discussed in detail.
+         totLINK provides objects to help you maintain and sort large lists, and
+         totLIST provides objects for displaying lists and arrays in windows.
+         A common form of software list is a file directory list. The Toolkit
+         provides two flexible directory displaying objects, and these are dis-
+         cussed in the next chapter.
+
+
+
+Array and Linked List Theory
+         One-dimensional arrays provide a very quick and convenient way of
+         managing lists. An array is a data structure designed to store data
+         about a fixed number of identical elements. For example, the following
+         variable could be used to store the address of my two sisters' and
+         three brothers' addresses:
+
+                  Addresses: array [1..5] of string;
+         Data in the array is accessed by specifying the element number. For
+         example, the following statement would update my second sister's
+         address:
+
+                  Addresses[2] := "38 The Ridgeway, Friern Barnet, London"
+
+         Arrays are very easy to create, but suffer from two major weaknesses:
+
+         q     The size of an array is fixed at compile time. In other words, in
+               your source code you must explicitly state the size (or bounds)
+               of the array. In our simple example, this was not a problem
+               because I have only five siblings. Imagine, however, that you
+               need to write a generic name and address program. You don't know
+               how many names and addresses will be required, but you must spec-
+               ify the number in your program. The typical solution is to choose
+               a large number of elements (e.g. 200) and hope that the user
+               doesn't need more. Not only does this set a limit on the pro-
+               gram's capacity, it also wastes memory if the maximum number of
+
+9-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+               elements are not used. Turbo Pascal automatically allocates the
+               memory for the entire array regardless of how many elements are
+               actually used. Which leads us to the second shortcoming.
+
+         q     The maximum size of a program's data segment in Turbo Pascal is
+               64k. This means that the sum of all the program's global vari-
+               ables cannot exceed 64k, and, therefore, no individual data
+               structure can exceed 64k. In our example, each element of the
+               array consumed 256 bytes, so 256 of these elements would consume
+               the entire data segment leaving no room for other global vari-
+               ables.
+
+
+         Linked lists do not suffer from these shortcomings. With a linked list,
+         each element is stored independently. The first element in the list
+         includes a pointer indicating where the second element in the list is
+         stored. The second element in the list includes a pointer to the loca-
+         tion of the third element in the list, and so on. When you reach an
+         element in the list that points to NIL, you know you have reached the
+         end of the list. You do not need to fix the maximum number of elements
+         in the list at compile time. Furthermore, the data is stored on the
+         heap (not in the data segment) and so is not limited to 64k. The list
+         can use all of the available memory.
+         Although linked lists are very flexible, they can prove complicated to
+         program and manage. Fortunately, the Toolkit provides a very powerful
+         object which makes managing linked lists a breeze.
+
+
+
+Managing Linked Lists
+         The totLINK unit includes the object DLLOBJ. This object provides a
+         variety of methods for creating and managing linked lists. If you are
+         interested, DLLOBJ actually maintains a doubly-linked list. Each ele-
+         ment in the list points to the next element and the previous element.
+         This is more efficient when you need to move up and down the list.
+
+         The DLLOBJ object is designed to store raw data, i.e. untyped vari-
+         ables. This allows you to store literally any data in a DLLOBJ object.
+         It is important to note that DLLOBJ is an abstract object and you
+         should not create any instances of type DLLOBJ.
+         In this chapter, we will concentrate on a descendant object, StrDLLOBJ,
+         designed specifically to manage lists of strings. If you want to create
+         objects which manage other data types, all you have to do is create an
+         object descended from DLLOBJ. In part 2: Extending the Toolkit, there
+         is a chapter describing how to create other descendants of DLLOBJ to
+         manage specific data types. By way of an example, it describes how to
+         create a linked list object for managing records.
+
+
+
+Managing Lists                                                               9-3
+--------------------------------------------------------------------------------
+
+         Before exploring the StrDLLOBJ methods, you need to understand some
+         doubly-linked-list jargon. Each element in the list is referred to as a
+         node. Behind the scenes, the Toolkit keeps track of the location of the
+         first node in the list, the last node in the list, and the node that
+         was last accessed. The last-accessed node is referred to as the active
+         node.
+
+
+Creating a List
+
+         To create a linked list, you must declare an instance of type StrDLLOBJ
+         and then call the Init and Add methods. The syntax of these methods is
+         as follows:
+
+         Init;
+
+         This method initializes the object and must be called before the other
+         methods.
+
+         Add(Str:string): integer;
+
+         This function method creates a new node in the linked list and stores
+         it in the string Str. The node is actually created immediately follow-
+         ing the active node. Once the node has been added, the active node is
+         moved to point to it. The function returns an integer code - a 0
+         indicates success, a 1 indicates there was insufficient memory to
+         create the node, and a 2 indicates there was enough memory to create
+         the node, but too little memory to store the string.
+
+         Ordinarily, to populate a list, all you have to do is call Init, and
+         then make multiple calls to Add. Listed below is an extract of the demo
+         program, DEMLK1.PAS, which stores a list of names in a linked list.
+
+         var
+           GirlFriends: StrDLLOBJ;
+           Retcode: integer;
+         begin
+            with GirlFriends do
+            begin
+               Init;
+               Retcode := Add('Erica');
+               if Retcode <> 0 then exit;
+               Retcode := Add('Theresa');
+               if Retcode <> 0 then exit;
+               Retcode := Add('Lynn');
+               if Retcode <> 0 then exit;
+               Retcode := Add('Donna');
+               if Retcode <> 0 then exit;
+
+
+
+
+9-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+               Retcode := Add('Godzilla');
+               if Retcode <> 0 then exit;
+               {....}
+            end;
+         end.
+
+
+         To save checking the value of Retcode every time you add a node, you
+         might check that there is enough memory available for all the nodes,
+         and ignore the return code, as follows:
+         var
+            GirlFriends: StrDLLOBJ;
+            Retcode: integer;
+
+         begin
+            with GirlFriends do
+            begin
+               Init;
+               if maxavail > 200 then
+               begin
+                  Retcode := Add('Erica');
+                  Retcode := Add('Theresa');
+                  Retcode := Add('Lynn');
+                  Retcode := Add('Donna');
+                  Retcode := Add('Godzilla');
+                  {...}
+               end;
+            end;
+         end.
+
+         In fact, if you are using Turbo Pascal 6.0 and the extended compiler
+         directive {$X+} has been set, you can ignore the function return value,
+         as follows:
+
+         {$X+}
+         var
+            GirlFriends: StrDLLOBJ;
+         begin
+            with GirlFriends do
+            begin
+               Init;
+               if maxavail > 200 then
+               begin
+                  Add('Erica');
+                  Add('Theresa');
+                  Add('Lynn');
+                  Add('Donna');
+                  Add('Godzilla');
+
+
+
+Managing Lists                                                               9-5
+--------------------------------------------------------------------------------
+
+                  {...}
+               end;
+            end;
+         end.
+
+
+Maintaining a List
+
+         Once you have created a list, the following methods can be used to
+         navigate the list:
+
+         TotalNodes: longint;
+
+         This function method returns a longint identifying the total number of
+         nodes in the list.
+
+         ActiveNodeNumber: longint;
+
+         Returns the position of the active node.
+
+         Jump(NodeNumber: longint)
+
+         This method moves the ActiveNodePtr to the specified node number. Add
+         inserts a node after the active node pointer. So, to insert a node
+         anywhere in the list, call the method Jump to move the active node
+         pointer and then call Add.
+
+         Advance(Amount: longint);
+
+         Moves the active node down the list the specified number of nodes. If
+         there are insufficient nodes, the active node pointer is moved to the
+         end of the list.
+
+         Retreat(Amount: longint);
+
+         Moves the active node up the list the specified number of nodes. If
+         there are too few nodes, the active node pointer is moved to the begin-
+         ning of the list.
+
+
+
+Advanced List Management
+
+         In many programs, all you'll need to do is create a list, add items to
+         the list, and then display the list using one of the browse or list
+         displaying objects (discussed later). However, if you want to delete
+         items from the list, swap the positions of two items in the list, or
+         change an item in the list, you will need to access the nodes in the
+         list directly.
+
+
+9-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         Each node in the list is actually a DLLNodeOBJ object, and many of the
+         list manipulation methods access a pointer to the node known as a
+         DLLNodePtr.
+
+         Without worrying about the details, all you need to know is how to
+         determine the value of DLLNodePtr for any given node. The following
+         four function methods serve this purpose:
+
+         NodePtr(NodeNumber:longint): DLLNodePtr;
+
+         Pass this function a node number, and it will return a pointer to the
+         node.
+
+         ActiveNodePtr: DLLNodePtr;
+
+         Returns a pointer to the active node.
+
+         StartNodePtr: DLLNodePtr;
+
+         Returns a pointer to the first node in the list.
+
+         EndNodePtr: DLLNodePtr;
+
+         Returns a pointer to the last node in the list.
+
+         Having established the DLLNodePtr value, the following methods can be
+         used to manipulate the node data:
+
+
+         Change(Node:DLLNodePtr;Str:string):integer;
+         Changes the value at the node to Str. This function method returns an
+         integer to indicate whether the change was a success: 0 indicates suc-
+         cess, 2 indicates insufficient memory for the data, and 3 indicates an
+         invalid node pointer.
+
+
+         DelNode(Node:DLLNodePtr);
+         Deletes the node.
+
+
+         SwapNodes(Node1,Node2:DLLNodePtr);
+         Swaps the data assigned to the two nodes.
+
+
+         InsertBefore(Node:DLLNodePtr; Str:string);
+
+
+
+
+Managing Lists                                                               9-7
+--------------------------------------------------------------------------------
+
+         Inserts a new node immediately before the specified node. (The Add
+         method inserts the data after the active node.) This method provides a
+         way of inserting a node at the very beginning of the list. After this
+         method has been called, the active node pointer is set to the first
+         node in the list.
+
+
+         GetStr(Node:DLLNodePtr; Start,Finish:longint): string;
+         This function returns a sub-string of the data stored at the specified
+         node. The parameters Start and Finish indicate the starting and ending
+         characters to be extracted in the string. For example, values of 6 and
+         10 will return five characters commencing with the character in posi-
+         tion 6 of the string. Pass values of zero for the Start and Finish
+         parameters, if you want the entire string.
+
+
+         Sort(SortID: shortint; Ascending: boolean);
+         This powerful method rearranges the order of all the nodes in a list,
+         i.e. it sorts the list. The sort routine is generic and can be utilized
+         by any descendant of the DLLOBJ object. In the case of StrDLLOBJ, the
+         first parameter has no meaning, and should be set to one. If you want
+         the list sorted in ascending order (i.e. lowest first), pass TRUE as
+         the second parameter, otherwise pass FALSE.
+
+
+         Listed below is the demo program DEMLK2.PAS which illustrates many of
+         the methods discussed thus far. Figure 9.1 shows the generated output.
+         Program DemoLinkTwo;
+         {DEMLK2 - creating a linked list}
+
+         Uses CRT,
+              totLink;
+         var
+            GirlFriends: StrDLLOBJ;
+            Retcode: integer;
+            I : integer;
+
+         begin
+            ClrScr;
+            with GirlFriends do
+            begin
+               Init;
+               if maxavail > 200 then
+               begin
+                  Retcode := Add('Erica');
+                  Retcode := Add('Theresa');
+                  Retcode := Add('Lynn');
+                  Retcode := Add('Donna');
+                  Retcode := Add('Godzilla');
+
+
+9-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+                  writeln('Total nodes: ',TotalNodes);
+                  writeln('Active node number: ',ActiveNodeNumber);
+                  for I := 1 to TotalNodes do
+                      writeln(GetStr(NodePtr(I),0,0));
+                  writeln;
+                  RetCode := InsertBefore(NodePtr(4),'Joyce');
+                  writeln('Total nodes: ',TotalNodes);
+                  writeln('Active node number: ',ActiveNodeNumber);
+                  SwapNodes(NodePtr(5),NodePtr(2));
+                  Retcode := Change(StartNodePtr,'Ekka');
+                  for I := 1 to TotalNodes do
+                      writeln(GetStr(NodePtr(I),0,0));
+                  writeln;
+                  writeln('Sorted:');
+                  Sort(1,true);
+                  for I := 1 to TotalNodes do
+                      writeln(GetStr(NodePtr(I),0,0));
+               end;
+            end;
+         end.
+
+
+Figure 9.1                                                              [SCREEN]
+Using
+StrDLLOBJ
+
+
+
+Removing a List
+         Calling the method Done will always dispose of all the memory consumed
+         by a list. A list can also be emptied with the following method:
+
+
+         EmptyList;
+         Removes all the memory allocated on the heap by chaining back through
+         the list and disposing of each node. The ActiveNodePtr, StartNodePtr
+         and EndNodePtr are set to nil, and TotalNodes is set to nil.
+
+
+
+Comparing StrDLLOBJ to Arrays
+         If you have never used linked lists before, but you have used arrays,
+         you might be interested in comparing array commands with StrDLLOBJ com-
+         mands. Table 9.1 compares the command syntax by manipulating a list of
+         5 names.
+
+
+                        StrDLLOBJ                        String Array
+
+
+
+Managing Lists                                                               9-9
+--------------------------------------------------------------------------------
+
+           Declaring the Variable or Instance
+           var NameList: StrDLLOBJ;            var NameList: array[1..5] of
+                                               string;
+
+           Initializing the List
+           NameList.Init;                      fillchar(NameList,sizeof(NameLis
+                                               t),#0);
+           Populating the List
+           with NameList do                    NameList[1] := 'Mark';
+           begin                               NameList[2] := 'Kirk';
+              Retcode := Add('Mark');          NameList[3] := 'Lloyd';
+              Retcode := Add('Kirk');          NameList[4] := 'Charles';
+              Retcode := Add('LLoyd');         NameList[5] := 'Keith';
+              Retcode := Add('Charles');
+              Retcode := Add('Keith');
+           end;
+
+           Writing an item to the display
+           with NameList do                    writeln(NameList[3]);
+            writeln(GetStr(NodePtr(3),0,0));
+
+           Swapping two items
+           with NameList do                    Temp := NameList[4];
+            SwapNodes(NodePtr(4),NodePtr(5));  NameList[4] := NameList[5];
+                                               NameList[5] := Temp;
+
+           Sorting the List
+           NameList.Sort(1,true);              Ugh!
+
+           Erasing the Entries
+           NameList.EmptyList;                 fillchar(NameList,sizeof(NameLis
+                                               t),#0);
+
+
+
+         Don't forget that the StrDLLOBJ is much more memory efficient, and is
+         not limited to a set number of elements.
+
+         Much of the power of DLLOBJ is not realized until you create descendant
+         objects, customized for your specific needs. Refer to Part 2: Extending
+         The Toolkit for further details.
+
+
+Browse Lists
+
+         Whether your data is in a DLLOBJ (or descendant) object, or in a string
+         array, you will want to take advantage of the Toolkit's objects for
+
+
+
+9-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         automatically displaying lists in windows. In this section, the Brow-
+         seOBJ family of objects will be discussed. These objects display lists
+         in a scrollable window.
+
+
+           Note that a browse window does not include a highlight bar. The
+           user browses the contents of the list, but does not select an
+           individual element. The ListOBJ family (discussed in the next sec-
+           tion) provides objects for highlighting individual elements in a
+           list.
+
+
+
+         Figure 9.2 shows the object hierarchy for the BrowseOBJ family. The
+         base object BrowseOBJ is abstract, and you should not create any
+         instances of this type. The BrowseArrayOBJ object displays the contents
+         of a string array, and the BrowseLinkOBJ displays the contents of an
+         object in the DLLOBJ family. Many programs need to display the contents
+         of ASCII files, and the object BrowseFileOBJ makes this a snap.
+
+Figure 9.2                                                             [PICTURE]
+BrowseOBJ
+Object Hierarchy
+
+
+
+
+Common Methods
+         The totLOOK unit includes an object LookTOT which is used to control
+         the overall look and feel of applications developed with the Toolkit.
+         Call the method LookTOT^.SetListKeys to change the keys which the user
+         can press to close the browse window. The defaults are [KEYCAP] and
+         [KEYCAP]. Refer to page 3-12 for further details.
+
+         Because all the objects are derived from the BrowseOBJ, they share a
+         set of common methods. The following methods can be used with any of
+         the browse objects:
+
+         SetTopPick(TopPick: longint);
+
+         This method identifies the node number of the first node that will be
+         displayed in the list window.
+
+         SetStartCol(Column: longint);
+
+         This method identifies the character position of the first character of
+         the string which is visible in the list window.
+
+
+
+
+Managing Lists                                                              9-11
+--------------------------------------------------------------------------------
+
+         SetEndCol(Column: longint);
+
+         This method sets the maximum lateral scrolling by identifying the last
+         column which will be displayed when the window is scrolled to the right
+         maximum. All lateral scrolling can be disabled by calling the Stretch-
+         WinOBJ method SetScrollable (discussed later).
+
+         Show;
+
+         This method displays the list and immediately returns control back to
+         the calling procedure, i.e. the Toolkit does not wait for user input.
+         This option is useful if you want to display the list on the screen,
+         but not activate it.
+
+         Go;
+
+         This method is the main "do it" method. If the list is not on display,
+         it is drawn. The Toolkit then processes user input until an end key is
+         pressed.
+
+         LastKey:word;
+
+         LastKey returns the key code of the key the user pressed to end the
+         browse session. This is used if you need to know whether the user
+         escaped or pressed the finish key.
+
+         Done;
+
+         As always, Done disposes of the Browse window object, and should always
+         be called when the object is no longer required.
+
+
+Modifying the Window Characteristics
+
+         The list data is displayed in a window of type StretchWinOBJ. You can
+         modify any window attribute by directly calling the StretchWinOBJ meth-
+         ods. BrowseOBJ includes a function method, Win, which returns a pointer
+         to the StretchWinOBJ instance. To modify the window, call the
+         appropriate StretchWinOBJ method using the following syntax:
+                  [BrowseOBJInstance].Win^.method
+
+         For example, the following statements would change the default window
+         size, style and title:
+                  var MyBrowser: BrowseLinkOBJ;
+
+                  begin
+                     with MyBrowser do
+                     begin
+
+
+9-12                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                        Init;
+                        Win^.SetSize(1,1,50,20,3);
+                        Win^.SetTitle('My Browser');
+                     end;
+                  end.
+
+
+         All the display colors used by the browse objects are controlled by the
+         underlying window attributes. To change the browse display colors call
+         the window method SetColors, e.g.
+                  Win^.SetColors(23,23,31,30);
+
+
+         Call Win^ methods to set all the browse window characteristics, e.g.
+         colors, title, remove status, boundaries, etc. Refer to chapter 7:
+         Using Windows for a thorough discussion of the StretchWinOBJ methods.
+
+
+Browsing Arrays
+
+         The BrowseArrayOBJ object provides a very simple way to browse the
+         contents of a string array. In addition to the common methods just
+         described, there is another method as follows:
+
+         AssignList(var StrArray; Total:longint; StrLength:byte);
+
+         AssignList identifies the string array that will be displayed. The
+         three parameters are the string array, the total number of elements in
+         the array, and the length of each string in the array. The string
+         length parameter must reflect the string length of the array when it
+         was declared, not the maximum length of any string assigned to the
+         array.
+
+         For example, if a string array was declared as follows:
+
+                  MyGirls: array[1..54] of string;
+         then the list is assigned with the following calls:
+
+                  with MyBrowser do
+                  begin
+                     Init;
+                     AssignList(MyGirls,54,255);
+                     {...}
+                  end;
+
+
+
+Managing Lists                                                              9-13
+--------------------------------------------------------------------------------
+
+         Having assigned the list, all you need to do is call Show and the
+         browse window will pop onto the display. Listed below is a the demo
+         program DEMBR1, followed by figure 9.3 illustrating the resultant dis-
+         play.
+
+         Program DemoBrowseArrayOne;
+         {SEMBR1}
+         Uses DOS,CRT,
+              totINPUT, totFAST,totLIST, totSTR;
+
+         var
+            BWin: BrowseArrayOBJ;
+            StringList: array[1..26] of string[100];
+            I : integer;
+         begin
+            for I := 1 to 26 do  {first assign something to the string array}
+               StringList[I] := 'Line '+
+                                IntToStr(I)+': '+
+                                replicate(80,char(I+64));
+            Screen.Clear(white,'°'); {paint the screen}
+            Key.SetFast;
+            Key.SetClick(true);
+            with BWin do
+            begin
+               Init;
+               AssignList(StringList,26,100);
+               Go;
+               Done;
+            end;
+         end.
+
+
+Figure 9.3                                                              [SCREEN]
+Browsing an
+Array
+
+
+         The demo program DEMBR2.PAS, listed below, is very similar to
+         DEMBR1.PAS. The only difference is that two Win^ methods are called to
+         modify the default window settings. Figure 9.4 shows the impact on the
+         display.
+         Program DemoBrowseArray;
+
+         Uses DOS,CRT,
+              totFAST,totLIST, totSTR;
+
+
+
+9-14                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         var
+            BWin: BrowseArrayOBJ;
+            StringList: array[1..26] of string[100];
+            I : integer;
+         begin
+            for I := 1 to 26 do  {first assign something to the string array}
+               StringList[I] := 'Line '+
+                                IntToStr(I)+': '
+                                +replicate(80,char(I+64));
+            Screen.Clear(white,'°'); {paint the screen}
+            with BWin do
+            begin
+               Init;
+               AssignList(StringList,26,100);
+               Win^.SetSize(30,5,50,15,2);
+               Win^.SetTitle('Array Browse Demo');
+               Go;
+               Done;
+            end;
+         end.
+
+
+Figure 9.4                                                              [SCREEN]
+Modifying the
+Browse Window
+
+Browsing Linked Lists
+         The BrowseLinkOBJ is very similar to the BrowseArrayOBJ, the primary
+         difference being that BrowseLinkOBJ displays the data stored in a
+         DLLOBJ object rather than in an array.
+
+         In addition to the common methods described, there are two additional
+         methods as follows:
+
+         AssignList(Var LinkList: DLLOBJ);
+
+         This method is passed a DLLOBJ instance, or any instance of an object
+         derived from DLLOBJ, e.g. StrDLLOBJ.
+
+         ListPtr: DLLPtr;
+
+         This method returns a pointer to the DLLOBJ used to create the list.
+         You can access the linked list by using the syntax MyBrow-
+         ser.ListPtr^.method.
+
+         Listed below is the program DEMBR3.PAS, which illustrates how to build
+         a large list of 500 items and display it in a browse window. Figure 9.5
+         shows the browse display.
+
+
+
+Managing Lists                                                              9-15
+--------------------------------------------------------------------------------
+
+         Program DemoBrowseList;
+
+         Uses DOS,CRT,
+              totFAST, totLINK, totLIST, totSTR;
+         var
+            BWin: BrowseLinkOBJ;
+            LL : StrDLLOBJ;
+
+         procedure CreateLinkedList;
+         {}
+         var
+           I, Retcode : integer;
+         begin
+            with LL do
+            begin
+               Init;
+               for I := 1 to 500 do
+                  Retcode := Add('This is line '+IntToStr(I)+
+                             ': '+replicate(200,char(random(255))));
+            end; {with}
+         end; {CreateLinkedList}
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            CreateLinkedList;
+            with BWin do
+            begin
+               Init;
+               AssignList(LL);
+               Win^.SetTitle('List Browse Demo');
+               Go;
+               Done;
+            end;
+            LL.Done
+         end.
+
+
+Figure 9.5                                                              [SCREEN]
+Browsing a
+StrDLLOBJ
+
+
+Browsing Files
+
+         The BrowseFileOBJ object makes browsing ASCII text files easy. Browse-
+         FileOBJ is descended from BrowseOBJ and inherits all the associated
+         methods. In addition, the following method AssignFile is used to
+         instruct the object on which file to display:
+
+
+
+9-16                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         AssignFile(Filename:string): integer;
+
+         This function method is passed a string indicating the name of the file
+         to be browsed. Behind the scenes, this function loads the file from
+         disk into a temporary StrDLLOBJ object. The function will return a 0 if
+         the file was successfully loaded. A return value of 1 indicates that
+         the file was not found, and so cannot be displayed. A return value of 2
+         indicates that there wasn't enough memory to load the entire file. In
+         such an instance you may want to use a MessageOBJ to advise the user
+         that only part of the file can be browsed.
+
+         That's all there is to it! Just declare a BrowseFileOBJ instance and
+         call the methods Init, AssignFile and Go:
+
+                  var FileWin: BrowseFileOBJ;
+                  begin
+                     with FileWin do
+                     begin
+                        Init;
+                        if AssignFile('Help.TXT') = 0 then
+                           Go;
+                        Done;
+                     end;
+                  end.
+
+         The following method can be used to directly access the linked list
+         created by the BrowseFileOBJ instance:
+
+
+         ListPtr: StrDLLPtr;
+         This method returns a pointer to the StrDLLOBJ used to create the list.
+         You can access the linked list by using the syntax MyFile.ListPtr^.me-
+         thod.
+
+
+         Listed below is the example program, DEMBR4.PAS. This small program
+         will display the contents of either a file specified on the command
+         line when the program was executed, or (if no parameters were speci-
+         fied) the contents of c:\autoexec.bat.
+
+
+         Program DemoBrowseFile;
+         Uses DOS,CRT,
+              totFAST, totINPUT, totLINK, totLIST, totSTR;
+         const
+            DefaultFile = '\autoexec.bat';
+         var
+
+
+
+Managing Lists                                                              9-17
+--------------------------------------------------------------------------------
+
+            BWin: BrowseFileOBJ;
+            RetCode: integer;
+            Filename: string;
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            if ParamCount = 0 then
+               FileName := DefaultFile
+            else
+               FileName := ParamStr(1);
+            with BWin do
+            begin
+               Init;
+               Retcode := AssignFile(Filename);
+               if Retcode in [0,2] then
+                  Go
+               else
+                  Writeln('Unable to load file: ',Filename,'.');
+                  Key.DelayKey(2000);
+               Done;
+            end;
+         end.
+
+
+
+9-18                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Selection Lists
+
+         So far, this chapter has focused on browse windows, where the user can
+         simply scroll data vertically and horizontally. By contrast, a list
+         window is designed to display selectable items, much like a menu. One
+         of the items within the list window is always highlighted, and the list
+         may be organized into single or multiple columns. The scroll bars are
+         used to move the item highlight bar. The list is removed when the user
+         presses an end key such as [KEYCAP] or [KEYCAP], when the user presses
+         [KEYCAP], or when the user double-clicks the mouse on an item.
+         When appropriate, users may even select, or tag, multiple items from
+         the list, and each selected item is marked with a special character.
+         The tag status of the highlighted option can be toggled by hitting the
+         [KEYCAP]. All items can be tagged or untagged at once by pressing [KEY-
+         CAP] and [KEYCAP], respectively.
+
+         Figure 9.6 shows a typical list window.
+
+Figure 9.6                                                              [SCREEN]
+A Typical List
+Window
+
+
+         By default, a list window is stretchable, and if the user changes the
+         dimensions, the Toolkit adjusts the displayed columns and rows. Figure
+         9.7 is the same List window as shown in figure 9.6, after the user has
+         stretched the window.
+
+Figure 9.7                                                              [SCREEN]
+A Stretched List
+Window
+
+
+         The primary Toolkit object for displaying lists in a window is ListOBJ,
+         but this is an abstract object which should not be instanciated. Lis-
+         tOBJ has a number of descendants designed to display different data
+         types in lists. Figure 9.8 illustrates the ListOBJ object hierarchy.
+
+         The object hierarchy is similar in principle to the BrowseOBJ hierar-
+         chy, with the following main objects:
+         ListArrayOBJ    Displays a list derived from a string array.
+
+         ListLinkOBJ     Displays a list derived from any DLLOBJ object or
+                         descendant.
+         ListDirOBJ &    These two objects are used for displaying directories
+         ListDirSortOBJ  in a list window and are discussed in the next chapter.
+
+
+
+Managing Lists                                                              9-19
+--------------------------------------------------------------------------------
+
+Figure 9.8                                                             [PICTURE]
+ListOBJ
+Object Hierarchy
+
+
+Common Methods
+
+         LookTOT (in the unit totLook) is used to control the overall look and
+         feel of applications developed with the Toolkit. As well as the window-
+         related methods, the following two LookTOT methods impact all list
+         objects:
+         SetListKeys     Identifies the keys to globally tag or untag windows,
+                         and close the list display.
+
+         SetListChars    Identifies the characters which will highlight the
+                         active item, as well as the characters which identify
+                         the tagged and non-tagged items.
+         Refer to page 3-12 for further details.
+
+
+         Because all the list objects are derived from the ListOBJ, they share a
+         set of common methods. The following methods can be used with any of
+         the list objects:
+
+         SetTopPick(TopPick: longint);
+
+         This method identifies the node number of the first node that will be
+         displayed in the list window, i.e. the first visible item in the list.
+         By default, this is the first item in the list.
+
+         SetActivePick(ThePick:longint);
+
+         The highlighted item is referred to as the active pick. This procedure
+         is used to set which item (or pick) will be highlighted when the list
+         is first displayed. The passed parameter represents the number of the
+         item in the visible window, with the top left item having a value of
+         one. For example, if the top pick (the first visible pick) was item
+         number 12 and you wanted to highlight the 15th item, pass a value of
+         four. This will instruct the Toolkit to highlight the fourth visible
+         pick. The default is the top pick. If an invalid value is used, e.g.
+         the value is greater than the number of visible picks, the value is set
+         to the top pick.
+
+         SetTagging(On:boolean);
+
+         This method is used to identify whether the user will be allowed to tag
+         and untag items. Pass true to enable item tagging.
+
+
+
+
+9-20                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         SetColWidth(Wid:byte);
+
+         This sets the width of each column in characters. If the column width
+         is set to zero, the list will be displayed in a single column only, and
+         the column width will be as wide as the window. When setting the column
+         width, remember to allow for the additional characters used to high-
+         light the active pick, and to signify tagged and non-tagged items.
+
+         Show;
+
+         This method displays the list and immediately returns control to the
+         calling procedure, i.e. the Toolkit does not wait for user input. This
+         option is useful if you want to display the list on the screen, but not
+         activate it.
+
+         Go;
+
+         This method is the main "do it" method. If the list is not on display,
+         it is drawn. The Toolkit then processes user input until an end key is
+         pressed.
+
+         GetHiString:string;
+
+         This function returns a string representing the highlighted item's
+         data.
+
+         LastKey:word;
+
+         LastKey returns the key code of the key the user pressed to end the
+         browse session. This is used if you need to know whether the user
+         escaped or pressed the done key.
+
+         Done;
+
+         As always, Done disposes of the Browse window object, and should always
+         be called when the object is no longer required.
+
+
+Modifying Window Characteristics
+
+         Like BrowseOBJ, the list data is displayed in a window of type Stretch-
+         WinOBJ. You can modify any window attribute by directly calling the
+         StretchWinOBJ methods.  ListOBJ includes a function method, Win, which
+         returns a pointer to the StretchWinOBJ instance. To modify the window,
+         call the appropriate StretchWinOBJ method using the following syntax:
+                  [ListOBJInstance].Win^.method
+
+         For example, the following statements would change the default window
+         size, style and title:
+
+Managing Lists                                                              9-21
+--------------------------------------------------------------------------------
+
+                  var MyLister: ListLinkOBJ;
+
+                  begin
+                     with MyList do
+                     begin
+                        Init;
+                        Win^.SetSize(1,1,50,20,3);
+                        Win^.SetTitle('My Lister');
+                     end;
+                  end.
+
+
+         Call Win^ methods to set the list window characteristics, e.g. colors,
+         title, remove status, boundaries, etc. Refer to chapter 7: Using Win-
+         dows for a thorough discussion of the StretchWinOBJ methods.
+
+
+
+           Note: the display colors used in list objects are controlled by
+           two different methods. The attributes of the list window perime-
+           ter, i.e. box, title, scroll bars and icons, are set using the
+           method:
+                            Win^.SetColors.
+           The display attributes for the body of the window, i.e. the items
+           in the list, are controlled using the ListOBJ method SetColors,
+           which is discussed later in this section.
+
+
+
+Listing Arrays
+
+         The ListArrayOBJ object provides an easy way to display a list based on
+         the contents of a string array. In addition to the common methods just
+         described, there is the following method:
+
+         AssignList(var StrArray;Total:longint;
+                    StrLength:byte;Taggable:boolean);
+
+         AssignList identifies the string array that will be displayed. The four
+         parameters are the string array, the total number of elements in the
+         array, the length of each string in the array, and a boolean to indi-
+         cate whether individual items can be tagged. The string length parame-
+         ter must reflect the string length of the array when it was declared,
+         not the maximum length of any string assigned to the array.
+
+         Having assigned the list, all you need to do is call Show, and the
+         browse window will pop onto the display. Listed below is the demo pro-
+         gram DEMLS1.PAS.
+
+
+
+9-22                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         program DemoList1;
+         {demls1}
+
+         Uses DOS, CRT,
+              totFAST, totLIST;
+         Var
+            Items : array [1..20] of string[30];
+            ListWin:  ListArrayObj;
+
+         procedure FillArray;
+         {}
+         begin
+            Items[1] := 'One';
+            Items[2] := 'Two';
+            Items[3] := 'Three';
+            Items[4] := 'Four';
+            Items[5] := 'Five';
+            Items[6] := 'Six';
+            Items[7] := 'Seven';
+            Items[8] := 'Eight';
+            Items[9] := 'Nine';
+            Items[10] := 'Ten';
+            Items[11] := 'Eleven';
+            Items[12] := 'Twelve';
+            Items[13] := 'Thirteen';
+            Items[14] := 'Fourteen';
+            Items[15] := 'Fifteen';
+            Items[16] := 'Sixteen';
+            Items[17] := 'Seventeen';
+            Items[18] := 'Eighteen';
+            Items[19] := 'Nineteen';
+            Items[20] := 'Twenty';
+         end; {FillArray}
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            FillArray;
+            with ListWin do
+            begin
+               Init;
+               AssignList(Items,20,30,true);
+               Go;
+               Done;
+            end;
+         end.
+
+
+         This is a very basic list which uses all the default settings. Figure
+         9.9 illustrates the resultant display.
+
+
+
+Managing Lists                                                              9-23
+--------------------------------------------------------------------------------
+
+Figure 9.9                                                              [SCREEN]
+A Basic List
+Window
+
+         The following few statements are an extract from the demo file
+         DEMLS2.PAS which is very similar to the previous demo, except that the
+         list window has been customized somewhat:
+            with ListWin do
+            begin
+               Init;
+               AssignList(Items,20,30,true);
+               SetColWidth(15);
+               Win^.SetTitle(' Pick a number! ');
+               Win^.SetSize(24,7,55,18,2);
+               Go;
+               Done;
+            end;
+
+
+         By calling the SetColWidth method, the list has been transformed from a
+         single list to a multi-column list. Refer back to figure 9.7 to see the
+         output generated from DEMLS2.PAS.
+         The program DEMLS3.PAS is yet another refinement of the array list
+         demo. In this on-disk file, the following statement is added to change
+         the list tagging and highlighting characters:
+
+               LookTOT^.SetListChars(chr(16),chr(17),chr(14),chr(32));
+
+
+Listing Linked Lists
+
+         The ListLinkOBJ is very similar to the ListArrayOBJ. The primary dif-
+         ference is that ListLinkOBJ displays the data stored in a DLLOBJ object
+         rather than in an array.
+         In addition to the common methods described earlier, there are the
+         following two methods:
+
+
+         AssignList(var LinkList: DLLOBJ);
+         This method is passed a DLLOBJ instance, or any instance of an object
+         derived from DLLOBJ, e.g. StrDLLOBJ.
+
+
+         ListPtr: DLLPtr;
+         This method returns a pointer to the DLLOBJ used to create the list.
+         You can access the linked list by using the syntax MyList.ListPtr^.me-
+         thod.
+
+
+
+
+9-24                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         The demo program DEMLS4.PAS (listed below) shows how well StrDLLOBJ and
+         ListLinkOBJ work together. This small demo program creates an StrDLLOBJ
+         instance called ItemList. The list is populated by reading the contents
+         of an ASCII file. The ListLinkOBJ instance ListWin is then used to
+         display the file contents in a window. Figure 9.10 shows the generated
+         screen display.
+
+         program DemoList4;
+         {demls4 - reading a list from a text file}
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST;
+
+         Var
+            ListWin:  ListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+            begin
+               Init;
+               {$I-}
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+               end;
+            end;
+         end; {LoadLinkedList}
+
+
+
+Managing Lists                                                              9-25
+--------------------------------------------------------------------------------
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            LoadLinkedList;
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               Win^.SetTitle(' Items from file DEMLS4.TXT ');
+               Win^.SetSize(20,5,60,20,1);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Done;
+            end;
+            ItemList.Done;
+         end.
+
+
+Figure 9.10                                                             [SCREEN]
+Display a List
+From a File
+
+
+Determining Which Items are Tagged
+
+         Earlier you learned that by calling the method SetTagging(true), you
+         could allow the user to tag and untag items. The Toolkit provides the
+         method SetStatus to allow you to pre-tag (or, indeed, pre-untag!) items
+         before the list is displayed. Similarly, the method GetStatus is used
+         to determine the status of any item in the list.
+         Before explaining the syntax of these methods, we need to take a little
+         peek behind the scenes. The Toolkit stores eight different flags for
+         each item in the list. These flags are numbered 0 through 7.  Flag 0 is
+         used to determine whether the user has tagged the item. Flag 1 indi-
+         cates which color to use in dual color mode (discussed later). The
+         remaining flags are not used and can be customized for descendant
+         objects. Refer to Part 2: Extending the Toolkit for more information.
+
+         The syntax of the SetStatus method is as follows:
+
+         SetStatus(Pick:longint; BitPos: byte; On:boolean);
+
+         To pre-tag an item, call the SetStatus method and pass three parame-
+         ters. The first parameter specifies the item to be modified, the second
+         parameter is the flag number (and this should be set to 0 (zero) to
+         modify the tag flag), and the third boolean parameter should be set to
+         True to tag the item, or False to un-tag it.
+
+
+
+9-26                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         After the user has removed the list window, and before the Done method
+         is called, the GetStatus method can be called to see which selections
+         the user made. The syntax of GetStatus is as follows:
+
+
+         GetStatus(Pick:longint; BitPos: byte): boolean;
+         This function method returns true if the identified item flag is set
+         on. The first parameter identifies the item number, and the second
+         parameter should be set to 0 (zero) to get the status of the tag flag.
+
+
+         The following demo program, DEMLS5.PAS, shows how to check for all the
+         tagged items. The program writes a list of all the tagged items.
+         program DemoList5;
+         {demls5 - selecting all tagged items}
+
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST;
+         Var
+            ListWin:  ListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+            L,Total: longint;
+
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+            begin
+               Init;
+               {$I-}
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+
+
+Managing Lists                                                              9-27
+--------------------------------------------------------------------------------
+
+               end;
+            end;
+         end; {LoadLinkedList}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            LoadLinkedList;
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               Win^.SetTitle(' Items from file DEMLS4.TXT ');
+               Win^.SetSize(20,5,60,20,1);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Remove;
+               Total := ItemList.TotalNodes;
+               clrscr;
+               for L := 1 to Total do
+                  if GetStatus(L,0) then
+                     Writeln('Selected: ',GetString(L,0,0));
+               Done;
+            end;
+            ItemList.Done;
+         end.
+
+         In a real application, you might call a procedure to process the tagged
+         items, rather than simply write a list of all tagged items.
+
+         If you are displaying a linked list, you can take advantage of the
+         DLLOBJ method DelAllStatus. This method is used to automatically remove
+         entries from the list which have one of the status flags set in a
+         specified state. The syntax of the DLLOBJ method is as follows:
+
+         DelAllStatus(BitPos:byte; On:boolean);
+
+         This method removes all entries from the linked list which have the
+         specified flag set in the specified state. The first parameter indi-
+         cates the flag number, in the range 0 to 7. The second parameter deter-
+         mines whether all the flags set to True or False will be deleted. For
+         example, to remove all tagged entries in a linked list you would call
+         the method DelAllStatus(0,true);.
+
+
+
+9-28                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Displaying Dual Colored Lists
+
+         All list objects are capable of displaying each item in one of two
+         color combinations. This facility is put to good effect in the ListDi-
+         rOBJ object (discussed in the next chapter), where the files are dis-
+         played in one color, and the subdirectories in another. The following
+         two methods impact the list display colors:
+
+         SetColors(HAttr,NAttr,SAttr: byte);
+
+         This method sets the display attributes for the items in the list. The
+         first parameter specifies the attribute of the active pick. The other
+         two attributes specify the attributes for the normal items. If the
+         status (discussed below) of the normal item is set to high, the SAttr
+         attribute will be used, otherwise the NAttr will be used.
+
+         SetDualColors(On:boolean);
+
+         If you want to exploit the dual color capabilities of the list objects,
+         pass True. Passing a False will force all the items to display in the
+         same color.
+
+         The Toolkit has to have some way of identifying the status of each
+         item, i.e. in which attribute the color should be displayed. The second
+         of the status flags, i.e. flag 1, is designated as the color flag. The
+         SetStatus and GetStatus flags are used to control the color feature, as
+         follows:
+
+
+         SetStatus(Pick:longint; BitPos: byte; On:boolean);
+         This method is used to set the status of any item in the list. The
+         first parameter identifies the number of the item to be set. The second
+         parameter should be set to 1 (one) to indicate that the color status
+         flag is being set. The final parameter is a boolean to indicate whether
+         status is on (True) or off (False).
+
+
+
+         GetStatus(Pick:longint; BitPos: byte): boolean;
+         This function method returns true if the identified item flag is set
+         on. The first parameter identifies the item number, and the second
+         parameter should be set to 1 (one) to determine the status of the dual
+         color flag.
+
+         An example of the dual color facility is included in the DEMLS7.PAS,
+         discussed in the Character Hook section at the end of the chapter.
+
+
+
+Managing Lists                                                              9-29
+--------------------------------------------------------------------------------
+
+Displaying Messages about the Highlighted Pick
+
+         The ListOBJ object family supports the optional display of a message at
+         the bottom of the list window. This message is normally related to the
+         currently highlighted pick. The message might be a long description of
+         a terse pick, or some other information about the highlighted pick.
+         There are two different ways to instruct the Toolkit to display a mes-
+         sage. The no-fuss way is to write a special procedure (called a message
+         hook) and instruct the Toolkit to call this procedure every time a pick
+         is highlighted. The alternative is to take advantage of an OOP feature
+         known as Polymorphism.
+
+         Once a message displaying routine has been implemented, it can be dis-
+         abled and enabled using the following method:
+
+         SetMsgState(On:boolean);
+
+         Pass True to activate the message display, or False to deactivate it.
+
+
+Using a Message Hook
+         A message hook is an external function which is called every time a new
+         pick is highlighted. To utilize the message hook facility, all you have
+         to do is create a function following some specific rules, and then call
+         the method SetMsgHook to instruct the Toolkit to use your function.
+
+         For a function to be eligible as a message hook it must adhere to the
+         following rules:
+         Rule 1     The function must be declared as a FAR function. This can be
+                    achieved by preceding the function with a {$F+} compiler
+                    directive, and following the function with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the function statement.
+
+         Rule 2     The function must be declared with one passed parameter of
+                    type longint. This parameter indicates the highlighted item
+                    number.
+         Rule 3     The function must return a value of type string. This return
+                    value is the actual text to be displayed in the message area
+                    of the window display.
+
+         Rule 4     The function must be at the root level, i.e. the function
+                    cannot be nested within another procedure or function.
+         The following function declaration follows these rules:
+
+
+
+9-30                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                  {$F+}
+                  function MyMessageHook(HiPick:longint): string;
+                  begin
+                  ...{function statements}
+                     MyMessageHook := 'something!';
+                  end;
+                  {$F-}
+
+
+         The following method SetMsgHook is then called to instruct the Toolkit
+         to call your function every time a new item is highlighted:
+
+         SetMsgHook(Func:ListMsgFunc);
+
+         This method is passed the function name of a function declared using
+         the rules outlined above, e.g. SetMsgHook(MyMessageHook);
+
+
+         The demo program DEMLS6 (listed below) implements a message hook. In
+         this case the message is simply a phrase stating which topic is high-
+         lighted. I hope your applications are a little more useful! Figure 9.11
+         illustrates the resultant output.
+
+
+         program DemoList6;
+         {demls6 - displaying a list message}
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST, totSTR, totMSG;
+
+         Var
+            ListWin:  ListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+         {$F+}
+         function MsgHook(HiPick:longint):string;
+         {}
+         begin
+            MsgHook := 'The Hi Pick is '+IntToStr(HiPick);
+         end; {MsgHook}
+         {$F-}
+
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+
+
+
+Managing Lists                                                              9-31
+--------------------------------------------------------------------------------
+
+            begin
+               Init;
+               {$I-}
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+               end;
+            end;
+         end; {LoadLinkedList}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            LoadLinkedList;
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               SetMsgHook(MsgHook);
+               Win^.SetTitle(' A List With Messages ');
+               Win^.SetSize(20,5,60,20,2);
+               Win^.SetMinSize(20,7);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Done;
+            end;
+            ItemList.Done;
+         end.
+
+Figure 9.11                                                             [SCREEN]
+A List with a Mes-
+sage
+
+
+
+9-32                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Creating a Descendant Object
+
+         By design, most of the documentation on customizing the Toolkit with
+         object oriented techniques is to be found in Part 2: Extending the
+         Toolkit. However, as an appetizer, this section explains how to take
+         advantage of OOP to implement your own message method, without needing
+         to pass a procedure as a parameter. The message hook procedure
+         described in the previous section is perfectly adequate and acceptable,
+         but it isn't OOP! If you want to learn a few OOP tidbits, read on,
+         otherwise be content with the message hook and skip to the next sec-
+         tion.
+         Usually, to customize a Toolkit object to better meet your needs, you
+         create a descendant object. For illustration, we will modify the List-
+         LinkOBJ object. Whenever you create a descendant object, you should
+         study the parent object's methods and decide which ones to replace or
+         modify.
+
+         A descendant object contains all the data and methods of its parent. As
+         a bare minimum, you should always define new Init and Done methods, and
+         then replace any other methods that you wish to improve or modify. (You
+         can also add new methods, but we'll leave that to Part 2!).
+         The ListLinkOBJ method includes the following virtual method:
+
+         function MessageTask(HiPick:longint):string;   VIRTUAL;
+         This method is called every time a new topic is highlighted, and it
+         returns the text to be displayed. Since this method is declared VIR-
+         TUAL, we can replace the method in a descendant object, and other
+         methods will use the newly defined version of MessageTask.
+
+         The objective is to create a new object descendant from ListLinkOBJ,
+         and replace the MessageTask method with a new routine. The syntax for
+         declaring the new object type is as follows:
+         Type
+         NewListLinkOBJ = object (ListLinkOBJ)
+           constructor Init;
+           function    MessageTask(HiPick:longint):string;   VIRTUAL;
+           destructor  Done;                                 VIRTUAL;
+         end; {NewListLinkOBJ}
+
+
+         The descendant object will be called NewListLinkOBJ. Notice that the
+         special constructor and destructor procedures Init and Done are
+         declared, as well as the new MessageTask function. The constructor and
+         destructor methods are required when an object includes virtual meth-
+         ods, as it instructs Turbo Pascal to manage procedure calls differ-
+         ently. The keywords constructor and destructor are simply used as
+         replacements for procedure. The de facto OOP standard is to name the
+         constructor INIT and the destructor DONE.
+
+
+
+Managing Lists                                                              9-33
+--------------------------------------------------------------------------------
+
+         If the ancestor method is declared VIRTUAL, the descendant method must
+         also be declared virtual. Furthermore, when you substitute virtual
+         methods in a descendant object, the declaration of the method must be
+         exactly the same as the ancestor. For this reason, MessageTask and Done
+         are both declared virtual, with the same parameters as ListLinkOBJ.
+
+         Having declared a new type NewListLinkOBJ, you must write the actual
+         object methods in the body of your program or unit. In this case, Turbo
+         Pascal expects the three object methods Init, MessageTask and Done.
+         Listed below is an example of how these methods might be written.
+         constructor NewListLinkOBJ.Init;
+         {}
+         begin
+            ListLinkOBJ.Init;
+            vMsgActive := true;
+         end; {NewListLinkOBJ.Init}
+
+         function NewListLinkOBJ.MessageTask(HiPick:longint):string;
+         {}
+         begin
+            MessageTask := 'The Hi Pick is '+IntToStr(HiPick);
+         end; {NewListLinkOBJ.MessageTask}
+
+         destructor NewListLinkOBJ.Done;
+         {}
+         begin
+            ListLinkOBJ.Done;
+         end; {NewListLinkOBJ.Done}
+
+         Notice that each method starts with the object name followed by a
+         period followed by the method identifier. Whenever you declare an Init
+         or Done method, you should always call the ancestors Init or Done --
+         very often, this ancestor method performs important data initialization
+         tasks, and let's not forget that a descendant object assumes all the
+         data of its ancestor.
+         In the new Init method, the variable vMsgActive is set to true. (All
+         object variables in the Toolkit commence with the letter "v".) This
+         variable indicates that the object should always call the message dis-
+         play method when the active topic is changed. In the LinkListOBJ, this
+         variable defaults to false, and is changed to true when the method
+         SetMsgHook is called. The main purpose of this descendant object is to
+         replace the old MessageTask method with a new one. In the new method,
+         the string value returned is just the statement identifying the high-
+         lighted topic.
+
+         That's it. Any instance of NewListLinkOBJ will automatically display
+         the string returned by the new MessageTask method. Listed below is the
+         example DEMLS7.PAS which shows the example in its entirety.
+
+
+
+9-34                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         program DemoList7;
+         {demls7 - creating a descendant ListObject}
+
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST, totSTR, totMSG;
+         Type
+           NewListLinkOBJ = object (ListLinkOBJ)
+              {Methods...}
+              Constructor Init;
+              function    MessageTask(HiPick:longint):string;   VIRTUAL;
+              destructor  Done;                                 VIRTUAL;
+           end; {NewListLinkOBJ}
+
+         Var
+            ListWin:  NewListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+
+         {+++++new object methods+++++}
+         constructor NewListLinkOBJ.Init;
+         {}
+         begin
+            ListLinkOBJ.Init;
+            vMsgActive := true;
+         end; {NewListLinkOBJ.Init}
+         function  NewListLinkOBJ.MessageTask(HiPick:longint):string;
+         {}
+         begin
+            MessageTask := 'The Hi Pick is '+IntToStr(HiPick);
+         end; {NewListLinkOBJ.MessageTask}
+
+         destructor NewListLinkOBJ.Done;
+         {}
+         begin
+            ListLinkOBJ.Done;
+         end; {NewListLinkOBJ.Done}
+         {+++++end of new object methods+++++}
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+            begin
+               Init;
+               {$I-}
+
+
+
+Managing Lists                                                              9-35
+--------------------------------------------------------------------------------
+
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+               end;
+            end;
+         end; {LoadLinkedList}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            LoadLinkedList;
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               Win^.SetTitle(' A List With Messages ');
+               Win^.SetSize(20,5,60,20,2);
+               Win^.SetMinSize(20,7);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Done;
+            end;
+            ItemList.Done;
+         end.
+
+         This example works just like DEMLS6.PAS, but a descendant object was
+         created rather than passing a procedure. I know what you are thinking
+         "It's a damn sight easier to pass a procedure!". That's true, and that
+         is precisely why the Toolkit includes the procedure passing alterna-
+         tive. By design, this first taste of OOP was a little simple. If your
+         curiosity has been piqued, review the source code in the unit
+         TOTLIST.PAS. You will see how the base object ListOBJ does all the
+         work, and how the descendant objects ListArrayOBJ and ListLinkOBJ make
+         the objects work for string arrays and linked lists. The totDIR unit
+         discussed in the next chapter extends the ListLinkOBJ and customizes it
+         specifically for displaying files and directories.
+
+
+
+9-36                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Character Hooks
+
+         The ListOBJ object family provides ways to intercept every key pressed
+         by the user. This allows you to implement your own special hotkeys.
+         Like the Message facility described earlier, there are two different
+         ways to instruct the Toolkit to call a procedure every time a key is
+         pressed -- by passing a procedure, or by creating a descendant object.
+
+
+Using a Character Hook
+
+         A character hook is an external procedure which is called every time a
+         key or mouse button is pressed. To utilize the character hook facility,
+         all you have to do is create a function following some specific rules,
+         and then call the method SetCharHook to instruct the Toolkit to use
+         your function.
+         For a function to be eligible as a character hook it must adhere to the
+         following rules:
+
+         Rule 1     The function must be declared as a FAR function. This can be
+                    achieved by preceding the function with a {$F+} compiler
+                    directive, and following the function with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the function statement.
+         Rule 2     The function must be declared with four (count 'em) passed
+                    parameters. Parameter one must be a variable parameter of
+                    type word. This parameter indicates which key the user just
+                    pressed, and you may change the value of this parameter to
+                    substitute a different key. The second and third parameters
+                    must be variable parameters of type byte, and they represent
+                    the X and Y coordinates of the mouse at the time the key was
+                    pressed. The fourth parameter is non-variable, and must be
+                    of type longint. This parameter indicates the highlighted
+                    item number.
+
+         Rule 3     The function must return a value of type tListAction. This
+                    is an enumerated type which indicates to the Toolkit how to
+                    proceed. The members of the enumerated type are: Finish,
+                    Refresh and None. If you want the list window to terminate,
+                    return Finish. If you have changed, inserted, or deleted any
+                    items in the visible list, return Refresh. The Toolkit will
+                    then re-display the entire window contents. Normally, how-
+                    ever, you will just return None.
+         Rule 4     The function must be at the root level, i.e. the function
+                    cannot be nested within another procedure or function.
+
+         The following function declaration follows these rules:
+
+
+
+Managing Lists                                                              9-37
+--------------------------------------------------------------------------------
+
+                  {$F+}
+                  function MyCharHook(var K:word;
+                                         var X,Y: byte;
+                                         HiPick:longint): tListAction;
+                  begin
+                  ...{function statements}
+                     MyCharHook := None;
+                  end;
+                  {$F-}
+
+
+         The following method SetCharHook is then called to instruct the Toolkit
+         to call your function every time a key is pressed:
+
+         SetCharHook(Func:ListCharFunc);
+
+         This method is passed the function name of a function declared using
+         the rules outlined above, e.g. SetCharHook(MyCharHook);.
+
+         The demo program DEMLS8.PAS, listed below, implements both a message
+         hook and a character hook. The character hook is checking for two spe-
+         cial keys. If [KEYCAP] is pressed, a simple help screen is displayed,
+         and if [KEYCAP] is pressed, the topic is changed to the alternative
+         color.
+
+         program DemoList8;
+         {demls8 - using Message and Character hooks}
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST, totSTR, totMSG;
+
+         Var
+            ListWin:  ListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+         {$F+}
+         function HelpHook(var K:word; var X,Y: byte; HiPick:longint): tListAc-
+         tion;
+         {}
+         var MsgWin: MessageOBJ;
+         begin
+            HelpHook := None;
+            if K = 315 then
+            begin
+               with MsgWin do
+               begin
+                  Init(6,'Kinda Help');
+                  AddLine('');
+                  AddLine('In a real application, this would');
+
+
+
+9-38                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                  AddLine('be a help screen, and it would give');
+                  AddLine('help related to item '+IntToStr(HiPick)+'!');
+                  AddLine('');
+                  Show;
+                  Done;
+               end;
+               K := 0;
+            end
+            else if K = 316 then {F2 so swap colors}
+            begin
+               ListWin.SetStatus(HiPick,1,not ListWin.GetStatus(HiPick,1));
+               K := 336; {emulate down cursor}
+            end;
+         end; {HelpHook}
+
+         function MsgHook(HiPick:longint):string;
+         {}
+         begin
+            MsgHook := 'The Hi Pick is '+IntToStr(HiPick);
+         end; {MsgHook}
+         {$F-}
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+            begin
+               Init;
+               {$I-}
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+
+
+
+Managing Lists                                                              9-39
+--------------------------------------------------------------------------------
+
+               end;
+            end;
+         end; {LoadLinkedList}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            Screen.WriteCenter(25,white,'  F1 Help   F2 Toggle Color!   [Space]
+         Toggle Tag  ');
+            LoadLinkedList;
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               SetCharHook(HelpHook);
+               SetMsgHook(MsgHook);
+               SetDualColors(true);
+               Win^.SetTitle(' A Multi-Colored List ');
+               Win^.SetSize(20,5,60,20,2);
+               Win^.SetMinSize(20,7);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Done;
+            end;
+            ItemList.Done;
+         end.
+
+Figure 9.12                                                             [SCREEN]
+Using a
+Character Hook
+
+Creating a Descendant Object
+
+         I think we've had enough OOP for one chapter. Suffice it to say that
+         just like the message hook, the character hook can be implemented by
+         creating a descendant object and replacing a ListLinkOBJ method called
+         CharTask.
+         The demo file DEMLS9.PAS (listed below) shows how to replace both the
+         character hook and the message hook by creating a new descendant
+         object.
+
+         program DemoListNine;
+         {demls9 - extending the LinkListOBJ object}
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST, totSTR, totMSG;
+
+
+
+9-40                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Type
+           NewListLinkOBJ = object (ListLinkOBJ)
+              {Methods...}
+              Constructor Init;
+              function    MessageTask(HiPick:longint):string;       VIRTUAL;
+              function    CharTask(var K:word; var X,Y: byte;
+                                   HiPick:longint): tListAction;    VIRTUAL;
+              destructor  Done;                                     VIRTUAL;
+           end; {NewListLinkOBJ}
+
+         Var
+            ListWin:  NewListLinkObj;
+            ItemList: StrDLLOBJ;
+            FileOK: boolean;
+         {+++++new object methods+++++}
+         constructor NewListLinkOBJ.Init;
+         {}
+         begin
+            ListLinkOBJ.Init;
+            vMsgActive := true;
+         end; {NewListLinkOBJ.Init}
+
+         function  NewListLinkOBJ.MessageTask(HiPick:longint):string;
+         {}
+         begin
+            MessageTask := 'The Hi Pick is '+IntToStr(HiPick);
+         end; {NewListLinkOBJ.MessageTask}
+
+         function NewListLinkOBJ.CharTask(var K:word; var X,Y: byte;
+                                          HiPick:longint): tListAction;
+         {}
+         var MsgWin: MessageOBJ;
+         begin
+            CharTask := none;
+            if K = 315 then
+            begin
+               with MsgWin do
+               begin
+                  Init(6,'Kinda Help');
+                  AddLine('');
+                  AddLine('In a real application, this would');
+                  AddLine('be a help screen, and it would give');
+                  AddLine('help related to item '+IntToStr(HiPick)+'!');
+                  AddLine('');
+                  Show;
+                  Done;
+               end;
+               K := 0;
+
+
+
+Managing Lists                                                              9-41
+--------------------------------------------------------------------------------
+
+            end
+            else if K = 316 then {F2 so swap colors}
+            begin
+               ListWin.SetStatus(HiPick,1,not ListWin.GetStatus(HiPick,1));
+               K := 336; {emulate down cursor}
+            end;
+         end; {NewListLinkOBJ.CharTask}
+
+         destructor NewListLinkOBJ.Done;
+         {}
+         begin
+            ListLinkOBJ.Done;
+         end; {NewListLinkOBJ.Done}
+         {+++++end of new object methods+++++}
+
+         procedure LoadLinkedList;
+         {}
+         var
+           F: text;
+           Line:string;
+           Result: integer;
+         begin
+            with ItemList do
+            begin
+               Init;
+               {$I-}
+               Assign(F,'demls4.txt');
+               Reset(F);
+               {$I+}
+               FileOK := (IOResult = 0);
+               if not FileOK then
+                  Result := Add('File not found')
+               else
+               begin
+                  while not eof(F) do
+                  begin
+                     Readln(F,Line);
+                     Result := Add(Line);
+                  end;
+                  close(F);
+               end;
+            end;
+         end; {LoadLinkedList}
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            Screen.WriteCenter(25,white,'  F1 Help   F2 Toggle Color!   [Space]
+         Toggle Tag  ');
+            LoadLinkedList;
+
+
+
+9-42                                                                User's Guide
+--------------------------------------------------------------------------------
+
+            with ListWin do
+            begin
+               Init;
+               AssignList(ItemList);
+               SetColWidth(15);
+               SetDualColors(true);
+               Win^.SetTitle(' A Multi-Colored List ');
+               Win^.SetSize(20,5,60,20,2);
+               Win^.SetMinSize(20,7);
+               if not FileOk then
+                  SetTagging(false);
+               Go;
+               Done;
+            end;
+            ItemList.Done;
+         end.
+

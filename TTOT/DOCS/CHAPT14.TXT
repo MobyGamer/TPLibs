@@ -1,0 +1,757 @@
+                                                                          String
+                                                                        Handling
+
+
+
+         "Guests, like fish, begin to smell after three days."
+
+                                                               Benjamin Franklin
+
+
+
+         The totSTR unit provides a set of routines for converting data to and
+         from string format. Although the unit includes the object FmtNumberOBJ,
+         the majority of the routines are good ol' functions.
+
+
+String Functions
+
+         These functions are grouped into the following categories reflecting
+         their primary purpose: string adjustment, string searching, word man-
+         agement and number conversion.
+
+
+String Adjustment
+Squeeze
+
+         Squeeze(L:char;Str:string;Width:byte);
+         Returns a string that has been squeezed (or expanded) to a specific
+         length. If the source string is too long, either the leftmost or right-
+         most characters are removed. The function is passed three parameters; a
+         character to indicate which side of the string to truncate ('L' or
+         'R'), the source string, and the desired string width. If the source
+         string is shorter than the desired width, the string is padded with
+         spaces. For example:
+
+                  TIGHT :=SQUEEZE('L','ARKANSAS',6);
+         Assigns the value 'KANSAS' to TIGHT.
+
+
+
+PadLeft
+         Padleft(Str:string;Size:byte;ChPad:char):string;
+
+         Expands and left justifies a string to a specified width. The function
+         is passed three parameters; the source string, the length of the
+         expanded string, and the character used to pad the string. For example:
+                  MyString := PadLeft('LOAD FILE',20,' ');
+
+         Assigns the value 'LOAD FILE          ' to MyString.
+
+14-2                                                                User's Guide
+--------------------------------------------------------------------------------
+
+PadRight
+
+         PadRight(Str:string;Size:byte;ChPad:char):string;
+         Expands and right justifies a string to a specified width. The function
+         is passed three parameters; the source string, the length of the
+         expanded string, and the character used to pad the string. For example:
+
+                  MyString := PadRight('RIGHT',10,'*');
+         Assigns the value '*****RIGHT' to MyString.
+
+
+
+PadCenter
+         PadCenter(Str:string;Size:byte;ChPad:char):string;
+
+         Expands and centers a string to a specified width. The function is
+         passed three parameters; the source string, the length of the expanded
+         string, and the character used to pad the string. For example:
+                  Bored := PadCenter('Middle',14,'-');
+
+         Assigns the value '----Middle----' to Bored.
+
+
+Pad
+
+         Pad(PadJust:tJust;Str:string;Size:byte;ChPad:char):string;
+         This function combines the features of PadLeft, PadRight and PadCenter
+         into a single function. The totSTR unit includes the declaration of an
+         enumerated type tJust, with the following members: JustLeft, Just-
+         Center, and JustRight. The function is passed four parameters; a member
+         of tJust to indicate the required justification, the source string, the
+         length of the expanded string, and the character used to pad the
+         string. For example:
+
+                  PadStr := Pad(JustCenter,'Middle',14,'-');
+         Assigns the value '----Middle----' to PadStr.
+
+
+
+SetUpper
+         SetUpper(Str:string):string;
+
+         Returns a string with all the alpha characters converted to upper case.
+         The string is passed one parameter; the source string. For example:
+                  MyString := SetUpper('123abc456dEf');
+
+         Assigns the value '123ABC456DEF' to MyString.
+
+String Handling                                                             14-3
+--------------------------------------------------------------------------------
+
+SetLower
+
+         SetLower(Str:string):string;
+         Returns a string with the alpha characters converted to lower case. The
+         string is passed one parameter; the source string. For example:
+
+                  MyString := SetLower('123ABC456DeF');
+         Assigns the value '123abc456def' to MyString.
+
+
+
+SetProper
+         SetProper(Str:string):string;
+
+         Returns a string with the first character of each word converted to
+         upper case. The string is passed one parameter; the source string. For
+         example:
+                  MyString := SetProper('eeny meeny miny mo');
+
+         Assigns the value 'Eeny Meeny Miny Mo' to MyString.
+
+
+AdjCase
+
+         AdjCase(NewCase:tCase; Str:string): string;
+         This function combines the features of SetUpper, SetLower and SetProper
+         into a single function. The totSTR unit includes the declaration of an
+         enumerated type tCase, with the following members: Lower, Upper,
+         Proper, and Leave. If the member Leave is specified, the string will
+         not be adjusted. The function is passed two parameters; a member of
+         tCase to indicate the required capitalization, and the source string.
+         For example:
+
+                  PStr := AdjCase(Proper,'tracy chapman');
+         Assigns the value 'Tracy Chapman' to PStr.
+
+
+
+Last
+         Last(N:byte; Str:string):string;
+
+         Returns the last part of a string. The function is passed two parame-
+         ters; the number of characters to extract, and the source string. For
+         example:
+                  NewString := Last(11,'Never take drugs!');
+
+         Assigns the value 'take drugs!' to NewString.
+
+14-4                                                                User's Guide
+--------------------------------------------------------------------------------
+
+First
+
+         First(N:byte; Str:string):string;
+         Returns the first part of a string. The function is passed two parame-
+         ters; the number of characters to extract, and the source string. For
+         example:
+
+                  MyString := First(10,'I want sextuplets');
+         Assigns the value 'I want sex' to MyString.
+
+
+
+Strip
+         Strip(L,C:char; Str:string): string;
+
+         Returns the string with a specific character removed. The function is
+         passed three parameters; a character to indicate which part of the
+         string to strip, the character to strip, and the source string. The
+         strip can be performed on the left of the string, the right of the
+         string, the left and right, or all occurrences throughout the string.
+         The first parameter would be the character 'L', 'R', 'B' or 'A',
+         respectively. For example:
+                  NoTees := Strip('A','T','THE TTT MAN');
+
+         Assigns the value 'HE  MAN' to NoTees.
+
+
+OverType
+
+         OverType(N:byte; StrS,StrT:string):string;
+         Places one string "on top of" another string and overlays the underly-
+         ing characters. The function is passed three parameters; the character
+         position in the target string to start the overtyping, the source
+         string, and the target string. For example:
+
+                  Result := Overtype(8,'TechnoJock','I love you');
+         Assigns the value 'I love TechnoJock' to Result.
+
+
+
+PicFormat
+         PicFormat(Input,Picture:string;Pad:char):string;
+
+         This function was specifically used to complement the PictureIOOBJ
+         object used for obtaining formatted user input. The function returns a
+         formatted string, and is passed three parameters; the source string,
+         the picture string containing the format characters '!@*#', and the
+
+
+String Handling                                                             14-5
+--------------------------------------------------------------------------------
+
+         character used to pad the string if the source is not long enough.
+         Refer to chapter 11 for a full description of format characters. For
+         example:
+
+                  TelStr := PicFormat('713493635','(###) ###-####','*');
+         Assigns the value '(713) 493-635*' to TelStr.
+
+
+
+TruncFormat
+         TruncFormat(Input:string; Start,Len:byte; Pad:char):string;
+
+         Truncates (or expands) a string from a specified character position.
+         The function is passed three parameters; the source string, the posi-
+         tion of the first character to extract, and the total length of the
+         returned string. For example:
+                  NewStr := TruncFormat('Hidey Hidey Ho',9,10);
+
+         Assigns the value 'dey Ho    ' to NewStr.
+
+
+String Searching
+
+FirstCapital
+         FirstCapital(Str:string):char;
+
+         Returns the first capital letter in a string. Note that this function
+         returns type char. If a capital letter is not found, a null (#0) is
+         returned. The function is passed one parameter; the source string. For
+         example:
+                  MyChar := FirstCapital('7 File Save');
+
+         Assigns the value 'F' to MyChar.
+
+
+FirstCapitalPos
+
+         FirstCapitalPos(Str:string):byte;
+         Returns the character position of the first capital letter in a string.
+         Note that this function returns type byte. If a capital letter is not
+         found, a zero is returned. The function is passed one parameter; the
+         source string. For example:
+
+                  ByteVar := FirstCapitalPos('how yer doin Bob');
+         Assigns the value 14 to ByteVar.
+
+
+
+14-6                                                                User's Guide
+--------------------------------------------------------------------------------
+
+LastPos
+
+         LastPos(C:char;Str:string):byte;
+         Returns a byte indicating the position of the last occurrence of a
+         character in a string. If the character is not found, a zero is
+         returned. The function is passed two parameters; a character to search
+         for, and the source string. For example:
+
+                  BytePos := LastPos('A','My Accommodation');
+         Assigns the value 4 to BytePos.
+
+
+
+LastPosBefore
+         LastPosBefore(C:char;Str:string;Last:byte): byte;
+
+         Returns a byte indicating the position of the last occurrence of a
+         character, up to a specified part of the string. If the character is
+         not found, a zero is returned. The function is passed three parameters;
+         a character to search for, the source string, and the position of the
+         last character to include in the search. For example:
+                  SubPos := LastPosBefore('s','Mississippi',5);
+
+         Assigns the value 4 to SubPos.
+
+
+PosAfter
+
+         PosAfter(C:char;Str:string;Start:byte):string;
+         Returns a byte indicating the position of the first occurrence of a
+         character, starting from a specified position in the string. If the
+         character is not found, a zero is returned. The function is passed
+         three parameters; a character to search for, the source string, and the
+         position of the first character to include in the search. For example:
+
+                  SubPos := PosAfter('s','Mississippi',5);
+         Assigns the value 6 to SubPos.
+
+
+Word Management
+WordCnt
+
+         WordCnt(Str:string):byte;
+         Returns the number of words in a string. The procedure is passed one
+         parameter; the source string. For example:
+
+                  TotWords := WordCnt('eeny meeny miny mo');
+
+String Handling                                                             14-7
+--------------------------------------------------------------------------------
+
+         Assigns the value 4 to TotWords.
+
+
+
+PosWord
+         PosWord(WordNo:byte; Str:string):byte;
+
+         Returns the position of the first character of a specific word in a
+         string. The function is passed two parameters; the word number, and the
+         source string. If there are insufficient words in the string, a zero is
+         returned. For example:
+                  MyWord := PosWord(4,'What a stupid idea son!');
+
+         Assigns the value 15 to MyWord.
+
+
+ExtractWords
+
+         ExtractWords(StartWord,NoWords:byte; Str:string):string;
+         Returns a substring containing a specified number of words (real words,
+         not computer words!) extracted from a source string. The function is
+         passed three parameters; the number of the first word to extract, the
+         total number of words to extract, and the source string. For example:
+
+                  NewString := ExtractWords(5,3,'who the hell says
+                                                 censorship is good');
+         Assigns the value 'censorship is good' to NewString.
+
+
+
+Number Conversions
+ValidInt
+
+         ValidInt(Str:string):boolean;
+         This function returns true if the source string represents a valid
+         integer, i.e. contains sensible numbers with no spaces or alpha charac-
+         ters. The only passed parameter is the source string. For example:
+
+                  OK := ValidInt('23xy45');
+         Assigns the value false to OK.
+
+
+
+ValidHEXInt
+         ValidInt(Str:string):boolean;
+
+
+
+14-8                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         This function returns true if the source string represents a valid HEX
+         notation integer, i.e. contains the numbers 0 through 9, or letters 'A"
+         through 'F' with no spaces. The only passed parameter is the source
+         string. For example:
+
+                  OK := ValidHEXInt('2E4A');
+         Assigns the value true to OK.
+
+
+
+ValidReal
+         ValidReal(Str:string):boolean;
+
+         This function returns true if the source string represents a valid real
+         number, i.e. contains numbers with no spaces or alpha characters. The
+         only passed parameter is the source string. For example:
+                  OK := ValidReal('89.95');
+
+         Assigns the value true to OK.
+
+
+StrtoInt
+
+         StrToInt(Str:string):integer;
+         Converts a number string and returns an integer. If the string is not a
+         valid integer, a zero is returned. The function ValidInt can be used to
+         check that the string is convertible. For example:
+
+                  Salary := StrToInt('30000');
+         Assigns the value 30000 to Salary.
+
+
+
+StrtoLong
+         StrToLong(Str:string):longint;
+
+         Converts a number string and returns a longint. If the string is not a
+         valid integer, a zero is returned. For example:
+                  GoodSalary := StrToLong('300000');
+
+         Assigns the value 300000 to GoodSalary.
+
+
+StrToReal
+
+         StrToReal(Str:string):extended;
+
+
+String Handling                                                             14-9
+--------------------------------------------------------------------------------
+
+         Converts a number string and returns a real. If the string is not a
+         valid real, a zero is returned. The function ValidReal can be used to
+         determine whether the string is convertible. For example:
+
+                  Taxes := StrToReal('15643.27');
+         Assigns the value 15643.27 to Taxes.
+
+
+
+HEXStrToLong
+         HEXStrToLong(Str:string):longint;
+
+         Converts a hexadecimal string and returns a longint. If the string is
+         not a valid hex number, a zero is returned. The function ValidHEXInt
+         can be used to determine whether the string is convertible. For exam-
+         ple:
+                  Val := HEXStrToLong('FF');
+
+         Assigns the value 255 to Val.
+
+
+IntToStr
+
+         IntToStr(Number:longint):string;
+         Returns a number converted to a string. The function is passed one
+         parameter; the source number of type byte, word, shortint, integer or
+         longint. For example:
+
+                  NumStr := IntToStr(365);
+         Assigns the value '365' to NumStr.
+
+
+
+RealToStr
+         RealToStr(Number:extended; Decimals:byte):string;
+
+         Returns a real number converted to a string. The function is passed two
+         parameters; the source real number, and the number of decimal places.
+         If the number of decimal places is passed as FLOATING (a constant), the
+         function will return only the significant digits. For example:
+                  MeatPie := RealToStr(3.546000,FLOATING);
+
+         Assigns the value '3.546' to MeatPie.
+
+IntToHEXStr
+
+         IntToHEXStr(Number:longint):string;
+
+14-10                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         Returns a hexadecimal string representing the value of a number. The
+         function is passed one parameter; the source number, and it may be of
+         type byte, word, shortint, integer or longint. For example:
+
+                  SillyPower := IntToHexStr(255);
+         Assigns the value 'FF' to SillyPower.
+
+
+
+RealtoSciStr
+         RealToSciStr(Number:extended; D:byte):string;
+
+         Returns a real number converted to a scientific notation string. The
+         function is passed two parameters; the source real number, and the
+         number of decimal places. For example:
+                  Velocity := RealToSciStr(45678.984564,8);
+
+         Assigns the value '4.56789846E+04' to Velocity.
+
+
+NthNumber
+
+         NthNumber(Str:string; Nth:byte):char;
+         This function is actually used internally by the Toolkit in the totDATE
+         unit, but can be used if you can think of a reason! This function
+         returns the character representing a number found in the string. The
+         function is passed two parameters; the source string, and a byte indi-
+         cating the position of the number to be returned. For example:
+
+                  NumChar := NthNumber('02/20/48',5);
+         Assigns the value '4' to NumChar.
+
+
+
+Examples
+         Listed below are the demo programs DEMST1.PAS and DEMST2.PAS, which
+         illustrate how to use the string functions. Following each listing is a
+         figure detailing the resultant output.
+
+         program DemoStringOne;
+         {demST1 - string functions}
+         Uses DOS, CRT,
+              totFAST, totSTR;
+
+         Var
+            DemoStr : string;
+
+
+
+String Handling                                                            14-11
+--------------------------------------------------------------------------------
+
+         begin
+            ClrScr;
+            with Screen do
+            begin
+               DemoStr := '  TechnoJock''s Object Toolkit string demo   ';
+               WriteAt(5,1,lightgray,'Source String: ');
+               WriteAt(30,1,lightcyan,'"'+DemoStr+'"');
+               WriteAt(1,4,lightgray,'SetUpper:');
+               WriteAt(30,4,yellow,'"'+SetUpper(DemoStr)+'"');
+               WriteAt(1,5,lightgray,'SetLower:');
+               WriteAt(30,5,yellow,'"'+SetLower(DemoStr)+'"');
+               WriteAt(1,6,lightgray,'SetProper:');
+               WriteAt(30,6,yellow,'"'+SetProper(DemoStr)+'"');
+               WriteAt(1,7,lightgray,'Total words:');
+               WriteAt(30,7,lightgreen,IntToStr(WordCnt(DemoStr)));
+               WriteAt(1,8,lightgray,'Posn. Word 3:');
+               WriteAt(30,8,lightgreen,IntToStr(PosWord(3,DemoStr)));
+               WriteAt(1,9,lightgray,'Words 2..5 are:');
+               WriteAt(30,9,yellow,'"'+ExtractWords(2,4,DemoStr)+'"');
+               WriteAt(1,10,lightgray,'Strip Leading spaces:');
+               WriteAt(30,10,yellow,'"'+Strip('L',' ',DemoStr)+'"');
+               WriteAt(1,11,lightgray,'Strip Trailing spaces:');
+               WriteAt(30,11,yellow,'"'+Strip('R',' ',DemoStr)+'"');
+               WriteAt(1,12,lightgray,'Strip Lng. & Tng. spaces:');
+               WriteAt(30,12,yellow,'"'+Strip('B',' ',DemoStr)+'"');
+               WriteAt(1,13,lightgray,'Strip All spaces:');
+               WriteAt(30,13,yellow,'"'+Strip('A',' ',DemoStr)+'"');
+            end;
+            GotoXY(1,23);
+         end.
+
+
+Figure 14.1                                                             [SCREEN]
+String
+Functions
+
+
+         program DemoStringTwo;
+         {demST2 - more string functions}
+         Uses DOS, CRT,
+              totSTR;
+
+         Const
+             MyInt:integer = 4000;
+             MyReal:real = 89.99;
+             MyIntStr = '8000';
+             MyRealStr = '89.95';
+             MyHexStr = 'FFFF';
+
+
+
+14-12                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         begin
+            ClrScr;
+            writeln('Test number - ',MyInt);
+            writeln;
+            writeln('IntToStr:    ',IntToStr(MyInt));
+            writeln('IntToHEXStr: ',IntToHEXStr(MyInt));
+            writeln;
+            writeln;
+            writeln('Test number - ',MyReal:5:2);
+            writeln;
+            writeln('RealToStr: ',RealToStr(MyReal,5));
+            writeln('RealToStr: ',RealToStr(MyReal,1));
+            writeln('RealToStr: ',RealToStr(MyReal,FLOATING));
+            writeln('RealToSciStr: ',RealToSciStr(MyReal,FLOATING));
+            writeln;
+            writeln;
+            writeln('Test Strings: ',MyIntStr,' ',MyRealStr,' ',MyHEXStr);
+            writeln;
+            writeln('ValidInt: ',ValidInt(MyIntStr));
+            writeln('ValidInt: ',ValidInt(MyHEXStr));
+            writeln('ValidInt: ',ValidInt(MyRealStr));
+            writeln('ValidReal: ',ValidReal(MyIntStr));
+            writeln('ValidReal: ',ValidReal(MyRealStr));
+            GotoXY(1,23);
+         end.
+
+
+
+Figure 14.2                                                             [SCREEN]
+More String
+Functions
+
+
+
+FmtNumberOBJ
+         The totSTR unit includes the object FmtNumberOBJ. This object includes
+         function methods which accept numbers, and return them as formatted
+         strings. The object is used to provide formatting capabilities to the
+         number input fields in the totIO units (see page 11-21), but it may
+         also be used independently to provide sophisticated number formatting
+         control.
+
+         The object can format both integer and real numbers, and the format
+         options include the following:
+         Prefix     The number can be preceded by a character or short string,
+                    e.g. '$'.
+
+         Suffix     The number can be succeeded by a character or short string,
+                    e.g. 'FFr'
+
+
+String Handling                                                            14-13
+
+--------------------------------------------------------------------------------
+
+         Sign       The number can be signed with + and/or -, parentheses on
+                    negative numbers, or DB/CR to indicate debit and credit.
+
+         Separators The number can have thousands separated by a character, e.g.
+                    ','. Even the decimal place character and the character used
+                    to pad the string can be specified.
+         Justificat The number can be left, right or center justified in the
+         ion        allotted space.
+
+
+         To format numbers, you must initialize an instance of type FormatNum-
+         berOBJ, specify the appropriate format options, and call a function
+         method to return the number formatted as a string. The following
+         methods are available:
+
+
+         Init;
+         This method initializes the object and must be called before the other
+         methods.
+
+
+         SetPrefixSuffix(P,S:string);
+         Specifies the strings that will be used to precede and succeed the
+         number. Pass a null string, i.e. '', to suppress either the prefix or
+         suffix.
+
+
+         SetSign(S:tSign);
+         The totSTR unit includes the declaration of an enumerated type tSign
+         with the following members: PlusMinus, Minus, Brackets, DbCr
+
+         PlusMinus  Always precedes the number with a '+' or '-' to indicate the
+                    sign of the number.
+         Minus      Only displays a '-', i.e. if the number is positive, the '+'
+                    is not displayed.
+
+         Brackets   Negative numbers are enclosed in parentheses, e.g. (25.67).
+         DbCr       If the number is negative it is succeeded with the string
+                    'DB', otherwise it is succeeded with the string 'CR'.
+
+         Use this method to specify how the sign of a number will be displayed.
+
+         SetSeparators(P,T,D:char);
+
+         Three different separators may be required to format a number, and this
+         method identifies them. The first parameter is the character used to
+         pad the string to the specified width, and common values are ' ' or
+         '*'. The second parameter specifies the character used to separate each
+
+14-14                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         significant thousand, and typically has a value of ','. Specify #0, if
+         you don't want a thousands separator. The last parameter specifies the
+         character indicating the decimal place, e.g. '.'.
+
+
+         SetJustification(J:tJust);
+         When the number is formatted, it can be left, center, or right justi-
+         fied. Pass a value of JustLeft, JustCenter or JustRight to identify the
+         required justification.
+
+
+         FormattedLong(Val:longint;Width:byte):string;
+         Having set all the formatting options as required, call this method to
+         return a formatted string. The method is passed two parameters; any
+         whole number (i.e. byte, word, shortint, integer, longint), and the
+         width of the string. If the formatted string is too long to fit in the
+         specified width, an unformatted string is returned.
+
+
+         FormattedReal(Val:extended;DP,Width:byte):string;
+         This function method is similar to the method FormattedLong, except it
+         is used to format real numbers. The method is passed three parameters;
+         the real number, the number of decimal places, and the width of the
+         returned string. The TotSTR unit includes a global constant FLOATING.
+         When FLOATING is specified as the number of decimal places, the Toolkit
+         will show all decimal places up to the last non-zero decimal.
+
+
+         Done
+         This method disposes of the memory used by the instance, and should be
+         called when the object is no longer required.
+
+
+
+           Note: the totIO2 unit includes a global instance FmtNumberTOT
+           which is used to specify the default format for number input
+           fields. Refer to page 11-22 for further details.
+
+
+
+         Listed below is the demo program DEMST3.PAS, which illustrates how to
+         use FmtNumberOBJ objects.
+
+         program DemoStringThree;
+         {demST3 - number formatting}
+         Uses DOS, CRT,
+              totFAST, totSTR;
+
+
+
+String Handling                                                            14-15
+--------------------------------------------------------------------------------
+
+         Var
+            Fmt: FmtNumberOBJ;
+
+         begin
+            ClrScr;
+            with Fmt do
+            begin
+               Init;
+               writeln(FormattedLong(2000,15));
+               writeln(FormattedReal(2000,2,15));
+               SetSign(PlusMinus);
+               writeln(FormattedLong(2000,15));
+               SetSign(DBCR);
+               writeln(FormattedReal(2000,3,15));
+               SetPrefixSuffix('$','');
+               writeln(FormattedReal(2000,3,15));
+               SetSeparators('*',',','.');
+               writeln(FormattedReal(2000,3,15));
+               SetJustification(JustRight);
+               writeln(FormattedReal(2000,3,15));
+               Done;
+            end;
+            GotoXY(1,23);
+         end.
+
+Figure 14.3                                                             [SCREEN]
+Formatting
+Numbers
+

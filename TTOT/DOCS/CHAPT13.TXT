@@ -1,0 +1,425 @@
+                                                                        Managing
+                                                                           Dates
+
+
+
+         "The brain is a wonderful organ; it starts the minute you get up in the
+         morning and does not stop until you get to the office."
+
+                                                                    Robert Frost
+
+
+
+
+
+         Date manipulation has always been a problem for computer programmers.
+         If only there were ten days in a week, ten weeks in a year, and ten
+         years in a century! Date mathematics is just plain clumsy when you
+         think of dates in days, months and years. Try computing the date one
+         hundred days after February 20, 1956! Not so easy.
+         Date mathematics is greatly simplified when you convert dates into
+         their Julian form. Over the centuries, many mathematicians have devised
+         methods of accurately computing dates. Most modern computer systems
+         (including this Toolkit!) use the Julian system. The Julian period was
+         devised in 1582 by Joseph Scaliger, and was named after his father
+         Julias (not after the Julian calendar). The Julian system assigns each
+         day its own unique number. Day 1 began at noon, January 1, 4713 B.C.
+         Every day since that time has its own sequential number, and February
+         11, 1991 is Julian period 2448299.
+
+         The totDATE unit provides a variety of functions for converting dates
+         to and from Julian format. To compute the date one hundred days after
+         February 20, 1956, you would convert the date to Julian, add one
+         hundred to it, and convert it back to a string. This can be achieved
+         with the following compound statement using Toolkit functions.
+                  FancyDateStr(GregToJul(2,20,1956)+100,true,true);
+
+         This uses the function GregToJul to convert Month/Day/Year to a Julian
+         period. A hundred is then added to it, and this value is passed to the
+         function FancyDateStr, which returns a text string showing the day and
+         date represented by the Julian period. In this example, the following
+         date would be returned:
+                  Wednesday May 30, 1956
+
+         The Toolkit supports dates in eight different formats. Using M, D and Y
+         to represent months, days and years respectively, the supported formats
+         are:
+                                  MMDDYY
+                                  MMDDYYYY
+                                  MMYY
+                                  MMYYYY
+                                  DDMMYY
+
+13-2                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                                  DDMMYYYY
+                                  YYMMDD
+                                  YYYYMMDD
+
+         Many of the totDATE functions need to know in which format the date
+         strings are, and so the unit includes the enumerated type tDate, which
+         (not surprisingly) has the following members: MMDDYY, MMDDYYYY, MMYY,
+         MMYYYY, DDMMYY, DDMMYYYY, YYMMDD and YYYYMMDD.
+
+
+
+           Note: if you plan to delve into ancient history with your date
+           calculations, you need to be aware of some strange facts. For
+           example, different countries decided to drop certain days to
+           adjust for inaccuracies in the lunar calendar. In 1752, the Brit-
+           ish decreed that the day following September 2 would be September
+           14. Further back in 1582, Pope Gregory XIII (of Gregorian calendar
+           fame!) decreed that October 4 would become October 15. In 1793 the
+           French .... well, you get the idea. For a good summary of these
+           calendar aberrations, refer to any copy of The World Almanac and
+           Book of Facts.
+
+
+
+Using DateTOT
+         The totDATE unit includes the object DateOBJ, and a global instance of
+         this object, DateTOT. This instance is used to control two of the
+         default date configurations. The following two methods control these
+         defaults:
+
+
+         SetLastYearNextCentury(yr:byte);
+         When a year is specified with only two digits, the Toolkit has to
+         decide to which century the year refers. This method is used to set the
+         largest year, which will be interpreted as falling in the next century.
+         For example, if this method is passed a value of 50, then the two digit
+         year 50 will be assumed to be 2050, and the two digit year 51 will be
+         assumed to be 1951. By default, this year is set to 20.
+
+
+         SetSeparator(Sep:char);
+         When dates are displayed in their numeric form, a character is used to
+         separate the days from the months from the years, e.g. 12-01-1990. This
+         default is used to control which character will be used as the separa-
+         tor. By default, the character is a slash, i.e. '/'.
+
+
+         The following two function methods return the current settings:
+
+
+
+Managing Dates                                                              13-3
+--------------------------------------------------------------------------------
+
+         GetLastYearNextCentury: byte;
+         GetSeparator: char;
+
+
+         Another purpose of the DateOBJ object is to control how the days of the
+         week and months are spelled. This feature is provided for international
+         users who want to use a different language. The following DateOBJ meth-
+         ods are supported:
+
+
+         SetMonths(M1,M2,M3,M4,M5,M6,M7,M8,M9,M10,M11,M12: StrShort);
+         This method defines how the months will be spelled. The method is
+         passed twelve strings representing the months January through December.
+
+
+         SetDays(D0,D1,D2,D3,D4,D5,D6:StrShort);
+         This method defines how the days will be spelled. The method is passed
+         seven strings representing the days Sunday through Saturday.
+
+
+         GetMonth(Mth:byte):string;
+         This function method returns a string representing a specific month.
+         The method is passed a byte parameter, with a value between one and
+         twelve, to indicate which month you want returned.
+
+
+         GetDay(Day:byte):string;
+         This function method returns a string representing a specific day. The
+         method is passed a byte parameter, with a value between zero and six,
+         to indicate which month you want returned. Day zero represents Sunday.
+
+
+
+Date Functions
+         Listed below are the functions used to manipulate date numbers and
+         strings:
+
+GregToJul
+         GregToJul(M,D,Y:longint): longint;
+
+         Returns the Julian value of a Gregorian date. The function is passed
+         three parameters of type byte, shortint, integer, word or longint; the
+         first parameter is the month, the second is the day, and the third is
+         the four-digit year. For example:
+                  MyJul := GregToJul(3,21,1957);
+
+         Assigns the value 1741959 to MyJul.
+
+
+13-4                                                                User's Guide
+--------------------------------------------------------------------------------
+
+JulToGreg
+
+         JulToGreg(Jul:longint; var M,D,Y:longint);
+         This procedure converts a Julian date to Gregorian. The function is
+         passed four parameters; the first is the source Julian date, and the
+         remaining three parameters must be variables of type longint. The ini-
+         tial values of these three variables are ignored, and they are updated
+         with the month, day and year equivalent of the Julian value. For
+         example:
+
+                  var
+                     Day,Mon,Yr: longint;
+                  {...}
+                  JulToGreg(2447654,Mon,Day,Yr);
+         Assigns the values 5, 7 and 1989 to Mon, Day and Yr, respectively.
+
+
+
+GregToStr
+         GregToStr(M,D,Y:longint; Format:tDate):string;
+
+         Returns a string representing the Gregorian date specified. The func-
+         tion is passed four parameters; the first three parameters may be of
+         type byte, shortint, word, integer or longint, representing the month,
+         day and year. The fourth parameter is a member of the enumerated type
+         tDate representing the desired string format. For example:
+                  DStr := GregToStr(2,11,1991,DDMMYY);
+
+         Assigns the value '11/02/91' to DStr.
+
+
+JulToStr
+
+         JulToStr(Jul:longint;Format:tDate):string;
+         Returns a string representing a Julian date. The function is passed two
+         parameters; the Julian date, and the date format. For example:
+
+                  DStr := JulToStr(2448299,YYYYMMDD);
+         Assigns the value '1991/02/11' to DStr.
+
+DOWJul
+         DOWJul(Jul:longint):byte;
+
+         Returns a byte representing the day of the week for a Julian date. The
+         function is passed one parameter; the Julian date. Zero represents
+         Sunday, and six represents Saturday, all other days falling in between
+         these two. For example:
+
+Managing Dates                                                              13-5
+--------------------------------------------------------------------------------
+
+                  TheDay := DOWJul(2448299);
+
+         Assigns the value 1 to TheDay, i.e. Monday.
+
+
+DOWStr
+
+         DOWStr(DStr:string; Format:tDate):byte;
+         This function is similar to DOWJul in as much as it returns the day of
+         the week for a specified date. In this case, however, the date is
+         specified in string form. The function is passed two parameters; the
+         date in string form, and the date format. For example:
+
+                  TheDay := DOWStr('02/11/91',MMDDYY);
+         Assigns the value 1 to TheDay.
+
+
+
+Day
+         Day(DStr:string; Format:tDate): word;
+
+         This function returns the day represented by a date string. The func-
+         tion is passed two parameters; the date in string form, and the date
+         format. For example:
+                  TheDay := Day('05/30/1956',MMDDYYYY);
+
+         Assigns the value 30 to TheDay.
+
+
+Month
+
+         Month(DStr:string; Format:tDate): word;
+         This function returns the month represented by a date string. The func-
+         tion is passed two parameters; the date in string form, and the date
+         format. For example:
+
+                  TheMon := Month('30/05/1956',DDMMYYYY);
+         Assigns the value 5 to TheMon.
+
+
+Year
+         Year(DStr:string; Format:tDate): word;
+
+         This function returns the year represented by a date string. The func-
+         tion is passed two parameters; the date in string form, and the date
+         format. For example:
+                  TheYr := Year('1956/05/30',YYYYMMDD);
+
+13-6                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Assigns the value 1956 to TheYr.
+
+
+ValidDate
+         ValidDate(M,D,Y:longint):boolean;
+
+         This function returns true if the Gregorian date specified is valid,
+         i.e. the month is between one and twelve, and the day is valid for the
+         specified month. The function is passed three parameters of type byte,
+         shortint, word, integer or longint, representing the month, day and
+         year, respectively. For example:
+                  OK := ValidDate(2,31,1991);
+
+         Assigns the value false to OK.
+
+ValidDateStr
+
+         ValidDateStr(DStr:string;Format:tDate):boolean;
+         This function is similar to ValidDate, except that it validates a
+         string date. The function is passed two parameters; the date in string
+         form, and the date format. For example:
+
+                  OK := ValidDateStr('02/28/1991',MMDDYYYY);
+         Assigns the value true to OK.
+
+
+TodayInJul
+         TodayInJul:longint;
+
+         This function calls a DOS interrupt, and returns the system's date in
+         Julian form. It is passed no parameters. For example:
+                  writeln(JulToStr(TodayInJul,DDMMYY));
+
+         Writes the value of the system's date in string form.
+
+
+StartOfYear
+
+         StartOfYear(Jul:longint):longint;
+         Returns the Julian date of January 1 of the year in which the passed
+         date falls. The function is passed one parameter; the Julian date of
+         the year to be returned. For example:
+
+                  JanJul := StartOfYear(2448299);
+         Assigns the value 2448258, representing the date Jan 1 1991, to JanJul.
+
+Managing Dates                                                              13-7
+--------------------------------------------------------------------------------
+
+EndOfYear
+
+         EndOfYear(Jul:longint):longint;
+         Returns the Julian date of December 31 of the year in which the passed
+         date falls. The function is passed one parameter; the Julian date of
+         the year to be returned. For example:
+
+                  DecJul := EndOfYear(2448299);
+         Assigns the value 2448622, representing the date Dec 31 1991, to Dec-
+         Jul.
+
+
+
+RelativeDate
+         RelativeDate(DStr:string; Format:tDate; Delta:longint):string;
+
+         Returns a string representing a date, which is a specified number of
+         days before or after a base date. The function is passed three parame-
+         ters; the base date in string form, the date format, and the number of
+         days from the base date. The last parameter may be positive or
+         negative, depending on whether you want a date after or before the base
+         date. For example:
+                  DatStr := RelativeDate('04/05/91',MMDDYY,-7);
+
+         Assigns the value '03/29/91' to DatStr.
+
+
+StripDateStr
+
+         StripDateStr(DStr:string; Format:tDate):string;
+         This function returns a date string with the date separator removed.
+         The function is passed two parameters; the date in string form, and the
+         date format. For example:
+
+                  SlimStr := StripDateStr('02/11/91',MMDDYY);
+         Assigns the value '021191' to SlimStr.
+
+
+
+FancyDateStr
+         FancyDateStr(Jul:longint; Long,day:boolean): string;
+
+         This function returns an attractively formatted string date. The func-
+         tion is passed three parameters; the Julian date, and two boolean
+         parameters to indicate the desired format. The first boolean parameter
+         should be set to true if the month and day of week should be spelled
+         out in their long form, or false to use the three character abbrevi-
+
+
+13-8                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         ation. The second boolean parameter should be set to true if the day of
+         the week is to be included, or false if it is not required. For
+         example:
+
+                  FStr := FancyDateStr(2448299,true,true);
+         Assigns the value 'Monday February 11, 1991' to FStr.
+
+
+
+DateFormat
+         DateFormat(Format:tDate):string;
+
+         This function is passed a date format, and returns the string represen-
+         tation of that format. For example:
+                  MyStr := DateFormat(MMDDYYYY);
+
+         Assigns the value 'MMDDYYYY' to MyStr.
+
+
+Example
+
+         Listed below is the demo program DEMDT2.PAS, followed by figure 13.1
+         showing an example of the generated output.
+         program DemoDateTwo;
+         {DEMDT2 - example date statements}
+
+         uses DOS,CRT, totDATE;
+         var
+          M,D,Y:longint;
+
+         begin
+            ClrScr;
+            writeln(TodayInJul);
+            writeln(JultoStr(TodayInJul,DDMMYYYY));
+            writeln(FancyDateStr(TodayInJul,false,false));
+            writeln(FancyDateStr(TodayInJul,true,false));
+            writeln(FancyDateStr(TodayInJul,false,true));
+            writeln(FancyDateStr(TodayInJul,true,true));
+            writeln;
+            writeln(RelativeDate('02/20/56',MMDDYY,90));
+            writeln;
+            writeln(JulToStr(StartOfYear(StrTo-
+         Jul('30/06/1990',DDMMYY)),DDMMYY));
+            writeln(JulToStr(EndOfYear(StrToJul('30/06/1990',DDMMYY)),DDMMYY));
+            writeln;
+            writeln(ValidDateStr('02/29/90',MMDDYY));
+            writeln(ValidDate(2,29,90));
+            writeln(DateFormat(MMDDYY));
+         end.
+
+
+Managing Dates                                                              13-9
+--------------------------------------------------------------------------------
+
+Figure 13.1                                                             [SCREEN]
+Date
+Functions
+
+
+
+

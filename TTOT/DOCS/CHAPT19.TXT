@@ -1,0 +1,456 @@
+                                                                     Customizing
+                                                                          Linked
+                                                                           Lists
+
+
+
+         "As we acquire knowledge, things do not become more comprehensible, but
+         more mysterious."
+
+                                                                     Will Durant
+
+
+
+         Doubly-linked lists are ideal for managing large lists of data, they
+         are memory efficient and fast. The only problem is they are compli-
+         cated! Fortunately, the Toolkit provides a very easy to use doubly-
+         linked list object called DLLOBJ. DLLOBJ is an abstract object designed
+         specifically to simplify the task of extending the object. In this
+         chapter, techniques for developing a custom doubly-linked list for
+         managing records is discussed.
+
+         You might want to consider re-reading the section on linked list theory
+         (page 9-1) before proceeding.
+
+
+DLLOBJ
+         Unlike many objects, you do not need to understand very much about
+         DLLOBJ to create descendant objects. All the following methods (which
+         were described in chapter 9) are unaffected by the type of data stored
+         in the list, and do not need to be modified in descendant objects:
+
+         procedure   Advance(Amount:longint);
+         procedure   Retreat(Amount:longint);
+         function    NodePtr(NodeNumber:longint): DLLNodePtr;
+         procedure   Jump(NodeNumber:longint);
+         procedure   ShiftActiveNode(NewNode: DLLNodePtr; NodeNumber: longint);
+         procedure   DelNode(Node:DLLNodePtr);
+         procedure   DelAllStatus(BitPos:byte;On:boolean);
+         function    TotalNodes: longint;
+         function    ActiveNodeNumber: longint;
+         function    ActiveNodePtr: DLLNodePtr;
+         function    StartNodePtr: DLLNodePtr;
+         function    EndNodePtr: DLLNodePtr;
+         procedure   EmptyList;
+         procedure   Sort(SortID:shortint;Ascending:boolean);
+         procedure   SwapNodes(Node1,Node2:DLLNodePtr);
+
+         The DLLOBJ stores un-typed data in binary format. You can literally
+         stored any type of data in a DLLOBJ list. The following methods add and
+         modify data in a list:
+
+
+19-2                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         function Add(var TheData;Size:longint): integer;
+         function Change(Node:DLLNodePtr;var TheData;Size:longint): integer;
+         function InsertBefore(Node:DLLNodePtr;var TheData;Size:longint): inte-
+         ger;
+
+
+         Each of these three methods are passed an untyped parameter and a lon-
+         gint indicating the size of the data. In descendant objects, you will
+         call these methods to manipulate the data in the list. The following
+         methods return information about the data stored in the list:
+         procedure   Get(var TheData);
+         procedure   GetNodeData(Node:DLLNodePtr;Var TheData);
+         function    GetNodeDataSize(Node:DLLNodePtr):longint;
+         function    GetMaxNodeSize: longint;
+
+
+         The most used method is GetNodeData, which will update a passed un-
+         typed parameter with the data stored in the list. It is the fundamental
+         way for a descendant object to get data from the list.
+
+
+Extending DLLOBJ
+
+         The main reason for extending DLLOBJ is to make the new object manage a
+         specific type of data. The Toolkit includes the descendant StrDLLOBJ,
+         which is specifically designed to store strings, and FileDLLOBJ, which
+         stores DOS file details.
+         In this section, DLLOBJ will be extended and customized to store a
+         record. To illustrate the principles involved, we will create a new
+         object RecordDLLOBJ to store the following record data:
+
+         RecordInfo = record
+            FirstName: string[15];
+            LastName: string[15];
+            Company: string[20];
+            Tel: string[10];
+            CumDollarsSpent: real;
+            LastOrder: longint;
+            Comments: string[40];
+         end;
+
+         The main methods that need to be customized are the data manipulation
+         methods, i.e. Add, Change and InsertBefore. If you want to display the
+         object in a Browse or List window you must also customize the GetStr
+         virtual method. GetStr is called by the browse and list objects, and is
+         simply a function which returns the data stored at a node in string
+         form. The fifth method which usually needs to be customized is Wron-
+
+
+
+Customizing Linked Lists                                                    19-3
+--------------------------------------------------------------------------------
+
+         gOrder. This method provides the Sort method with the information
+         needed to sort the data, and is discussed in a later section. The new
+         object would therefore be declared as follows:
+
+         RecordListOBJ = object (DLLOBJ)
+            constructor Init;
+            function    Add(Rec:RecordInfo): integer;
+            function    Change(Node:DLLNodePtr;Rec:RecordInfo): integer;
+            function    InsertBefore(Node:DLLNodePtr;Rec:RecordInfo): integer;
+            function    WrongOrder(Node1,Node2:DLLNodePtr;
+                                   Asc:boolean): boolean;        VIRTUAL;
+            function    GetStr(Node:DLLNodePtr;
+                               Start,Finish: longint):string;    VIRTUAL;
+            destructor  Done;                                    VIRTUAL;
+         end; {RecordListOBJ}
+
+         Notice that Add, Change and InsertBefore are each passed a variable of
+         type RecordInfo. All these methods need to do is call their correspond-
+         ing DLLOBJ method and pass the record as an untyped parameter together
+         with the record size. The three methods would be implemented as
+         follows:
+
+         function RecordDLLOBJ.Add(Rec:RecordInfo): integer;
+         begin
+            Add := DLLOBJ.Add(Rec,sizeof(Rec));
+         end; {RecordDLLOBJ.Add}
+         function RecordDLLOBJ.Change(Node:DLLNodePtr;
+                                       Rec:RecordInfo): integer;
+         begin
+            Change := DLLOBJ.Change(Node,Rec,sizeof(Rec));
+         end; {RecordDLLOBJ.Change}
+
+         function RecordDLLOBJ.InsertBefore(Node:DLLNodePtr;
+                                             Rec:RecordInfo): integer;
+         {}
+         begin
+            InsertBefore := DLLOBJ.InsertBefore(Node,Rec,sizeof(Rec));
+         end; {RecordDLLOBJ.InsertBefore}
+
+         It's really as simple as that.
+
+         The function method GetStr is passed three parameters; a node pointer
+         indicating which data to access, and the Start and Finish parameters of
+         type longint. Start and Finish identify the first and last character
+         positions of the sub-string to be returned by the function. The DLLOBJ
+         method GetNodeData can be used to retrieve the node data, and then the
+         data must be converted into string form. The requested portion of this
+         string can then be returned. GetStr could be implemented as follows:
+
+
+
+19-4                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         function RecordDLLOBJ.GetStr(Node:DLLNodePtr;Start,Finish: lon-
+         gint):string;
+         {Returns string representation of record}
+         var
+           Temp: string;
+           Rec: RecordInfo;
+         begin
+            if Node = nil then
+               GetStr := 'Not found'
+            else
+            begin
+               GetNodeData(Node,Rec);  {inherited method}
+               with Rec do
+               begin
+                  Temp := inttostr(ActiveNodeNumber)+': '+
+                          FirstName+
+                          LastName+
+                          Company;
+                  if Finish > 53 then
+                     Temp := Temp + PicFormat(Tel,'(###) ###-####',' ')+' ';
+                  if Finish > 68 then
+                     Temp := Temp + JultoStr(LastOrder,MMDDYY)+' ';
+                  if Finish > 77 then
+                     Temp := Temp + FmtNumberTOT.FormattedReal
+                                    (CumDollarsSpent,2,10)+' ';
+                  if Finish > 88 then
+                     Temp := Temp + Comments;
+                end;
+                GetStr := copy(Temp,Start,succ(Finish-start));
+             end;
+         end; {RecordDLLOBJ.GetStr}
+
+
+         GetStr will never be called with Start and Finish parameters that are
+         more than 255 characters apart. In this case example, the entire record
+         can be represented by a string, so GetStr builds a string and returns
+         the requested sub-string. In cases where the record is larger than will
+         fit in a 255 string, the method should only convert the requested por-
+         tion of the record in string form. Note that the Browse object calls
+         GetStr many times during a browse session, and that GetStr needs to
+         respond quickly to avoid sluggishness. If you find that browsing is too
+         slow, try the program with range checking, stack checking etc. turned
+         off. These compiler directives slow down string-related activity con-
+         siderably.
+
+         The file EXTLINK.PAS contains the entire code for the customized
+         RecordDLLOBJ object, and is only about 100 lines long. Use this unit as
+         a template for your own specific record types.
+
+
+
+
+Customizing Linked Lists                                                    19-5
+--------------------------------------------------------------------------------
+
+Displaying RecordListOBJ Records
+
+         The List and Browse objects automatically support any descendant of
+         DLLOBJ, and so the new object RecordDLLOBJ can be easily displayed in a
+         List or Browse window.
+         The key method controlling what information is displayed in the window
+         is the GetStr method. Thanks to polymorphism, the List and Browse
+         objects don't need to know the specifics of GetStr. When they need a
+         node in string form, they simply call the DLLOBJ (or descendant) GetStr
+         method, and use whichever string is returned.
+
+         Listed below is the demo program, EXTDEM5.PAS, which displays the list
+         contents in a browse window. Figure 19.1 shows the resultant output.
+         Program ExtendedDemoFive;
+
+         Uses DOS,CRT,
+              totFAST, totINPUT, totList, extLINK, totSTR;
+         var
+           RecList: RecordDLLOBJ;
+           ListWin: BrowseLinkOBJ;
+
+         procedure BuildTheList(Filename:string);
+         {loads in the data from disk - could also be from d/b}
+         var
+           F: file of RecordInfo;
+           Rec: RecordInfo;
+           Ecode: integer;
+         begin
+            assign(F,filename);
+            {$I-}
+            reset(F);
+            {$I+}
+            if ioresult <> 0 then
+            begin
+               writeln('The file ',filename,' cannot be located.');
+               writeln('Demo aborting');
+               halt(1);
+            end;
+            Ecode := 0;
+            RecList.Init;
+            while not eof(F) and (Ecode = 0) do
+            begin
+               Read(F,Rec);
+               with Rec do
+               begin
+                  FirstName:= padleft(FirstName,15,' ');
+                  LastName:= padleft(LastName,15,' ');
+                  Company:= padleft(Company,20,' ');
+               end;
+
+
+
+19-6                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+               Ecode := RecList.Add(Rec);
+            end;
+            close(F);
+         end; {BuildtheList}
+
+         begin {Main program}
+            BuildTheList('EXTDEM5.DBF');
+            Screen.Clear(white,'°'); {paint the screen}
+            Key.SetFast;
+            with ListWin do
+            begin
+               Init;
+               AssignList(RecList);
+               Go;
+            end;
+         end.
+
+Figure 19.1                                                             [SCREEN]
+Browsing
+RecordDLLOBJ
+
+
+         As it stands, the string returned by GetStr is not really suited for
+         displaying in a list. Each item in the list would be wider than the
+         list display! A quick solution is to build a descendant of RecordDLLStr
+         and replace the GetStr method with a method which only returns a short
+         string, e.g. last name. The on-disk example EXTDEM6.PAS illustrates
+         this technique. In this example, ListLinkOBJ is also extended and cus-
+         tomized to show the full record in the message box at the bottom of the
+         list. This technique was described on page 9-30. Figure 19.2 shows the
+         output generated by EXTDEM6.
+
+
+Figure 19.2                                                             [SCREEN]
+Listing
+RecordDLLOBJ
+
+
+
+Sorting
+         It is very easy to make your custom linked lists sortable. To make a
+         list sortable, the inherited virtual method WrongOrder must be com-
+         pleted. Behind the scenes, the Toolkit sort routines repeatedly call
+         WrongOrder to determine whether two nodes are in the correct order.
+
+         The WrongOrder method is declared as follows:
+            function WrongOrder(Node1,Node2:DLLNodePtr;Asc:boolean): boolean;
+
+
+
+
+Customizing Linked Lists                                                    19-7
+--------------------------------------------------------------------------------
+
+         WrongOrder is a boolean function method which should return TRUE if the
+         data in the two nodes are in the wrong order. The method is passed
+         three parameters; two DLLNodePtr pointers to identify the nodes to be
+         compared, and a boolean to indicate whether the list is being sorted in
+         ascending (true) or descending (false) order.
+
+         The WrongOrder method must therefore get the data from the two nodes,
+         and decide if they are in the appropriate order for the sort. All
+         DLLOBJ objects include a shortint vSortID. This variable can be used to
+         provide multiple sorting capabilities. When you call the Sort method,
+         you must pass two parameters; a Sort ID, and a boolean to indicate
+         whether the sort order is ascending or descending. The Toolkit automat-
+         ically updates vSortID with the parameter passed to Sort. WrongOrder
+         should therefore check vSortID to determine what data to use in
+         deciding whether the order is correct.
+         In the RecordDLLOBJ example, the following codes might be appropriate:
+
+                   1      sort on LastName
+                   2      sort on Company
+                   3      sort on Tel
+                   4      sort on CumDollarsSpent
+                   5      sort on LastOrder
+         The actual codes you select are not important. You decide which fields
+         you want to be able to sort on, and which codes to use. Using the
+         listed codes, the WrongOrder method for the RecordDLLOBJ object would
+         be as follows:
+
+         function RecordDLLOBJ.WrongOrder(Node1,Node2:DLLNodePtr;Asc:boolean):
+         boolean;
+         var
+           S1,S2: string;
+           Rec1,Rec2: RecordInfo;
+           R1,R2: real;
+           D1,D2: longint;
+         begin
+            GetNodeData(Node1,Rec1);
+            GetNodeData(Node2,Rec2);
+            if vSortID in [1,2,3] then
+            begin
+               case vSortID of
+                  1:begin      {LastName}
+                     S1 := Rec1.LastName;
+                     S2 := Rec2.LastName;
+                  end;
+                  2: begin     {Company}
+                     S1 := Rec1.Company;
+                     S2 := Rec2.Company;
+                  end;
+                  3: begin     {Tel}
+
+
+
+19-8                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+                     S1 := Rec1.Tel;
+                     S2 := Rec2.Tel;
+                  end;
+               end; {case}
+               if Asc then
+                  WrongOrder := (S1 > S2)
+               else
+                  WrongOrder := (S2 > S1);
+            end
+            else if vSortID = 4 then  {CumDollars}
+            begin
+               R1 := Rec1.CumDollarsSpent;
+               R2 := Rec2.CumDollarsSpent;
+               if Asc then
+                  WrongOrder := (R1 > R2)
+               else
+                  WrongOrder := (R2 > R1);
+            end
+            else                       {LastOrder}
+            begin
+               D1 := Rec1.LastOrder;
+               D2 := Rec2.LastOrder;
+               if Asc then
+                  WrongOrder := (D1 > D2)
+               else
+                  WrongOrder := (D2 > D1);
+            end;
+         end; {RecordDLLOBJ.WrongOrder}
+
+
+         To sort the list, call the method Sort, e.g. MyList.Sort(1,true). The
+         demo file EXTDEM6.PAS includes a sort statement.
+
+
+Using Status Codes
+
+         List status codes are used internally by the Toolkit to support the
+         displaying of lists in windows. In some circumstances, you may be able
+         to use this facility in your custom lists.
+         All items stored in a DLLOBJ, or descendant object, include a Status
+         byte. Each of the eight bits in the Status byte can be used for a
+         different purpose. Chapter 9: Managing Lists (page 9-27), describes how
+         the first two bits are used by the List display object. You may recall
+         that bit 0 is used to identify whether the item is tagged, and bit 1
+         identifies which items to display in an alternate color. The remaining
+         six bits can be used for your own custom needs. For example, you might
+         use bit 2 to identify all customers with a delinquent account, and bit
+         3 might identify whether the customer is international or domestic, or
+
+
+
+
+Customizing Linked Lists                                                    19-9
+--------------------------------------------------------------------------------
+
+         you might extend ListOBJ to use a three-color list, and use bit 2 to
+         identify items to show in the third color. Whatever the reason, they
+         are there if you need them.
+
+         To access the Status bits, you need to know how data is stored at each
+         node. Each node in a list actually points to a DLLNodeOBJ. This object
+         manages the storage of data at the node, as well as the node status
+         byte. The following four DLLNodeOBJ methods support the Status byte:
+                  GetStatus(Bitpos:byte): boolean;
+                  SetStatus(BitPos:byte;On:boolean);
+                  GetStatusByte:byte;
+                  SetStatusByte(Val:byte);
+
+         To call these methods use the syntax MyList.NodePtr(number)^.method.
+         Use the Set methods to change a status bit, and the get methods to
+         check the current status. For example, to set the fourth bit to true
+         for the 12th entry in the list MyList, you would use the following
+         statement:
+                  MyList.NodePtr(12).SetStatus(3,true);
+

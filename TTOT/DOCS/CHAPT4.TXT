@@ -1,0 +1,475 @@
+                                                                     Determining
+                                                                               &
+                                                                     Controlling
+                                                                        Hardware
+
+
+
+         "Never let a domestic quarrel ruin a day's writing. If you can't start
+         the next day fresh, get rid of your wife."
+
+                                                                      Mario Puzo
+
+
+         This chapter describes the objects included in the totSYS unit. There
+         are four objects in all, designed to provide information about the
+         hardware and operating system on which an application is running. Dis-
+         playOBJ is an object relating to the monitor/display card; EquipOBJ
+         returns information about the peripheral devices installed on the
+         computer; MemOBJ provides information about base, extended and expanded
+         memory; OSOBJ provides information about the operating system and the
+         DOS configurable international settings.
+
+         A full example illustrating the use of each object can be found at the
+         end of the chapter.
+
+
+Using DisplayOBJ
+         The public methods (i.e. the methods you should be calling) in Display-
+         OBJ are designed to provide you with information about the computer
+         display. Since other units in the Toolkit also need to know this
+         information, a global instance, called Monitor, is automatically ini-
+         tialized when the totSYS unit is used. Monitor is, in fact, a pointer
+         to an object on the heap, and has to be referenced with the pointer
+         symbol, e.g. Monitor^. There should be no reason to initialize another
+         DisplayOBJ, just access the Monitor^ methods. The following methods are
+         available:
+
+
+         SnowProne: boolean
+         This function method returns true if the display is a "snowy" CGA.
+         Since the screen writing routines in totFAST take care of snow, you
+         should not normally need to call this method.
+
+
+         GetMode:byte
+         Returns the current display mode, e.g. mode 3 is 80 column color mode.
+         Refer to the Turbo Pascal Programmer's Guide or a DOS Technical Refer-
+         ence for more information about display modes.
+
+
+         ColorOn:boolean
+
+4-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         This function returns true if the system is capable of color display.
+         This function is normally called to determine whether to use monochrome
+         or color display attributes when overriding the Toolkit's defaults.
+         This function will always return false if ForceBW is set to true (dis-
+         cussed next). It also returns false if the user is using a color sys-
+         tem, but has set the device to BW80 mode.
+
+
+         SetBW(On:boolean)
+         Call this procedure and pass a true value if you want to force the
+         system to use monochrome values. This is useful for laptop systems
+         where the system responds as a color device, but the user only sees
+         gray (or orange!) scales. Because LookTOT was initialized before your
+         program code was executed, you should also call LookTOT^.SetDefaults,
+         and LookTOT will then be assigned the default monochrome settings.
+
+
+         DisplayType: tVideo
+         The totSYS unit defines an enumerated type tVideo which has the follow-
+         ing members: UnKnown, Mono, CGA, MCGAmono, MCGAcol, EGAmono, EGAcol,
+         VGAmono and VGAcol. The function display type checks the installed
+         hardware and returns the appropriate member.
+
+
+         BaseOfScreen: pointer;
+         This function returns a pointer to the base address of video memory.
+         This is $B800:0000 for color systems and $B000:0000 for monochrome.
+         Unless you are using non-Toolkit routines to directly access video
+         memory, you should not need to call this method.
+
+
+         Width: byte
+         This function returns the width of the display in characters, which is
+         commonly a value of 80.
+
+
+         Depth: byte
+         This function returns the depth of the display in lines. In normal
+         display mode the function will return 25, but in condensed mode an EGA
+         system will return 43, and a VGA system will return 50.
+
+
+         The following two methods are used to switch an EGA or VGA display
+         system between condensed and normal modes.
+
+
+         SetCondensed: byte;
+
+
+
+
+Hardware                                                                     4-3
+--------------------------------------------------------------------------------
+
+         This function tries to set the display to condensed mode, and returns
+         the number of text lines the system can display in condensed mode. Note
+         that only EGA and VGA systems can be set into condensed mode.
+
+
+
+4-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+
+         Set25;
+
+         This procedure forces the display into 25 line mode.
+
+
+
+
+Using EquipOBJ
+         The EquipOBJ object is designed to provide information about the
+         installed hardware devices. Most of the EquipOBJ methods reflect the
+         data which the user defined with the SETUP operating system command.
+         This may not correspond with the actual physical configuration, but is
+         the only configuration which DOS will allow software to access. Equi-
+         pOBJ includes the following methods:
+
+
+         ComputerID:byte;
+         This function returns a byte indicating the basic system type. The
+         computer ID was implemented by IBM to provide an easy way for differen-
+         tiating between the various IBM personal computers. The following list
+         shows the hexadecimal values of the IBM range:
+
+         $FF     - IBM PC
+         $FE,$FB - IBM XT or portable
+         $FD     - the infamous PC Junior
+         $FC     - IBM AT, XT-286, PS/2 50 and 60
+         $FA     - PS/2 25 and 30
+         $F9     - IBM PC Convertible
+         $F8     - PS/2 80
+
+         Some non-IBM systems do not follow this convention, and an unlisted
+         number may be returned by this method.
+
+
+         ParallelPorts: byte;
+         This function returns the number of installed parallel ports (LPTx).
+
+
+         SerialPorts: byte;
+         This function returns the number of installed serial ports (COMx).
+
+
+         FloppyDrives: byte;
+         This function returns the number of physical diskette drives.
+
+
+         ROMDate: string;
+
+
+
+Hardware                                                                     4-5
+--------------------------------------------------------------------------------
+
+         Returns an eight character string representing the ROM date in the
+         format MM/DD/YY.
+
+
+         GameAdapter: boolean;
+         Returns true if a game adapter is installed.
+
+
+         Serialprinter: boolean;
+         Returns true if a serial printer is configured.
+
+
+         MathChip: boolean;
+         Returns true if a math co-processor is detected. If you compile Toolkit
+         programs with the compiler directive FLOAT enabled, but FLOATEM dis-
+         abled, the program will only run on systems equipped with a math co-
+         processor. Use this function during program initialization to ensure
+         the host PC is adequately equipped.
+
+
+
+Using MemOBJ
+         The MemOBJ methods provide data related to base, extended and expanded
+         memory on the host PC. The following function methods are provided:
+
+
+         BaseMemory: integer;
+         Returns the total amount of base memory installed, i.e. memory up to
+         640k. The value is returned in kilobytes ("k"). Remember that the Turbo
+         Pascal functions MemAvail and MaxAvail provide data on free memory,
+         i.e. memory not being used by device drivers and programs.
+
+
+         EMMInstalled: boolean;
+         Returns true if an expanded memory manager is installed.
+
+
+         EMMversionMajor: byte;
+         Returns the expanded memory manager major version number, i.e. the
+         whole portion of the version number. If an EMM is not installed, a 0 is
+         returned.
+
+
+         EMMversionMinor: byte;
+         Returns the expanded memory manager minor version number, i.e. the dec-
+         imal portion of the version number. If an EMM is not installed, or if
+         the minor version number is zero, a 0 is returned.
+
+
+4-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         EMMversion: string;
+
+         Returns a three character string representing the complete EMM version
+         number, e.g. "4.0".
+
+         MaxExpMem: word;
+
+         Returns the total amount of installed expanded memory in kilobytes.
+
+         ExpMemAvail: word;
+
+         Returns the amount of unused (or available) expanded memory in kilo-
+         bytes.
+
+         ExtMemAvail: word;
+
+         Returns the amount of unused extended memory in kilobytes.
+
+
+Using OSOBJ
+
+         The OSOBJ object is designed to provide information about the operating
+         system. This unit is particularly useful when programs need to be
+         developed for the international (read: non-American!) market place,
+         because the DOS configuration can be ascertained, including the date
+         format, currency symbol, country code, etc.
+         If you develop a program to be distributed internationally, you need to
+         adhere to the host countries' formatting conventions, especially date
+         and number formats. Refer to chapter 11: Controlling User Input for a
+         full discussion of this topic.
+
+         The following function methods are available:
+
+         OSVersionMajor: byte;
+
+         Returns the major DOS version number, e.g. 2, 3 or 4.
+
+         OSVersionMinor: byte;
+
+         Returns the minor DOS version number, e.g. 1.
+
+         OSVersion: string;
+
+         Returns the full DOS version number as a string, e.g. "3.1"
+
+         Country: word;
+
+
+Hardware                                                                     4-7
+--------------------------------------------------------------------------------
+
+         Returns a word which represents the country code. In general, the coun-
+         try codes are the same as the 3-digit international phone access code.
+         Some of the more common codes are:
+
+                001   United States
+                002   Canada (French)
+                003   Latin America
+                031   Netherlands
+                032   Belgium
+                033   France
+                034   Spain
+                039   Italy
+                041   Switzerland
+                044   United Kingdom
+                045   Denmark
+                046   Sweden
+                047   Norway
+                049   Germany
+                061   Australia
+                351   Portugal
+                358   Finland
+
+         Currency: string;
+
+         Returns a string identifying the country's currency abbreviation. On
+         systems using DOS prior to version 3.0, only a signal character can be
+         accessed. However, systems using DOS 3.0 and later may return more than
+         one character, e.g. FFR, DKR.
+
+         DateFmt: tDate;
+
+         The totSYS unit includes the declaration of the tDATE enumerated type
+         which has three members: USA, EUROPE and JAPAN. This function returns
+         the member which represents the operating system default date format.
+         Note that the three formats are MM-DD-YY, DD-MM-YY and YY-MM-DD,
+         respectively.
+
+         ThousandsSep: char;
+
+         Returns the character used to punctuate the thousands mark in numbers.
+         The USA uses a comma, whereas many other countries use a period or a
+         space.
+
+         DecimalSep: char;
+
+         Returns the character used to punctuate the decimal place. This is
+         usually a period or a comma.
+
+
+
+4-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         DateSep: char;
+
+         Returns the character used to separate the month, day and year elements
+         of a date, e.g. "/", "-". Note: this information is not accessible on
+         systems using DOS prior to version 3.0. If the machine does not have
+         DOS 3.0 or later, a '/' is returned.
+
+         TimeSep: char;
+
+         Returns the character used to separate the hours, minutes and seconds
+         when displaying the time, e.g. ":". Note: this information is not
+         accessible on systems using DOS prior to version 3.0. If the machine
+         does not have DOS 3.0 or later, a ':' is returned.
+
+         TimeFmt: byte;
+
+         Returns a byte to indicate the preferred time display. A 0 indicates a
+         12 hour format, and a 1 indicates a 24 hour format. Note: this informa-
+         tion is not accessible on systems using DOS prior to version 3.0. If
+         the machine does not have DOS 3.0 or later, a 0 is returned.
+
+         CurrencyFmt: byte;
+
+         Returns a byte indicating the currency format. One of the following
+         five values will be returned:
+              0     String leads currency, no space
+              1     String follows currency, no space
+              2     String leads currency, one space
+              3     String follows currency, one space
+              4     String replaces decimal separator
+
+         Note: this information is not accessible on systems using DOS prior to
+         version 3.0. If the machine does not have DOS 3.0 or later, a 0 is
+         returned.
+
+         CurrencyDecPlaces: byte;
+
+         Returns the number of decimal places normally used with the country's
+         currency. Note: this information is not accessible on systems using DOS
+         prior to version 3.0. If the machine does not have DOS 3.0 or later, a
+         2 is returned.
+
+
+
+Hardware                                                                     4-9
+--------------------------------------------------------------------------------
+
+Example
+
+         Listed below is the demo program, DEMSY1, which illustrates the use of
+         each of the four totSYS objects. Figure 4.1 reflects the resultant
+         output on a VGA computer.
+          Program DemoSystemOne;
+          {DEMSY1}
+
+          USES DOS,CRT, TOTSYS;
+          var
+             Equip: EquipObj;
+             Mem: MemObj;
+             OS: OSObj;
+             Lines: byte;
+          begin
+            ClrScr;
+            Lines := Monitor^.SetCondensed;
+            if Monitor^.ColorOn then
+               writeln('This system is color')
+            else
+               writeln('This system is monochrome');
+            with Equip do
+            begin
+               Init;
+               Writeln('Machine ID: ',ComputerID);
+               Writeln('Parallel Ports: ',ParallelPorts);
+               Writeln('Serial Ports: ',SerialPorts);
+               Writeln('Floppy Drives: ',Floppydrives);
+               Writeln('ROM date: ',RomDate);
+               Writeln('Game Adapter: ',GameAdapter);
+               Writeln('Serial printer: ',Serialprinter);
+               Writeln('Math Coprocessor: ',MathChip);
+               Writeln;
+            end;
+
+            with Mem do
+            begin
+               Init;
+               Writeln('Base memory: ',Basememory,'k');
+               Writeln('Avail Extended memory: ',ExtMemAvail,'k');
+               if EMMInstalled then
+               begin
+                  Writeln('Total Expanded memory: ',MaxExpMem,'k');
+                  Writeln('Avail Expanded memory: ',ExpMemAvail,'k');
+                  Writeln('Expanded memory manager version: '+
+                          EMMversion);
+               end
+               else
+
+
+
+4-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                  Writeln('Expanded memory not installed: ');
+               writeln;
+            end;
+
+            with OS do
+            begin
+               Init;
+               Writeln('Operating System Version: '+OSversion);
+               Writeln('Country Code: ',Country);
+               write('Currency String: ',Currency,' ');
+               case CurrencyFmt of
+                  0: writeln('(String leads currency, no space)');
+                  1: writeln('(String follows currency, no space)');
+                  2: writeln('(String leads currency, one space)');
+                  3: writeln('(String follows currency, one space)');
+                  4: writeln('(String replaces decimal separator)');
+               end; {case}
+               writeln('Currency Decimal Places: ',CurrencyDecPlaces);
+               write('Thousands Separator: ','''',ThousandsSep,'''');
+               writeln(' Decimal Separator: ','''',DecimalSep,'''');
+               case DateFmt of
+                  USA: writeln('Date Format: MM DD YY');
+                  Europe: writeln('Date Format: DD MM YY');
+                  Japan: writeln('Date Format: YY MM DD');
+               end; {case}
+               write('Date separator: ','''',DateSep,'''');
+               writeln(' Time separator: ','''',TimeSep,'''');
+               if TimeFmt = 0 then
+                  writeln('Time is displayed on a 12 hour clock')
+               else
+                  writeln('Time is displayed on a 24 hour clock');
+            end;
+            write('                            press any key ...');
+            Repeat until keypressed;
+            if Lines > 25 then
+               Monitor^.Set25;
+          end.
+         Notice that the INIT method is not called for the Monitor^ instance.
+         This is because Monitor^ is a global instance, and the Toolkit automat-
+         ically initializes all global instances.
+
+
+Figure 4.1                                                              [SCREEN]
+The System Demo
+Program
+

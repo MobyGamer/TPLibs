@@ -1,0 +1,535 @@
+                                                                 Getting Started
+
+
+
+         "It is common sense to take a method and try it. If it fails, admit it
+         frankly and try another. But above all, try something."
+
+                                                           Franklin D. Roosevelt
+
+
+
+Installing the Toolkit
+         The Toolkit is available in a variety of disk densities and sizes. This
+         section assumes that you are installing the software from a two disk
+         set. If you are using a single disk set, simply assume that all the
+         files are contained on a single disk and ignore the instructions for
+         inserting the second disk.
+
+         The program disk includes an installation program INSTALL.EXE. This
+         program can be used to automatically install the software onto your
+         hard disk. It will prompt you to enter the appropriate source and tar-
+         get directories, and will not modify your CONFIG.SYS and AUTOEXEC.BAT
+         files. Alternatively, you may install the Toolkit manually. Please note
+         that the files are stored on disk in compressed form, and must be
+         uncompressed (decompressed?) before they can be used.
+
+
+Using INSTALL.EXE
+         The Install program will transfer the Toolkit files from the diskettes
+         to a specified hard drive. To run the install program, insert the
+         Source Disk in drive A (or another floppy drive) and then:
+
+         q    Type the command: A:INSTALL [KEYCAP].
+         q    Press [KEYCAP] at the installation screen.
+
+         q    Follow the prompts.
+         It is recommended that you install the source files in a sub-directory
+         TOT beneath the main Turbo Pascal directory. Similarly, the demo files
+         should be installed in a TOTDEM subdirectory.
+
+         During the installation process, files will be copied from the Toolkit
+         disks to your hard drive. The files will then be compressed. Once the
+         files have been installed, the Installation program will ask if you
+         want to view the README file. This file contains last-minute details
+         about the Toolkit. A following section describes how to view the README
+         file after installation.
+         If the installation is not successful, follow the manual installation
+         method described in the next section.
+
+
+2-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+Manual Installation
+
+         The disks contain the following files:
+         INSTALL.EXE     the Toolkit Installation program
+
+         SOURCE.EXE      a self-extracting file which contains the .PAS source
+                         files for the Toolkit units
+         DEMO.EXE        a self-extracting file which contains the .PAS demon-
+                         stration files, which illustrate how to use the Toolkit
+
+         DOCS.EXE        a self-extracting file containing all this documenta-
+                         tion in ASCII form
+         README.COM      a self-displaying text file which lists all the last-
+                         minute changes and enhancements
+
+         REGISTER.EXE    a self-extracting file which contains all the ShareWare
+                         information and instructions
+
+
+         We recommend that the source files are installed in a separate sub-
+         directory "underneath" the compiler directory. For example, if your
+         compiler is stored in the directory C:\TP, then create a directory
+         C:\TP\TOT. You can insert the source disk in the A drive and install
+         the source files as follows:
+                  C: [KEYCAP]
+                  MD\TP\TOT [KEYCAP]
+                  CD\TP\TOT [KEYCAP]
+                  A:SOURCE [KEYCAP]
+
+
+         The SOURCE.EXE program will then place all the source code files in the
+         newly created directory. The README.COM file should also be copied to
+         the TOT sub-directory.
+
+                  COPY A:README.COM [KEYCAP]
+
+
+         Although not essential, the demonstration files are referred to
+         throughout the documentation and it is recommended that you do install
+         them. Furthermore, it is recommended that you install them in a sepa-
+         rate subdirectory as follows:
+                  C: [KEYCAP]
+                  MD\TP\TOTDEMO [KEYCAP]
+                  CD\TP\TOTDEMO [KEYCAP]
+                  A:DEMO [KEYCAP]
+
+
+
+
+Getting Started                                                              2-3
+--------------------------------------------------------------------------------
+
+         You do not need to install the DOCS.EXE and REGISTER.EXE files, since
+         you are a registered user and you are reading the documentation. These
+         files are included so that you may give an evaluation copy of the
+         Toolkit to a colleague who may try the software. Refer to the License
+         Agreement for further information.
+
+The Toolkit Files
+         Listed below are the source files that have been installed on your hard
+         disk:
+
+         TOTFLAGS.INC    contains global compiler directives
+         TOTLOOK.PAS     controls the overall look and feel of your programs
+
+         TOTREAL.PAS     provides numeric co-processor support and supports
+                         extended reals
+         TOTSYS.PAS      contains objects for ascertaining hardware and operat-
+                         ing system configurations
+
+         TOTINPUT.PAS    provides mouse and keyboard support
+         TOTFAST.PAS     supports writing to physical and virtual screens
+
+         TOTWIN.PAS      contains a variety of window objects
+         TOTMSG.PAS      provides objects for displaying messages and prompts in
+                         Pop-up windows
+
+         TOTLINK.PAS     includes a variety of objects for managing linked lists
+         TOTLIST.PAS     provides objects for displaying string arrays or linked
+                         lists in a window
+
+         TOTDIR.PAS      includes a directory display object
+         TOTIO1,2,3.PAS  three units for building full screen input
+
+         TOTMENU.PAS     includes routines for building pop-up and pull-down
+                         menus
+         TOTSTR.PAS      contains a host of string manipulation functions
+
+         TOTDATE.PAS     includes a set of functions for managing Julian and
+                         Gregorian dates
+         TOTMISC.PAS     provides a potpourri of procedures and functions
+
+         TOTBUILD.PAS    used to re-build all the TOT TPUs
+
+
+         In addition to the source code files, there are a host of demonstration
+         files. All the demonstration filenames begin with DEM. The files which
+         demonstrate how to extend the Toolkit begin with EXT. The major demon-
+
+2-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         stration file is DEMTOT.PAS. All the other files are designed to be
+         small and concise illustrations of how to get the most from the
+         Toolkit.
+
+
+
+The README File
+         The file README.COM is actually a self-displaying text file which con-
+         tains any last-minute changes or additions to the documentation. To
+         view the contents of the README file, simply change the default
+         directory to the TOT source and execute README, e.g.
+
+                  CD\TP\TOT [KEYCAP]
+                  README [KEYCAP]
+
+
+Configuring Turbo Pascal
+
+         Having installed the Toolkit, you must configure Turbo Pascal so the
+         compiler knows where to locate the Toolkit files. Configure the inte-
+         grated environment as follows:
+         q    Execute the IDE by changing the default directory to the main
+              Turbo Pascal directory, and enter TURBO.
+
+         q    Select the Directories item from the Options menu. The Directories
+              dialog box will then be displayed. Fig 2.1 illustrates the Pascal
+              6.0 dialog box.
+         q    You must now add the C:\TURBO\TOT directory (or whichever direc-
+              tory you have chosen for the Toolkit) to the Unit, Include and
+              Object input fields. If an entry already exists in the field,
+              press the right cursor and add a semi-colon before entering the
+              Toolkit directory. Note: do not have more than one directory in
+              the EXE/TPU input field - this must be a single directory identi-
+              fying where the compiler should locate compiled files.
+
+         q    Save the options by selecting Save from the Options menu.
+
+
+Figure 2.1                                                              [SCREEN]
+Configuring the IDE
+
+
+         If you are using the command line version of the compiler, i.e. TPC.EXE
+         or TPCX.EXE, then you must add the Toolkit directory to the Unit,
+         Include and Source parameters in the TPC(X).CFG file. Listed below is
+         an example of a TPC.CFG file:
+
+
+
+Getting Started                                                              2-5
+--------------------------------------------------------------------------------
+
+               /L
+               /M
+               /IC:\TURBO\TOT;C:\TURBO\MISC
+               /UC:\TURBO\TOT
+               /OC:\TURBO\TOT
+               /EC:\TURBO\MYPROGS
+
+
+         Turbo Pascal 5.5 users can use the TPCONFIG.EXE program to create a
+         TPC.CFG file from the IDE settings, and vice verse.
+         For further configuration information refer to the Turbo Pascal User's
+         Guide.
+
+
+
+Unit Summary
+         Listed below is a description of the features in each of the major
+         units:
+
+
+         totLOOK    This unit is designed to help you control the look and feel
+                    of large programs. A global object, LOOKTOT, defines the
+                    default colors to be used when displaying windows, menus and
+                    lists.
+
+         totREAL    This small unit controls the REAL type. Unless the compiler
+                    directive FLOAT is specified (in the TOTFLAGS.INC file -
+                    discussed later), the types SINGLE, DOUBLE, EXTENDED and
+                    COMP are type cast to the base type REAL.
+         totSYS     This unit provides four objects which can be used to deter-
+                    mine the hardware and operating system configurations of the
+                    PC on which your programs are running. The DisplayOBJ object
+                    provides information about the display: whether it is color
+                    or monochrome, what is the width and depth of the screen,
+                    and the object includes methods for setting the screen into
+                    and out of condensed mode, i.e. 43 or 50 line mode. The
+                    EquipOBJ object provides information about the PC peripheral
+                    devices, e.g. how many serial and parallel ports there are,
+                    if a math chip is present, how many floppy drives, etc. The
+                    MemOBJ object provides information about base memory, as
+                    well as extended and expanded memory. The OSOBJ provides
+                    information about the operating system, e.g. the DOS version
+                    number, the country configuration, and the characters used
+                    for currency, date and time separators.
+
+
+
+2-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         totINPUT   The two main objects in this unit, MouseOBJ and KeyOBJ, are
+                    used to detect and control mouse and keyboard activity. The
+                    MouseOBJ detects if a mouse is present and includes a
+                    variety of methods for controlling the mouse shape and
+                    location. The KeyOBJ is the primary input object and detects
+                    both keyboard and mouse button activity. There are methods
+                    to get and set the status of the Caps Lock, Num Lock and
+                    Scroll Lock keys, as well as routines to stuff or erase
+                    characters with a special keyboard type-ahead buffer.
+
+         totFAST    The totFAST unit provides the main screen writing primi-
+                    tives, and contains four main objects: WriteOBJ, ScreenOBJ,
+                    ScrollOBJ and ShadowOBJ. The WriteOBJ object controls the
+                    screen writing techniques used throughout the Toolkit. If
+                    you do not want to use the Toolkit screen writing algo-
+                    rithms, you can create a descendent object and substitute
+                    any of the WriteOBJ methods. The ScreenOBJ object contains
+                    all the methods for writing formatted data to the screen.
+                    There are routines to write text to any location on the
+                    screen with right, left or center justification. As well as
+                    routines for drawing boxes and lines which automatically use
+                    line joining characters if they cross over another line.
+                    ScreenOBJ also supports virtual screens which can be slid or
+                    popped onto the visible screen at any time. Virtual screens
+                    can either be copied from the visible screen or created from
+                    scratch. The ScrollOBJ object controls the look and feel of
+                    the scroll bars used throughout the Toolkit. The ShadowOBJ
+                    controls the look and feel of the shadows used throughout
+                    the system. Shadows may be set up or down, right or left,
+                    and the depth and color of the shadow can be defined.
+         totWIN     This unit provides a variety of window objects for writing
+                    text in a window. The primary object is WinOBJ, which
+                    provides the methods for popping a window onto the display.
+                    You can specify the window attributes such as display
+                    colors, size and title. When a window is activated, the
+                    Toolkit automatically restricts screen writing to within the
+                    window area. When the window is removed, the original screen
+                    contents are restored and the cursor is repositioned in its
+                    original position. The MoveWinOBJ offers all the features of
+                    the WinOBJ, but the user can drag or move the window around
+                    the screen. The ScrollWinOBJ is a moveable window object
+                    that optionally supports horizontal and vertical scroll
+                    bars. Finally, the StretchWinOBJ is a moveable, scrollable
+                    window that allows the user to stretch the window into
+                    different shapes by dragging the lower-right window corner.
+
+         totMSG     The totMSG unit provides a suite of objects for displaying
+                    pop-up messages to the user. In the next section, this unit
+                    forms part of a demonstration on how to use the Toolkit.
+
+
+Getting Started                                                              2-7
+--------------------------------------------------------------------------------
+
+         totLINK    One of the least understood elements of contemporary pro-
+                    gramming techniques is the creation and maintenance of
+                    linked lists. This unit provides a number of objects for
+                    building doubly-linked lists. Linked lists allow you to
+                    create lists of variable size, unlike arrays where you have
+                    to specify the total size of the array at compile time.
+                    Linked lists are ideal for reading directories, text files
+                    or database records. The linked list engine provides rou-
+                    tines for adding, deleting and moving entries in the list,
+                    as well as automatic sorting.
+
+         totLIST    This unit provides the ListOBJ for displaying arrays or
+                    linked lists in a stretchable window. List objects can be
+                    used to display text files, data base records, or any list
+                    in a window. Lists can be displayed in multiple columns, and
+                    the user may optionally select one or more items from the
+                    list.
+         totDIR     Most programs require the user to select a filename. The
+                    DirOBJ provides a very quick and convenient way of display-
+                    ing a dialog box from which the user can choose a file, or
+                    enter a new filename.
+
+         totIO1     The most used element of TechnoJock's Turbo Toolkit was the
+                    screen IO, i.e. the full screen input routines. The Object
+                    Toolkit dedicates three units to full screen input objects.
+                    The totIO1 unit provides objects for defining hotkeys,
+                    buttons, 3D buttons, check boxes and radio buttons, as well
+                    as the IO event manager ActionOBJ.
+         totIO2     totIO2 provides objects for string input (including lateral
+                    scrolling), integer/real/date/hex input with automatic input
+                    and range validation, formatted string input for telephone
+                    number input and the like, and a list unit for displaying a
+                    scrollable list as an input field.
+
+         totIO3     totIO3 provides objects for creating memo fields, i.e.
+                    multi-line fields that provide full word wrapping. Either a
+                    linked list or an array can be assigned to the memo field.
+         totMENU    The totMENU unit provides objects for displaying full-screen
+                    menus, as well as multilevel pull-down menus.
+
+         totSTR     The totSTR unit provides a wealth of routines for formatting
+                    and converting strings. There are routines to convert inte-
+                    gers, reals and HEX to string and vice verse. There are also
+                    routines to truncate and extend strings, delete characters
+                    from strings, count words, adjust case, etc.
+
+
+
+2-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         totDATE    Date manipulation is a snap with the totDATE unit. This unit
+                    provides a set of functions for converting to and from
+                    Julian dates. The unit supports eight (count 'em) different
+                    date formats for national and international use.
+
+         totMISC    This unit contains a potpourri of procedures and functions
+                    that didn't fit anywhere else in the Toolkit. There are
+                    routines for validating filenames, checking the status of
+                    the printer, copying files, range checking integers, and
+                    more.
+
+
+Compiling the Demo Programs - A Quick Start
+
+         Enough is enough. You must want to try it by now. If you have not yet
+         installed the Toolkit or configured Turbo Pascal, do so now. Full
+         instructions were provided earlier in this chapter.
+         Start the IDE and use the File Change Dir option to change the working
+         directory to C:\TURBO\TOTDEMO (or wherever you installed the demo
+         files). Choose File Open and load the file DEMMS1.PAS. This filename is
+         an abbreviation of DEMO-MESSAGE-ONE, the first demo of the totMSG unit.
+
+         Listed below are the file contents:
+
+
+         program DemoMessage1;
+         {demms1}
+         Uses DOS, CRT,
+              totFAST, totMSG;
+
+         Var  MsgWin : MessageOBJ;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MsgWin do
+            begin
+               Init(1,' Message ');
+               AddLine('');
+               AddLine('The message unit provides a');
+               AddLine('very easy way of displaying');
+               AddLine('pop-up messages in a move-');
+               AddLine('able window.');
+               AddLine('');
+               Show;
+               Done;
+            end;
+         end.
+
+
+
+Getting Started                                                              2-9
+--------------------------------------------------------------------------------
+
+         The demo program uses methods from the totFAST and totMSG units, so
+         they are included in the Uses statement. The VAR statement declares an
+         object variable called MsgWin which is of type MessageOBJ. This is the
+         main object used for displaying messages.
+
+         The first statement of the program:
+                  Screen.Clear(white,'°');
+
+         calls the Clear method (or procedure in the old terminology) from the
+         Screen object. Screen is a globally declared object in the totFAST unit
+         and controls the writing to the screen. The Clear method is used to
+         clear the screen, and the two parameters identify the display color and
+         the character used to fill the screen.
+         The remaining statements all affect the MsgWin object, so to abbreviate
+         the code, the "with var do" shortcut is used. Every Toolkit object must
+         be initialized before the object methods can be called, and this is
+         always achieved with the INIT statement. In the case of MessageOBJ
+         objects, INIT must be passed two parameters: the first indicates the
+         window border style (1 for a single line box), and the second the
+         window title. The AddLine method is called multiple times to add the
+         message text. The Show method is then called to instruct the Toolkit to
+         display the message. Finally, when the user has removed the message,
+         the WinOBJ is disposed of by calling the DONE method (known as a
+         destructor). That's all there is to it.
+
+         Select Run Run (or press [KEYCAP]) to execute the demo program. Fig 2.2
+         illustrates the screen that should be displayed. (If the program did
+         not run successfully, refer to the next section for the probable
+         cause.)
+         The message window can be dragged around the screen using the Mouse by
+         moving the mouse cursor to the top of the window, and holding down the
+         left mouse button. While the button remains depressed the window can be
+         dragged around the screen. Using the keyboard, the window can be moved
+         by pressing the [KEYCAP] key and then using the cursor keys. The move
+         is terminated when [KEYCAP] is pressed.
+
+         The message can be removed by clicking the left mouse button on the
+         close icon [þ] at the top left of the window, by clicking the left
+         mouse button on the OK hot spot, or by pressing [KEYCAP] or [KEYCAP].
+
+
+Figure 2.2                                                              [SCREEN]
+The Message Demo
+Program
+
+
+
+2-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Common Problems
+
+         Listed below are a few of the common problems that occur when you first
+         try to run the demo programs, together with some quick remedies.
+
+
+
+         Error 15: File not found (TOTFAST.TPU)
+         This error is generated when the compiler cannot find the TPU file or
+         the associated PAS file. The most likely cause is that you have not
+         correctly entered the Toolkit path in the Options Directories Unit
+         Directories dialog box. Correct the path and try again.
+
+
+         Error 15: File not found (TOTFLAGS.INC)
+         Make sure that you have correctly added the Toolkit directory to the
+         Options Directories Include Files dialog box.
+
+
+         Error 15: File not found (TOTFAST.OBJ)
+         Make sure that you have correctly added the Toolkit directory to the
+         Options Directories Object Files dialog box.
+
+
+         Error 1: Out of memory
+         Turbo Pascal lacks sufficient room to compile, link, and execute your
+         program. The first obvious step is to remove any unnecessary memory
+         resident programs, not forgetting items in CONFIG.SYS like BUFFERS and
+         ANSI.SYS. A number of IDE settings influence the amount of memory
+         required to run a program. The following actions will minimize the
+         memory consumed:
+
+         q     Set the Compile Destination to disk.
+         q     Set the Options Linker to disk.
+
+         q     Set the Options Linker mapfile to off.
+         q     Set the Options Debugger so that both stand-alone and integrated
+               options are not selected.
+
+         q     Edit the TOTFLAGS.INC file and enable the FINAL directive (dis-
+               cussed in the next chapter).
+         q     If the file you are editing is large, switch to a smaller file,
+               and specify the program filename in the Compiler Primary file
+               field.
+
+         q     If you are using Turbo Pascal version 6, there are a number of
+               other ways to save memory, particularly if you have expanded
+               memory. Refer to page 147 of the 6.0 User's Guide for further
+               information.
+
+
+Getting Started                                                             2-11
+--------------------------------------------------------------------------------
+
+         If there is still insufficient memory, remove any unnecessary memory
+         resident programs from memory and try again. If you can compile the
+         program, but not run it, drop to DOS and execute the program from the
+         command line. If all else fails, use the command line version of Turbo
+         (TPC or TPCX) to compile the program. Note that all the demo programs
+         included in the Toolkit will run from the integrated environment on a
+         640k machine when compiled in the FINAL state.
+
+
+
+         Error 72: Unit file format error (...)
+
+         This problem usually occurs when you switch from one version of Turbo
+         Pascal to another - TPUs created with one version of Pascal cannot be
+         used by another version. The solution is to select Compile Build and
+         force the compiler to recreate the TPU files.
+

@@ -1,0 +1,71 @@
+
+All the documentation files have a TXT extension and the following files are
+provided:
+
+     Filename          Description
+     ------------      -------------------------------------------
+     INFO     TXT      This file
+
+Part 1 - User's Guide
+     CHAPT1   TXT      Chapter 1     Introduction
+     CHAPT2   TXT      Chapter 2     Getting Started
+     CHAPT3   TXT      Chapter 3     Toolkit Basics
+     CHAPT4   TXT      Chapter 4     Determining & Controlling Hardware
+     CHAPT5   TXT      Chapter 5     Writing to the Screen
+     CHAPT6   TXT      Chapter 6     Keyboard & Mouse Input
+     CHAPT7   TXT      Chapter 7     Using Windows
+     CHAPT8   TXT      Chapter 8     Displaying Messages and Prompts
+     CHAPT9   TXT      Chapter 9     Managing Lists
+     CHAPT10  TXT      Chapter 10    Displaying Directories
+     CHAPT11  TXT      Chapter 11    Controlling User Input
+     CHAPT12  TXT      Chapter 12    Menus Menus Menus
+     CHAPT13  TXT      Chapter 13    Managing Dates
+     CHAPT14  TXT      Chapter 14    String Handling
+     CHAPT15  TXT      Chapter 15    Miscellaneous
+                                     
+Part 2 - Extending the Toolkit       
+     CHAPT16  TXT      Chapter 16    OOP Principles
+     CHAPT17  TXT      Chapter 17    Replacing The Screen Writer
+     CHAPT18  TXT      Chapter 18    Extending Windows
+     CHAPT19  TXT      Chapter 19    Customizing Linked Lists
+     CHAPT20  TXT      Chapter 20    Extending Input Field Types
+
+Part 3 - Flash Cards
+     FLASH    TXT      A Not-Too-Quick Reference
+
+
+
+These files are direct exports of the master files used for typesetting
+the printed manuals. Please note that, for obvious reasons, the files do
+not include any of the diagrams and screen shots which form part of the
+final manual, nor any of the typestyle changes used to emphasize headings
+and subheadings.
+
+Also, note that the bound manuals are printed on 7" by 9" paper in a 
+9 point proportional typeface. This means that it is unlikely that the
+embedded page references will correspond to the page as printed
+on a 8.5" by 11" 12 point monospaced page! The index and detailed table
+of contents are not included because of the page reference problem.
+
+
+DISCLAIMER 
+
+Users of TechnoJock's Object Toolkit must accept this 
+disclaimer of warranty:
+
+   THE TOOLKIT IS SUPPLIED AS IS. TECHNOJOCK SOFTWARE, INC. DISCLAIMS ALL
+   WARRANTIES, EXPRESSED OR IMPLIED, INCLUDING, WITHOUT LIMITATION,
+   THE WARRANTIES OF MERCHANTABILITY AND OF FITNESS FOR ANY PURPOSE.
+   TECHNOJOCK SOFTWARE, INC. ASSUMES NO LIABILITY FOR DAMAGES, DIRECT OR 
+   CONSEQUENTIAL, WHICH MAY RESULT FROM THE USE OF THE TOOLKIT.
+
+
+ROYALTIES
+
+While you are evaluating the product, your are not authorized to
+sell any software developed with the Toolkit. Registered users may
+develop and sell programs developed with the Toolkit without paying
+any Royalties to TechnoJock Software, Inc. The printed User's Manual
+provides full clarification of the "No Royalty" License Agreement. 
+Contact TechnoJock Software, Inc. for further information.
+

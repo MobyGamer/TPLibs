@@ -1,0 +1,40 @@
+;ננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננ
+; XLINK DOC XLC file by Jinx! /TC
+;ננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננננ
+
+
+
+;------------------------------------------------------------------------------
+; File list
+;------------------------------------------------------------------------------
+; Put in here the file you want to link to one EXE file
+; Format: "FILE_NAME_WITH_FULL_PATH","NEW_FILENAME"
+; (if "NEW_FILENAME" is "" than "FILE_NAME_WITH_FULL_PATH" is used!)
+;------------------------------------------------------------------------------
+[FILE]
+  "C:\TEST\A_FILE.EXE","MAIN1.EXE"
+  "C:\TEST\B_FILE.EXE","MAIN2.EXE"
+  "DATA1.DTA",""                       ;-->Name is: "DATA1.DTA"
+  "DATA2.DTA","DATA5.DTA"              ;-->Name is: "DATA5.DTA"
+
+
+
+;------------------------------------------------------------------------------
+; Execute list
+;------------------------------------------------------------------------------
+; Put here the file you wanna have executed by the main loader.
+; The files MUST be EXE file (no COM support!, convert your COM programs to
+; an EXE file) and are executed in the order they are listed.
+; Format: "EXE_FILE","COMMAND PARAMETER"
+;------------------------------------------------------------------------------
+[START]
+  "MAIN1.EXE","PARAM1 PARAM2"          ;(1) start: MAIN1.EXE PARAM1 PARAM2
+  "MAIN2.EXE",""                       ;(2) start: MAIN2.EXE
+                                       ;(3) --> back to DOS (or what ever!)
+
+
+
+;------------------------------------------------------------------------------
+; END - Every XLC file MUST end this way!!
+;------------------------------------------------------------------------------
+[END]

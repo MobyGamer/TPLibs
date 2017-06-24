@@ -1,0 +1,164 @@
+                                                                    Introduction
+
+
+
+
+
+         "Objects underneath this T-shirt are larger than they appear!"
+                                                                    1990 T-Shirt
+
+
+
+
+What is the Object Toolkit?
+
+         TechnoJock's Object Toolkit (or simply the Toolkit) is a library of
+         objects, procedures and functions for Pascal programmers. While writing
+         a PC program, most people spend 80% or more of their time writing the
+         program's user interface, and only 20% on the "meat" of the applica-
+         tion. The Toolkit is designed to provide a wealth of professional user
+         interface tools which can eliminate up to 80% of your development work.
+         For example, to display a sorted directory listing in a moveable window
+         takes a mere three lines of code.
+         The interface tools include such features as efficient screen writing,
+         window management, menu management, full screen user input, list dis-
+         playing, directory listing and much more. These tools give programs a
+         truly professional appearance, and use the latest interface style with
+         pop-up dialog boxes, scroll-bars and malleable windows, all with full
+         mouse and keyboard support.
+
+         As well as needing a user interface, many programs have to manipulate
+         strings, access files, check attached hardware, and the like. The Tool-
+         kit also provides a rich set of routines to help with these common
+         tasks.
+         If you are new to object oriented programming, you are in luck, for the
+         Toolkit provides a great way for you to learn this powerful facility
+         without requiring that you be a rocket scientist!
+
+
+Required Software & Hardware
+         The Toolkit is designed to work with v5.5 (or later) of Borland Inter-
+         national's Turbo Pascal compiler for the IBM PC. To compile programs
+         developed using the Toolkit, you will need Turbo Pascal v5.5 or later
+         (or a 100% compatible Pascal compiler), and MS/PC-DOS (version 2.0 or
+         later).
+
+         Programs developed with the Toolkit will function on the same hardware
+         as specified in the Turbo Pascal compiler documentation, i.e. IBM PC,
+         XT, AT, PS/2, along with all true IBM-compatibles. A 640k memory mini-
+         mum is recommended. Any of the standard display adapters are supported,
+         including the monochrome, CGA, EGA and VGA. Software written with the
+         Toolkit automatically supports the Microsoft (two button) and Logitech
+         (three button) mice. Most other PC mice are compatible with these two
+
+1-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+         industry leaders. If the system does not have a mouse, no problem, the
+         mouse features are ignored. In other words, if you develop a program
+         using the Toolkit, it can be run on machines with or without a mouse.
+
+
+
+Royalties
+         Many Toolkit users develop commercial programs specifically to sell for
+         profit. TechnoJock Software, Inc. neither expects nor requires a roy-
+         alty fee on such programs. The major restrictions are that you may not
+         distribute the Toolkit files with your program, and that the program is
+         itself not a Toolkit, i.e. a library of programmer's utilities.
+
+         Refer to the License Agreement at the front of the manual for more
+         information.
+
+
+Using the Documentation
+
+         In two words: READ IT! The documentation is organized into three main
+         parts:
+
+         Part 1     User's Guide
+
+                    Describes the main components of the Toolkit and illustrates
+                    in a tutorial-like way how to use every unit.
+
+
+         Part 2     Extending the Toolkit
+
+                    Good though it is, the Toolkit may not meet your exact
+                    needs. One of the real strengths of object oriented
+                    libraries is that the library can be extended and modified
+                    without making any changes to the original library source
+                    code. This part of the documentation provides guidance on
+                    how to extend and tailor the Toolkit to meet your specific
+                    needs. A basic knowledge of object oriented Pascal is
+                    required.
+
+
+         Part 3     Flash Cards
+
+                    Small is beautiful. This part is a condensed reference
+                    designed for the experienced Toolkit user who wants a
+                    not-too-quick Quick Reference.
+
+
+
+Support
+         TechnoJock Software, Inc. strives to support its users. If you have
+         problems that you are unable to resolve:
+
+Introduction                                                                 1-3
+--------------------------------------------------------------------------------
+         q     send a diskette containing the problematic software, together
+               with details about the problem to:
+
+                        TechnoJock Software, Inc.
+                        PO Box 820927
+                        Houston TX 77282-0927
+                        USA
+
+
+         q     transmit an electronic message on to one of the following IDs:
+
+                        CompuServe: 74017,227
+                        MCI Mail: TECHNOJOCK
+
+         q     FAX the problem to (713) 493-5872
+
+         q     call us at (713) 493-6354
+         Be sure to identify the following: the version of the Toolkit, the DOS
+         version, the contents of the CONFIG.SYS and AUTOEXEC.BAT files, and a
+         description of the hardware. Try to distill the problem down into a
+         small program - it can take many hours to sift through a huge and
+         unfamiliar program.
+
+
+
+Acknowledgements
+         In this documentation, references are made to several products:
+
+         Turbo Pascal is a registered trademark of Borland International. IBM is
+         a registered trademark and PC, XT, AT, PS/2 and PC-DOS are trademarks
+         of International Business Machines Corporation. MS-DOS is a trademark
+         of Microsoft Corporation. Brief is a registered trademark of Underware,
+         Inc. CompuServe is a registered trademark of CompuServe Information
+         Service, Inc. Pagemaker is a registered trademark of Aldus Corporation.
+         CorelDRAW! is a registered trademark of Corel Systems Corporation. MCI
+         Mail is a registered trademark of MCI Communications Corporation. Lotus
+         1-2-3 and Lotus Manuscript are registered trademarks of Lotus Develop-
+         ment Corporation. Norton Utilities is a trademark of Peter Norton Com-
+         puting, Inc. PC Tools is a trademark of Central Point Software. Deskpro
+         is a registered trademark of Compaq Computer Corporation. Toshiba is a
+         registered trademark of Toshiba Corporation. Postscript is a registered
+         trademark of Adobe Systems Incorporated.
+         For those who may be interested, the Toolkit was developed on three
+         computers: a Compaq Deskpro 286 8 MHz, a Compaq Deskpro 386 33 MHz, and
+         a Toshiba T3100SX laptop. The editors used for code development were
+         Brief 3.0 from Solution Systems, Inc., and Sage Professional Editor
+         from Sage Software, Inc. The documentation was produced with Lotus
+         Manuscript, Aldus Pagemaker, CorelDRAW!, Lotus 1-2-3 Release 3.1, and
+         was printed on a Postscript printer.
+
+         Enough preliminaries ... let's get busy!
+
+
+
+

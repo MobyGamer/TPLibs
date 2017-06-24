@@ -1,0 +1,115 @@
+OVERLAY.DOC
+===========
+
+{               Copyright 1990 TechnoJock Software, Inc.               }
+{                          All Rights Reserved                         }
+{                         Restricted by License                        }
+
+{                    Credits: Rob Rosenberger - thanks!                }
+
+INTRODUCTION
+============
+One day, Rob Rosenberg called and informed us that our Overlay section
+in chapter three was factually incorrect! Worst still, he was right
+
+The bottom line is "overlaid units may have an initialization section".
+The only requirement is that the overlay manager must be initialized 
+first so it can load and execute the overlaid units.
+
+The Toolkit includes a small unit TOTOVR.PAS which is designed as a 
+template unit for initializing the overlay manager. Each time you need to
+overlay some Toolkit units, you should make a copy of TOTOVR.PAS
+to a new file, e.g. AccntOVR.PAS. Then edit the name of the program overlay
+file (default: program.OVR) to reflect the name of the file which will 
+contain the compiled overlay code, e.g. ACCOUNTS.OVR.
+
+The USES statement of the main program must list the AccntOVR file (or 
+whatever name you gave the unit) before the Toolkit units which are to be
+overlayed. For example:
+
+program AccountsPayable;
+{ACCOUNTS.PAS}
+{$F+}
+USES OVERLAY,DOS,CRT,
+     AccntOVR, totFAST, totWIN, totIO1;
+
+{$O totFAST}
+{$O totWIN}
+{$O totIO1}
+
+begin
+   {.....}
+end.
+
+
+In the example, by the time the programs tries to load totFAST, the overlay
+manager has already been installed (by AccntOVR) and so the totFAST 
+initialization unit can be successfully executed as an overlay.
+
+A new Compiler Directive OVERLAYINIT can be used with the Toolkit. If
+OVERLAYINIT is used in preference to OVERLAY, the Toolkit units will be
+compiled in an overlayable state, and the individual unit initialization
+sections *will* be executed, i.e. you will not need to call the  unitINIT
+procedures as described on page 3-8 of the manual.
+
+A new example, DEMOVR3.PAS illustrates the use of this new compiler directive.
+
+The use of the OVERLAY unit as described in the User's Manual (page 3-8) is
+still functional, and may be appropriate in some circumstances. 
+
+UNIT DEPENDANCIES
+=================
+
+This section details the Toolkit unit dependancies. In other words, the units
+used by each Toolkit unit. This information is important when you want to
+overlay Toolkit units using the OVERLAY compiler directive.
+
+If you enable the OVERLAY compiler directive in the TOTFLAGS.INC file, you
+must manually call the initialization procedure for each unit. Every Toolkit
+unit has an initialization procedure, and this procedure name is consistently
+the unit name minus the TOT prefix plus the characters "INIT". For example,
+the initialization procedures for the TOTFAST and TOTSYS units are FASTINIT
+and SYSINIT, respectively.
+
+Listed below are the unit dependancies:
+
+totSYS   - none
+
+totLOOK  - totSYS
+
+totREAL  - none
+
+totINPUT - none
+
+totFAST  - totSYS, totLOOK, totINPUT
+
+totWIN   - totSYS, totLOOK, totINPUT, totFAST, totSTR, totMISC
+
+totMSG   - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totIO1, totREAL
+
+totLINK  - totREAL, totINPUT, totSTR
+
+totLIST  - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totREAL, totIO1, totLINK
+
+totDIR   - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totIO1, totREAL, totLINK, totDATE, totMSG, totIO2
+
+totIO1   - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totREAL
+
+totIO2   - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totIO1, totREAL, totLINK, totDATE, totMSG
+
+totIO3   - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totIO1, totREAL, totLINK, totDATE, totMSG, totIO2
+
+totMENU  - totSYS, totLOOK, totINPUT, totFAST, totMISC, totWIN, totSTR,
+           totIO1, totREAL, totLINK
+
+totSTR   - totREAL, totINPUT
+
+totDATE  - totSYS, totREAL, totINPUT, totLOOK, totSTR
+
+totMISC  - totFAST, totSTR

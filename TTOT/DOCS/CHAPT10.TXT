@@ -1,0 +1,723 @@
+                                                                      Displaying
+                                                                     Directories
+
+
+
+         "An intellectual is someone who can listen to the William Tell overture
+         and not think of the Lone Ranger."
+
+                                                                       Anonymous
+
+
+
+         The Toolkit includes two entirely different object families for dis-
+         playing directory listings. The objects ListDirOBJ and ListDirSortOBJ
+         are descendant from ListOBJ and should be used when you want to display
+         the directory in a stretchable window, or let the user select multiple
+         files. The DirWinOBJ should be used when you want to display a file
+         selection dialog box and allow the user to choose a single file.
+
+
+Displaying Directory List Windows
+
+         The totLIST unit includes the ListDirOBJ object which is an adaptation
+         of ListOBJ. ListDirOBJ is designed to display files and directories in
+         a stretchable window. ListDirOBJ is a descendant of ListOBJ, and inher-
+         its all the following ListOBJ methods:
+                    Init
+                    SetTopPick
+                    SetActivePick
+                    SetTagging
+                    SetColWidth
+                    Show
+                    Go
+                    LastKey
+                    GetHiString
+                    Win^
+                    Done
+
+         Some of the list defaults are influenced by LookTOT^ methods. Refer
+         back to page 9-20 for a full description of these methods.
+         In addition to the inherited methods, ListDirOBJ includes the following
+         important method:
+
+
+         ReadFiles(Filemasks:string; FileAttrib:word);
+         This method must be called before the Go method. ReadFiles instructs
+         the object to read all the files matching the first parameter. The
+         filemask should include wild cards, e.g. *.pas, *.*, bob?.tit, etc.,
+         and may optionally include a drive and path. If a drive/path is not
+         specified, all matching files in the default directory will be read.
+         Note that the string may include more than one file specification sepa-
+         rated by spaces, e.g. '*.pas *.asm'. The second parameter identifies
+         the attributes of the files to include in the list.
+
+10-2                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         The Turbo Pascal DOS unit includes the following file attribute con-
+         stants:
+
+                    ReadOnly        = $01
+                    Hidden          = $02
+                    SysFile         = $04
+                    VolumeID        = $08
+                    Directory       = $10
+                    Archive         = $20
+                    AnyFile         = $3F
+         Specify any of the desired file types by summing these constants and
+         passing them as the second parameter. For example, the following method
+         call will list all the .TXT files that can be edited:
+
+                  ReadFiles('*.TXT',Anyfile-ReadOnly-Hidden);
+         Note that the Toolkit automatically removes the VolumeID file from the
+         list.
+
+         In summary, to display a basic file listing, all you have to do is
+         declare an instance of ListDirOBJ, and then call the methods Init,
+         ReadFiles and Go. The chosen file can be determined by calling the
+         function method GetHiString. Listed below is the demo file DEMDR1.PAS
+         which displays a simple directory, followed by figure 10.1 showing the
+         resultant list.
+
+
+         program DemoDirectoryOne;
+         {demdr1 - the default directory list}
+         Uses DOS, CRT,
+              totFAST, totLIST;
+
+         Var
+            ListWin:  ListDirObj;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with ListWin do
+            begin
+               Init;
+               ReadFiles('*.*',AnyFile);
+               Go;
+               Win^.Remove;
+               if (LastKey = 27) or (Lastkey = 600) then
+                  writeln('You escaped!')
+               Else
+                  writeln('You chose file '+GetHiString);
+               Done;
+            end;
+         end.
+
+
+
+
+Displaying Directories                                                      10-3
+--------------------------------------------------------------------------------
+
+Figure 10.1                                                             [SCREEN]
+A Basic Directory
+List
+
+
+Determining Tagged Files
+
+         By default, the user can select multiple files by hitting the [KEYCAP]
+         or clicking the left mouse button on a filename. The method SetTagging
+         can be used to enable or disable multiple file tagging.
+         The ListDirOBJ object implements the methods GetStatus and SetStatus to
+         provide access to tagged files. These methods work in precisely the
+         same way as their namesakes in the DLLOBJ family. Full descriptions can
+         be found on page 9-27, but in brief, GetStatus returns a boolean to
+         indicate whether the file has been tagged, and is passed two parame-
+         ters; the first parameter is the number of the file in the list, and
+         the second is the flag ID which should be set to 0 (zero) to check the
+         status of the tag flag.
+
+         Each ListDirOBJ instance includes a FileDLLOBJ object which is a linked
+         list holding all the file details. The ListDirOBJ object provides the
+         method FileList which returns a pointer to the FileDLLOBJ list. This is
+         useful when you want to directly manipulate the file linked list. You
+         may recall that all DLLOBJ objects have a method TotalNodes which
+         returns a longint identifying the number of entries in the list. The
+         ListDirOBJ method FileList^.TotalNodes therefore returns the total num-
+         ber of files in the list.
+         The demo program DEMDR2.PAS, listed below, shows how the methods GetS-
+         tatus and FileList^.TotalFiles can be used to ascertain which files the
+         user tagged. Notice that you must access the tagged files before
+         calling the method Done - otherwise, the list will be disposed of
+         before you can access it! Following the listing are figures 10.2 and
+         10.3 which provide an example of the output generated by the program.
+         Note that the highlighted file will only be included in the list if the
+         file is tagged.
+
+         program DemoDirectoryTwo;
+         {demdr2 - determining chosen files}
+         Uses DOS, CRT,
+              totFAST, totLIST;
+
+         Var
+            ListWin:  ListDirObj;
+            Tot,L:longint;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with ListWin do
+            begin
+
+
+
+
+10-4                                                                User's Guide
+--------------------------------------------------------------------------------
+
+               Init;
+               ReadFiles('*.*',AnyFile);
+               Go;
+               Win^.Remove;
+               if (LastKey = 27) or (Lastkey = 600) then
+                  writeln('You escaped!')
+               Else
+               begin
+                  writeln('The highlighted file was '+GetHiString);
+                  writeln('The tagged files were: ');
+                  Tot := FileList^.TotalNodes;
+                  for L := 1 to Tot do
+                      if GetStatus(L,0) then
+                         writeln(GetString(L,0,0));
+               end;
+               Done;
+            end;
+         end.
+
+
+
+Figure 10.2                                                             [SCREEN]
+Tagging Multiple
+Files
+
+Figure 10.3                                                             [SCREEN]
+Displaying the
+Tagged Files
+
+
+Advanced Directory Management
+
+         In the previous section you learned that the method FileList returns a
+         pointer to an instance of type FileDLLOBJ which contains a list of all
+         the files selected for display. In addition to the TotalNodes method,
+         you can call any of the other FileDLLOBJ methods. Remember that these
+         methods must be called via the FileList method using the syntax:
+                  FileList^.method
+
+
+Sorting
+
+         The Sort method can be used to sort the directory listing. This method
+         is described on page 9-6, and has the following syntax:
+                  FileList^.Sort(SortID:shortint;Ascending:boolean);
+
+         When used with a FileDLLOBJ object, the first parameter instructs the
+         Toolkit about which element of the file to sort by. The permissible
+         values are as follows:
+
+
+
+Displaying Directories                                                      10-5
+--------------------------------------------------------------------------------
+
+              0     DOS (unsorted)
+              1     Name
+              2     Ext
+              3     Size
+              4     Time
+
+         For example, calling the method Sort(2,false) will sort the files by
+         filename extension in descending order.
+
+
+Accessing File Details
+
+         The totLINK unit includes the following type declaration:
+                  tFileInfo = record
+                     Filename: string[12];
+                     Attr: byte;
+                     Time:longint;
+                     Size:longint;
+                     LoadID: longint;
+                  end;
+
+         Every node in a FileDLLOBJ list contains such a record, describing all
+         the file details. The first four fields in the record are the same as
+         the corresponding fields in the Turbo Pascal SearchRec record. The
+         fifth record LoadID is the node number when the file was added to the
+         list. This field is required so the list can be sorted in DOS order,
+         i.e. the order in which the files are stored in the DOS directory.
+         The FileDLLOBJ method GetFileRecord can be used to access a file's
+         record, and the method GetLongStr can be used to access a string
+         detailing the file information. The syntax of these methods is as fol-
+         lows:
+
+
+         FileList^.GetFileRecord(var Info:tFileInfo; NodeNumber:longint);
+         The first parameter must be a variable of type tFileInfo. This variable
+         is updated with the file details for the file specified by the second
+         parameter.
+
+
+         FileList^.GetLongStr(Node:DLLNodePtr): string;
+         This method is passed a pointer to the list node, and returns a for-
+         matted string representing the node's file details. Remember that the
+         method FileList^.NodePtr can be used to return a node pointer.
+
+
+
+10-6                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Refreshing the File List
+
+         In the last chapter you learned that you can intercept all characters
+         pressed while a list is active, by assigning a character hook, or by
+         creating a descendant method and replacing the virtual method CharTask.
+         Thanks to OOP inheritance, these techniques can also be used with List-
+         DirOBJ objects.
+         The FileList linked list can be directly modified using some FileDLLOBJ
+         methods. Ordinarily, you wouldn't need to call these methods, but if
+         you want to modify the displayed list "on the fly" from a character
+         hook, you can use the following methods:
+
+
+         FileList^.GetFileMask:string;
+         This function returns the currently active file mask.
+
+
+         FileList^.SetFileDetails(FileMasks:string; FileAttrib:word);
+         Specifies a new set of file masks and file attributes. This method must
+         be called prior to FillList.
+
+
+         FileList^.FillList;
+         Empties the list (if it already contains files), and re-populates the
+         list with the new category of files.
+
+
+         FileList^.FillNewMask(Filemasks:string);
+         This method re-populates the list with all files matching the FileMasks
+         parameter, which have the same attributes that were used when the list
+         was last filled.
+
+
+
+Example
+         The demo program DEMDR3.PAS, listed below, illustrates some of the
+         techniques discussed in this section. Figure 10.4 shows the resultant
+         output.
+
+         program DemoDirectoryThree;
+         {demdr3 - a customized directory list}
+         Uses DOS, CRT,
+              totFAST, totLINK, totLIST;
+
+         Var
+            ListWin:  ListDirObj;
+            FileInfo: tFileInfo;
+
+
+
+Displaying Directories                                                      10-7
+--------------------------------------------------------------------------------
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with ListWin do
+            begin
+               Init;
+               SetTagging(false);
+               ReadFiles('*.*',AnyFile - directory); {exclude directories}
+               FileList^.Sort(1,true);               {sort in name order}
+               Win^.SetTitle(' Choose a file ');
+               Go;
+               Win^.Remove;
+               if (LastKey = 27) or (Lastkey = 600) then
+                  writeln('You escaped!')
+               Else
+               begin
+                  writeln('You chose file '+GetHiString);
+                  writeln(FileList^.GetLongStr(FileList^.ActiveNodePtr));
+                  FileList^.GetFileRecord(FileInfo,
+                                          FileList^.ActiveNodeNumber);
+                  with FileInfo do
+                  begin
+                     writeln('Name:           ', FileName);
+                     writeln('Attr:           ', Attr);
+                     writeln('Packed Time:    ', Time);
+                     writeln('Size:           ', Size);
+                     writeln('Directory entry:',LoadID);
+                  end;
+               end;
+               Done;
+            end;
+         end.
+
+
+
+Figure 10.4                                                             [SCREEN]
+Advanced Directory
+Control
+
+
+
+Displaying Sortable Directories
+         ListDirSortOBJ is a descendant of ListDirOBJ, and shares all the meth-
+         ods of its ancestor. ListDirSort works in just the same way as ListDi-
+         rOBJ, with one added bonus - the user can press the right mouse button
+         or [KEYCAP] to display a sort dialog box. This allows the end user to
+         sort the file list in any order.
+
+         Listed below is the demo program DEMDR4.PAS, followed by figure 10.5
+         showing the sort dialog box.
+
+
+10-8                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         program DemoDirFour;
+         {demdr4 - a user sortable directory listing}
+
+         Uses DOS, CRT,
+              totFAST, totLIST;
+         Var
+            ListWin:  ListDirSortOBJ;
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            Screen.WriteCenter(25,white,' Press S or Right Mouse Button
+                                          for Sort Options ');
+            with ListWin do
+            begin
+               Init;
+               ReadFiles('*.*',AnyFile);
+               Go;
+               Done;
+            end;
+         end.
+
+
+
+Figure 10.5                                                             [SCREEN]
+The Sort Dialog
+Box
+
+
+
+Displaying Directories                                                      10-9
+--------------------------------------------------------------------------------
+
+Displaying a Directory Dialog Window
+
+         In the unit totDIR, the Toolkit provides an alternative object for
+         displaying a directory dialog box. Figure 10.6 shows how the dialog box
+         looks to the user. The display is generated using a DirWinOBJ, and it
+         is ideal for prompting the user to enter a filename.
+         The user can enter a file name, or a file mask, into the filename
+         field. If a file mask is entered, the file list is automatically
+         updated to reflect the new mask. The user can move from field to field
+         by pressing the [KEYCAP] and [KEYCAP] keys. As in the Turbo 6 environ-
+         ment, the user can choose a file from the file list by cursoring to the
+         desired file and pressing [KEYCAP]. The user can change directories or
+         drives by tabbing to the directory list, highlighting the desired
+         directory, and pressing [KEYCAP]. The user can also tab to the buttons
+         and select OK, Cancel or Help. Alternatively, the buttons can be
+         selected by pressing one of the hotkeys [KEYCAP], [KEYCAP] or [KEYCAP].
+
+         A mouse user simply clicks on a field to activate it, and double-clicks
+         to choose a specific file or directory.
+
+
+Figure 10.6                                                             [SCREEN]
+A Pop-up Directory
+Window
+
+
+Displaying a Basic Directory Window
+         The DirWinOBJ is very easy to use, and has the following four main
+         methods:
+
+
+         Init;
+         As always, this methods initializes the instance and must always be
+         called first.
+
+
+         Go:tAction;
+         This is the "do it" method which instructs the Toolkit to display the
+         dialog window and wait for the user to choose a file. Go returns a
+         member of the enumerated type tAction to indicate whether the user
+         chose a file or escaped. This function will only return Finished or
+         Escaped.
+
+
+         GetChosenFile:string;
+
+
+
+10-10                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         This function method should be called after Go, to determine which file
+         the user selected. The function returns the name the user entered in
+         the input field, or the active filename in the file list. Note you
+         should check the value returned by Go to check whether the user
+         escaped.
+
+
+         Done;
+         This function should be called to dispose of the instance, and should
+         be called after the method GetChosenFile.
+
+
+         Listed below is the program DEMDR5.PAS which generated the display
+         shown in figure 10.6.
+         program DemoDirFive;
+         {demdr5 - the directory dialog box}
+
+         Uses DOS, CRT,
+              totFAST, totDir, totIO1;
+         Var
+            DirWin: DirWinObj;
+            Result: tAction;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with DirWin do
+            begin
+               Init;
+               Result := Go;
+               if Result = Finished then
+                  writeln('You chose file: ',GetChosenFile)
+               else
+                  writeln('You escaped!');
+               Done;
+            end;
+         end.
+
+
+Customizing the Window
+
+         To provide further display control, the DirWinOBJ object also includes
+         the following customization methods:
+
+         SetFileDetails(StartDir:string; FileMasks:string; FileAttrib: word);
+
+         By default, the Toolkit will display any file with a mask of '*.*' in
+         the default directory. Use this method to override the defaults. The
+         first parameter specifies the initial drive and directory to search.
+         The second parameter identifies the file mask which may include multi-
+
+
+
+Displaying Directories                                                     10-11
+--------------------------------------------------------------------------------
+
+         ple file masks separated by spaces, e.g. '*.bat *.exe *.com'. The third
+         parameter specifies the attributes of the files to be included in the
+         list (see the file attribute list on page 10.2).
+
+
+         SetSortDetails(SortID:byte; SortOrder: boolean);
+         Ordinarily, the files are sorted in name order. Use this method to
+         specify an alternate sort order. Refer to the sorting discussion on
+         page 10.5 for further information.
+
+
+         Win^:MoveWinPtr;
+         The method Win returns a pointer to the MoveWinOBJ instance on which
+         the window is drawn. By calling any MoveWinOBJ method using the syntax
+         Win^.method, you control the appearance of the window.
+
+
+
+           Note: the DirWinOBJ is a hybrid of a number of other Toolkit
+           objects, and the way to control all the colors is not obvious. The
+           overall background, title, box border and file details are con-
+           trolled by the window, and the color is set with the method
+           Win^.SetColors. All other aspects of the dialog box are controlled
+           by the object IOTOT. The following IOTOT methods control the
+           directory display colors:
+
+                    IOTOT^.SetColLabel (changes the box labels, e.g. Name:)
+                    IOTOT^.SetColList (changes the file and dir lists)
+                    IOTOT^.SetColField (changes the filename input field
+                    IOTOT^.SetColButtons (changes the buttons)
+
+           IOTOT is discussed fully in the next chapter.
+
+
+
+         Listed below is the demo program DEMDR6.PAS which illustrates how to
+         customize the directory display using the above methods, and figure
+         10.7 shows the resultant output:
+         program DemoDirSix;
+         {demdr6 - customizing the directory dialog box}
+
+         Uses DOS, CRT,
+              totFAST, totDir, totIO1;
+         Var
+            DirWin: DirWinObj;
+            Result: tAction;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+
+
+
+
+10-12                                                               User's Guide
+--------------------------------------------------------------------------------
+
+            with DirWin do
+            begin
+               Init;
+               SetFileDetails('','*.EXE *.COM *.BAT',AnyFile);
+               SetSortDetails(2,true);
+               Win^.SetColors(15,15,15,11);
+               IOTOT^.SetColLabel(15,15,15,15);
+               IOTOT^.SetColList(7,7,112,112);
+               IOTOT^.SetColField(7,112,8,8);
+               IOTOT^.SetColButton(112,126,127,126);
+               Result := Go;
+               if Result = Finished then
+                  writeln('You chose file: ',GetChosenFile)
+               else
+                  writeln('You escaped!');
+               Done;
+            end;
+         end.
+
+
+Figure 10.7                                                             [SCREEN]
+Customizing the
+Directory Window
+
+
+
+On-Screen Help
+         By default, the Help key displays a simple message window describing
+         how to select a file (see figure 10.8). You can substitute your own
+         help dialog if necessary.
+
+
+Figure 10.8                                                             [SCREEN]
+The Default Help
+Display
+
+
+         In the next chapter, you will learn all about the Toolkit's very power-
+         ful full screen input facility. The totDIR unit makes extensive use of
+         the totIO units to build the directory dialog box. To override the
+         default directory help, you need to access the full screen input man-
+         ager object. You will be very familiar with the manager by the end of
+         the next chapter, but for now, all you need to concentrate on is the
+         help facility.
+
+         The DirWinOBJ object includes the function method Action which returns
+         a pointer to the dialog manager. By calling the dialog manager's own
+         method SetHelpHook, you can assign a special procedure to be called
+         when the user asks for help.
+
+
+Displaying Directories                                                     10-13
+--------------------------------------------------------------------------------
+
+         To create customized help, all you have to do is create a procedure
+         following some specific rules, and then call the DirWinOBJ method
+         Action^.SetHelpHook to instruct the Toolkit to use your procedure.
+
+         For a procedure to be eligible as a help hook, it must adhere to the
+         following rules:
+         Rule 1     The procedure must be declared as a FAR procedure. This can
+                    be achieved by preceding the procedure with a {$F+} compiler
+                    directive, and following the procedure with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the procedure statement.
+
+         Rule 2     The procedure must be declared with one passed parameter of
+                    type word. This parameter indicates which field was high-
+                    lighted when help was pressed. The directory dialog fields
+                    have the following IDs:
+                          1     File mask field
+                          2     File list field
+                          3     Directory list field
+                          4     OK button
+                          5     Cancel button
+                          65335 Help button (constant HelpID)
+
+         Rule 3     The procedure must be at the root level, i.e. the procedure
+                    cannot be nested within another procedure.
+         The following procedure declaration follows these rules:
+
+                  {$F+}
+                  procedure MyHelpHook(ID:word);
+                  .....{procedure statements}
+                  end;
+                  {$F-}
+
+         The following method Action^.SetHelpHook is then called to instruct the
+         Toolkit to call your procedure when the user asks for help:
+
+
+         Action^.SetHelpHook(PassedProc:HelpProc);
+         This method is passed the procedure name of a procedure declared using
+         the rules outlined above.
+
+
+         The demo program DEMDR7.PAS, listed below, illustrates how to customize
+         the directory help. Figure 10.9 shows the help screen!
+
+         program DemoDirSeven;
+         {demdr7 - customizing directory help}
+
+
+
+
+10-14                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         Uses DOS, CRT,
+              totFAST, totDir, totIO1, totMSG;
+
+         Var
+            DirWin: DirWinObj;
+            Result: tAction;
+         {$F+}
+         procedure NewHelp(ID:word);
+         {}
+         var  HelpWin: MessageOBJ;
+         begin
+            with HelpWin do
+            begin
+               Init(1,' Not Much Help ');
+               AddLine('');
+               Addline(' Honey, if you need help here, we got big problems! ');
+               AddLine('');
+               Show;
+               Done;
+            end;
+         end; {NewHelp}
+         {$F-}
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with DirWin do
+            begin
+               Init;
+               Action^.SetHelpHook(NewHelp);
+               Result := Go;
+               if Result = Finished then
+                  writeln('You chose file: ',GetChosenFile)
+               else
+                  writeln('You escaped!');
+               Done;
+            end;
+         end.
+
+
+Figure 10.9                                                             [SCREEN]
+Customized Help
+
+
+
+

@@ -1,0 +1,2017 @@
+                                                                     Flash Cards
+
+
+
+
+
+
+
+
+         "A car will be built that runs on water - after being developed from
+         newly discovered plans Thomas Edison made before he died."
+
+         "New gene-engineered pets will appear - the first ones will be tigers
+         the size of kittens"
+
+         "Cher will end up in hospital with blood infection after getting a new
+         tattoo on her backside"
+                                         1991 Predictions, The National Enquirer
+
+
+
+
+
+
+
+
+
+
+         This section of the documentation is designed to give you a summary of
+         all the objects, methods, procedures and functions in the Toolkit.
+         Think of it as a "detailed" Quick Reference.
+         A common problem with object libraries is the difficulty developers
+         (that's you) have in determining which methods are available for each
+         object; especially when an object is descended from other objects and
+         many of the methods are inherited. In this section, you will find every
+         Toolkit object with a list of all associated "public" methods supported
+         by the object, including inherited methods.
+
+         The Flash Cards are organized into major topics such as Screen Writing,
+         Window Manipulation, Hardware, Form Input, etc. The next two pages
+         graphically show the Toolkit object structure in the form of two Object
+         Hierarchy diagrams. These diagrams provide a road map for all the
+         objects available. Note that shaded objects are abstract and should not
+         be used directly, i.e. do not declare an instance of the abstract
+         object type.
+
+
+FC-2                                                                 Flash Cards
+--------------------------------------------------------------------------------
+
+
+
+
+Flash Cards                                                                 FC-3
+--------------------------------------------------------------------------------
+
+
+
+
+FC-4                                                                 Flash Cards
+--------------------------------------------------------------------------------
+
+Object Summary
+
+         Listed below is a comprehensive list (in alphabetical order) of all the
+         public objects available in the Toolkit:
+
+
+         AlphabetOBJ     totINPUT   Controls how the Toolkit determines which
+                                    characters are upper- and lower-case, and
+                                    how to change the case of letters. This
+                                    object is primarily designed for interna-
+                                    tional users with a non-English alphabet.
+         ArrayIOOBJ      totIO2     A scrollable list of options from which the
+                                    user may select one. The displayed list is
+                                    based on the contents of a one-dimensional
+                                    string array.
+
+         BrowseArrayOBJ  totLIST    Displays the contents of a string array in a
+                                    scrollable browse window.
+         BrowseFileOBJ   totLIST    Displays the contents of a text file in a
+                                    scrollable browse window.
+
+         BrowseLinkOBJ   totLIST    Displays the contents of a DLLOBJ instance
+                                    in a scrollable browse window.
+         ButtonMessageOB totMSG     Displays a multi-line message in a pop-up
+         J                          moveable window (like MessageOBJ), and uses
+                                    a box button for the "OK" prompt.
+
+         ButtonPromptOBJ totMSG     Displays a multi-line message with two or
+                                    three box buttons.
+         ButttonIOOBJ    totIO1     A "Norton Utilities-like" box button.
+
+         CheckIOOBJ      totIO1     A check box field, where the user can check
+                                    any item in the list.
+         ControlKeysIOOB totIO1     Defines which keys are used to move between
+         J                          fields, and which keys terminate the input
+                                    session.
+
+         DateIOOBJ       totIO2     Input of dates. The Toolkit supports eight
+                                    different date formats, and this field will
+                                    automatically verify that the date entered
+                                    is valid and, optionally, within a specified
+                                    range.
+         DateOBJ         totDATE    Controls the basic date format settings. Use
+                                    the global instance DATETOT.
+
+         DirWinOBJ       totDIR     Displays a file selection dialog box in a
+                                    moveable window.
+
+
+Flash Cards                                                                 FC-5
+--------------------------------------------------------------------------------
+
+         DisplayOBJ      totSYS     Controls and provides data about the
+                                    installed video display system. Use the
+                                    global instance pointer Monitor^.
+
+         DLLOBJ          totLINK    A generic doubly-linked list manager.
+         EquipOBJ        totSYS     Provides data about installed equipment,
+                                    e.g. number of parallel ports.
+
+         FixedRealIOOBJ  totIO2     Like RealIOOBJ, this object is for the input
+                                    of real numbers. The object is similar to
+                                    contemporary database packages - there are a
+                                    fixed number of decimal places, and when the
+                                    user presses [KEYCAP] the cursor jumps to
+                                    the right of the decimal place.
+         FmtNumberOBJ    totSTR     Provides function methods to format integer
+                                    and real numbers.
+
+         FormOBJ         totIO1     Full screen input manager for creating input
+                                    forms and dialog boxes.
+         HexIOOBJ        totIO2     Just for the engineers, this accepts the
+                                    input of hexadecimal numbers!
+
+         HotKeyIOOBJ     totIO1     HotkeyIOOBJ an invisible field, used to trap
+                                    for special keys. For example, the key
+                                    [KEYCAP] might terminate the input session.
+         IntIOOBJ        totIO2     Whole number input. Use this object when you
+                                    want to obtain a whole number, i.e. short-
+                                    int, byte, integer, word, longint. Provides
+                                    methods to ensure input is within a
+                                    specified range.
+
+         KeyOBJ          totINPUT   Reports information about keyboard and mouse
+                                    activity. Use the global instance Key.
+         LateralIOOBJ    totIO2     String input which supports lateral scrol-
+                                    ling. For example, the field width can be
+                                    set to 20 characters wide, but the user
+                                    might be allowed to enter up to 40 charac-
+                                    ters.
+
+         LinkIOOBJ       totIO2     A scrollable list based on the contents of a
+                                    DLLOBJ instance.
+         ListArrayOBJ    totLIST    Displays a pick list of items from a string
+                                    array in a stretchable window.
+
+         ListDirOBJ      totLIST    Displays a pick list of filenames in a
+                                    stretchable window.
+         ListLinkOBJ     totLIST    Displays a pick of items from a DLLOBJ
+                                    instance in a stretchable window.
+
+FC-6                                                                 Flash Cards
+--------------------------------------------------------------------------------
+
+         LookOBJ         totLOOK    Defines default attributes for windows,
+                                    lists and menus. Use the global instance
+                                    pointer LookTOT^.
+
+         MemOBJ          totSYS     Provides data about the system's installed
+                                    memory, including base, extended and
+                                    expanded.
+         MessageOBJ      totMSG     Displays a multi-line message in a pop-up
+                                    moveable window.
+
+         MouseOBJ        totINPUT   Controls the mouse cursor position and dis-
+                                    play attributes. Use the global instance
+                                    Mouse.
+         MoveWinOBJ      totWIN     Creates user-moveable windows, and includes
+                                    methods for control the screen area in which
+                                    the window can be moved.
+
+         OSOBJ           totSYS     Providing data about the installed operating
+                                    system and the country settings.
+         PictureIOOBJ    tot102     String input which supports a special field
+                                    mask or picture to control input.
+
+         PromptOBJ       totMSG     Displays a multi-line message with two or
+                                    three strip buttons.
+         RadioIOOBJ      totIO1     A radio button field where the user can
+                                    select any one item in the list.
+
+         RealIOOBJ       totIO2     Real number input. By using Toolkit compiler
+                                    directives, this object can get input of
+                                    single, double, extended and comp reals.
+                                    Provides methods to ensure input is within a
+                                    specified range.
+         ScreenOBJ       totFAST    Provides screen writing and management meth-
+                                    ods, for both physical and virtual screens.
+                                    Use the global instance Screen to access the
+                                    visible display.
+
+         ScrollOBJ       totFAST    Controls the appearance of all scroll bars
+                                    displayed by the Toolkit. Use the global
+                                    instance ScrollTOT.
+         ScrollWinOBJ    totWIN     A moveable window which can optionally dis-
+                                    play vertical and/or horizontal scroll bars.
+
+         ShadowOBJ       totFAST    Controls the cosmetic appearance of shadows.
+                                    Use the global instance ShadowTOT.
+         StrDLLOBJ       totLINK    A doubly-linked list object for managing
+                                    strings.
+
+
+Flash Cards                                                                 FC-7
+--------------------------------------------------------------------------------
+
+         StretchWinOBJ   totWIN     Creates flexible windows which can be moved,
+                                    stretched and zoomed.
+
+         StringIOOBJ     totIO2     Basic string input. Provides methods to
+                                    force the case of text, and to justify text
+                                    when the user moves to another field.
+         Strip3dIOOBJ    totIO1     The same as StripIOOBJ, except that a small
+                                    3-D shadow is drawn behind the strip.
+
+         StripIOOBJ      totIO1     A "Turbo 6.0-like" button which the user can
+                                    select, e.g. buttons for Edit, Save, Cancel,
+                                    etc.
+         WinFormOBJ      totIO1     A window-based full screen input manager for
+                                    creating input forms and dialog boxes.
+
+         WinOBJ          totWIN     Provides basic window capabilities by saving
+                                    the underlying screen box, and drawing a
+                                    shadowed box.
+         WriteOBJ        totFAST    This object should not be directly accessed.
+                                    Its methods are called by ScreenOBJ objects.
+
+         WWArrayIOOBJ    totIO3     A multi-line word-wrapping field. A one-
+                                    dimensional string array is assigned to the
+                                    field. The contents of the array are updated
+                                    with the user's input.
+         WWLinkIOOBJ     totIO3     A multi-line word-wrapping field. A DLLOBJ
+                                    instance is assigned to the field. The
+                                    linked list is updated with the user's
+                                    input.
+
+
+--------------------------------------------------------------------------------
+Important Type Declarations & Global Objects
+
+
+Conditional Compiler Directives
+
+
+         FINAL         Use when building your final production version.
+
+         FLOAT         Enables extended real types.
+         FLOATEM       Instructs compiler to emulate a math co-processor.
+
+         OVERLAY       Makes all Toolkit units overlayable.
+
+
+
+FC-8                                                                 Flash Cards
+--------------------------------------------------------------------------------
+
+Global Objects
+
+         The following instances are declared globally and should be used to
+         access the display, mouse and keyboard:
+         Screen     Use this ScreenOBJ instance to perform all write operations
+                    to the physical screen.
+
+         Mouse      Use this MouseOBJ instance to show and hide the mouse.
+         Key        Use this KeyOBJ for all keyboard and mouse checking.
+
+         Monitor^   Use this DisplayOBJ instance pointer to check the status of
+                    the installed display, e.g. Monitor^.ColorOn.
+
+
+Type Declarations
+
+totSYS
+         tVideo = (UnKnown, Mono, CGA, MCGAMono, MCGACol, EGAMono, EGACol, VGA-
+         col);
+         tDate = (USA,Europe,Japan);
+
+totFAST
+
+         StrScreen = string[255];
+         StrVisible = string[80];
+         Direction = (Up, Down, Left, Right, Vert, Horiz);
+         Coords = record
+            X1,Y1,X2,Y2:shortint;
+         end;
+         ByteCoords = record
+            X1,Y1,X2,Y2:byte;
+         end;
+         ShadowPosition = (UpLeft, UpRight, DownLeft, DownRight);
+
+totLink
+         tFileInfo = record
+            Filename: string[12];
+            Attr: byte;
+            Time: longint;
+            Size:longint;
+            LoadID: longint;
+         end;
+
+totList
+
+         tListAction = (Finish, Refresh, None);
+
+
+
+
+Flash Cards                                                                 FC-9
+--------------------------------------------------------------------------------
+
+totInput
+
+         CharSet = set of char
+
+totIO1
+         tCursPos = (CursLeft, CursRight, CursPrev);
+         tAction = (None, NextField, PrevField, Finished, Escaped,
+                    Refresh, Signal, Enter, Help, Stop1, Stop2,
+                    Stop3, Stop4, Stop5, Stop6, Stop7, Stop8, Stop9);
+         StringBut = string[MaxButtonWidth];
+         tSignal = record;
+            ID: word;
+            MsgType: word;
+            case word of
+            0: (MsgPtr: pointer);
+            1: (MsgLong: longint);
+            2: (MsgWord: word);
+            3: (MsgInt: integer);
+            4: (MsgByte: byte);
+            5: (MsgChar: char);
+         end;
+
+totSTR
+
+         tJust = (JustLeft, JustCenter, JustRight);
+         tCase = (Lower, Upper, Proper, Leave);
+         tSign = (PlusMinus, Minus, Brackets, DbCr);
+         Const
+
+         FmtChars: set of char = ['!','#','@','*'];
+
+totDATE
+         tDate = (MMDDYY, MMDDYYY, MMYY, MMYYYY, DDMMYY, DDMMYYYY,
+                  YYMMDD, YYYYMMDD);
+
+
+--------------------------------------------------------------------------------
+Overall Look & Feel - totLOOK
+
+
+LookTOT^
+
+         Controls the default settings for windows, lists and menus.
+
+
+
+
+FC-10                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         procedure SetWindow(Border,Body,Icons:byte);
+         procedure SetWinKeys(Move,Stretch,Zoom:word);
+         procedure SetListKeys(EndKey,Esc,Toggle,Tag,UnTag:word);
+         procedure SetListChars(LeftChar,RightChar,
+                                ToggleOnChar,ToggleOffChar:char);
+         procedure SetMenu(Bor,Tit,Icon,HiHot,HiNorm,LoHot,LoNorm,Off:byte);
+         procedure SetDefaults;
+         function  WinBorder:byte;
+         function  WinBody:byte;
+         function  WinTitle:byte;
+         function  WinIcons:byte;
+         function  WinMoveKey: word;
+         function  WinStretchKey: word;
+         function  WinZoomKey: word;
+         function  ListEndKey: word;
+         function  ListEscKey: word;
+         function  ListToggleKey: word;
+         function  ListTagKey: word;
+         function  ListUnTagKey: word;
+         function  ListLeftChar: char;
+         function  ListRightChar: char;
+         function  ListToggleOnChar: char;
+         function  ListToggleOffChar: char;
+         function  MenuBor:byte;
+         function  MenuTit:byte;
+         function  MenuIcon:byte;
+         function  MenuHiHot:byte;
+         function  MenuHiNorm:byte;
+         function  MenuLoHot:byte;
+         function  MenuLoNorm:byte;
+         function  MenuOff:byte;
+
+ShadowTOT^
+
+         Controls the Toolkit box and window shadow characteristics.
+         procedure SetShadowStyle(ShadP:ShadowPosition;ShadA:byte;ShadC:char);
+         procedure SetShadowSize(ShadW,ShadD:byte);
+         procedure SetDefaults;
+         function  ShadWidth:byte;
+         function  ShadDepth:byte;
+         function  ShadAttr:byte;
+         function  ShadChar:char;
+         function  ShadPos:ShadowPosition;
+
+ScrollTOT^
+
+         Controls the characters used to create scroll bars.
+
+
+
+Flash Cards                                                                FC-11
+--------------------------------------------------------------------------------
+
+         procedure SetScrollChars(U,D,L,R,E,B:char);
+         procedure SetDefaults;
+         function  UpChar:char;
+         function  DownChar:char;
+         function  LeftChar:char;
+         function  RightChar:char;
+         function  ElevatorChar:char;
+         function  BackgroundChar:char;
+
+DateTOT^
+
+         Controls default date characteristics.
+         function  GetLastYearNextCentury: byte;
+         procedure SetLastYearNextCentury(Yr:byte);
+         function  GetSeparator: char;
+         procedure SetSeparator(Sep:char);
+         procedure SetMonths(Mth1,Mth2,Mth3,Mth4,Mth5,Mth6,
+                             Mth7,Mth8,Mth9,Mth10,Mth11,Mth12:strshort);
+         procedure SetDays(Day0,Day1,Day2,Day3,Day4,Day5,Day6:strshort);
+         function  GetLastYearNextCentury:byte;
+         function  GetSeparator:char;
+         function  GetMonth(Mth:byte):string;
+         function  GetDay(Day:byte):string;
+
+IOTOT^
+
+         Controls default input characteristics.
+         procedure SetDefaults;
+         procedure SetColLabel(Off,OffHot,On,OnHot:byte);
+         procedure SetColButton(Off,OffHot,On,OnHot:byte);
+         procedure SetColGroup(Off,OffHot,On,OnHot:byte);
+         procedure SetColList(Off,OffHot,On,OnHot:byte);
+         procedure SetColField(Off,On,Mask,Inactive:byte);
+         procedure SetColMsg(Col:byte);
+         procedure SetIns(InsOn:boolean);
+         procedure SetRules(Rules:byte);
+         procedure SetPadChar(Pad:char);
+         procedure SetJust(Just:tJust);
+         procedure SetCursor(Curs:tCursPos);
+         procedure SetCase(Cas:tCase);
+         procedure SetForceCase(On:boolean);
+         function  LabelCol(Element:byte):byte;
+         function  ButtonCol(Element:byte):byte;
+         function  GroupCol(Element:byte):byte;
+         function  ListCol(Element:byte):byte;
+         function  FieldCol(Element:byte):byte;
+         function  MessageCol:byte;
+         function  InputPad:char;
+
+
+
+
+FC-12                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         function  InputIns:boolean;
+         function  InputRules:byte;
+         function  InputPadChar:char;
+         function  InputJust:tJust;
+         function  InputCursorLoc:tCursPos;
+         function  InputCase:tCase;
+         function  InputForceCase:boolean;
+
+AlphabetTOT^
+
+         Controls how the Toolkit determines upper- and lower-case characters,
+         and how to change the case of a character.
+         procedure AssignUpCaseFunc(Func:caseFunc);
+         procedure AssignLoCaseFunc(Func:caseFunc);
+         procedure SetUpper(Letters:CharSet);
+         procedure SetLower(Letters:CharSet);
+         procedure SetPunctuation(Letters:CharSet);
+         function  IsUpper(K:word):boolean;
+         function  IsLower(K:word):boolean;
+         function  IsLetter(K:word):boolean;
+         function  IsPunctuation(K:word):boolean;
+         function  GetUpCase(Ch:char):char;
+         function  GetLoCase(Ch:char):char;
+
+         The syntax for the functions to be passed to AssignUpCaseFunc and
+         AssignLoCaseFunc is as follows:
+         function MyConverter(Ch:char):char;
+
+
+
+
+Flash Cards                                                                FC-13
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Controlling Hardware - totSYS
+
+
+DisplayOBJ
+
+         Remember that the Toolkit includes the global instance Monitor^ which
+         is a pointer to a DisplayOBJ. Use this instance pointer with the syntax
+         Monitor^.method, rather than creating a new instance.
+         function  SnowProne:boolean
+         function  GetMode:byte
+         function  ColorOn:boolean
+         procedure SetBW(On:boolean)
+         function  DisplayType:tVideo
+         function  BaseOfScreen:pointer;
+         function  Width:byte
+         function  Depth:byte
+         function  SetCondensed:byte;
+         procedure Set25;
+
+EquipOBJ
+
+         constructor Init;
+         destructor  Done;
+         function    ParallelPorts:byte;
+         function    SerialPorts:byte;
+         function    FloppyDrives:byte;
+         function    ROMDate:string;
+         function    GameAdapter:boolean;
+         function    Serialprinter:boolean;
+         function    MathChip:boolean;
+
+MemOBJ
+         constructor Init;
+         destructor  Done;
+         function    BaseMemory:integer;
+         function    EMMInstalled:boolean;
+         function    EMMversionMajor:byte;
+         function    EMMversionMinor:byte;
+         function    EMMversion:string;
+         function    MaxExpMem:word;
+         function    ExpMemAvail:word;
+         function    ExtMemAvail:word;
+
+OSOBJ
+
+         constructor Init;
+         destructor  Done;
+         function    OSVersionMajor:byte;
+
+
+
+FC-14                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         function    OSVersionMinor:byte;
+         function    OSVersion:string;
+         function    Country:word;
+         function    Currency:string;
+         function    DateFmt:tDate;
+         function    ThousandsSep:char;
+         function    DecimalSep:char;
+         function    DateSep:char;
+         function    TimeSep:char;
+         function    TimeFmt:byte;
+         function    CurrencyFmt:byte;
+         function    CurrencyDecPlaces:byte;
+
+
+--------------------------------------------------------------------------------
+Screen Writing - totFAST
+
+
+ScreenOBJ
+
+         Instance Methods:
+         constructor Init;
+         destructor  Done;
+         Screen Writing:
+         procedure Write(Str:string);
+         procedure WriteLn(Str:string);
+         procedure WriteAT(X,Y,Attr:byte;Str:string);
+         procedure SetHiMarker(M:char);
+         procedure WriteHi(X,Y,AttrHi,Attr:byte;Str:string);
+         procedure WriteCap(X,Y,AttrCap,Attr:byte;Str:string);
+         procedure WriteClick(X,Y,Attr:byte;Str:string);
+         procedure WriteCenter(Y,Attr:byte;Str:string);
+         procedure WriteBetween(X1,X2,Y1,Attr:byte;Str:string);
+         procedure WriteRight(X,Y,Attr:byte;Str:string):
+         procedure WriteVert(X,Y,Attr:byte;Str:string);
+         procedure WritePlain(X,Y:byte;Str:string);
+
+         Screen Clearing:
+         procedure Clear(Attr:byte;Ch:char);
+         procedure PartClear(X1,Y1,X2,Y2,Attr:byte;Ch:char);
+         procedure ClearText(X1,Y1,X2,Y2:byte);
+         Attribute Changing:
+         procedure Attrib(X1,Y1,X2,Y2,Attr:byte);
+
+
+
+
+Flash Cards                                                                FC-15
+--------------------------------------------------------------------------------
+
+         Box & Line Drawing:
+         procedure Box(X1,Y1,X2,Y2,attr,style:byte);
+         procedure FillBox(X1,Y1,X2,Y2,attr,style:byte);
+         procedure ShadFillBox(X1,Y1,X2,Y2,attr,style:byte);
+         procedure TitledBox(X1,Y1,X2,Y2,Battr,Tattr,
+                             Mattr,style:byte;Title:string);
+         procedure HorizLine(X1,X2,Y,Attr,Style:byte);
+         procedure VertLine(X,Y1,Y2,Attr,Style:byte);
+         procedure SmartHorizLine(X1,X2,Y,Attr,Style:byte);
+         procedure SmartVertLine(X,Y1,Y2,Attr,Style:byte);
+
+         Screen Reading:
+         function  ReadChar(X,Y:byte):char;
+         function  ReadAttr(X,Y:byte):byte;
+         function  ReadWord(X,Y:byte;varAttr:byte;varCh:char);
+         function  ReadStr(X1,X2,Y:byte):string;
+         Scroll Bar Drawing:
+         procedure WriteHScrollBar(X1,X2,Y,Attr:byte;Current,Max:longint);
+         procedure WriteVScrollBar(X,Y1,Y2,Attr:byte;Current,Max:longit);
+
+         Block Manipulation:
+         procedure Scroll(Way:tDirection;X1,Y1,X2,Y2:byte);
+         procedure CopyScreenBlock(X1,Y1,X2,Y2,X,Y:byte);
+         procedure MoveScreenBlock(X1,Y1,X2,Y2,X,Y:byte);
+         Cursor Control:
+         procedure GotoXY(X,Y:byte);
+         function  WhereX:byte;
+         function  WhereY:byte;
+         procedure CursOff;
+         procedure CursOn:
+         procedure CursHalf;
+         procedure CursFull;
+         procedure CursReset;
+         function  CharHeight:integer;
+         procedure CursSize(T,B:byte);
+         function  CursTop:byte;
+         function  CursBot:byte;
+
+         Window management:
+         procedure SetWindow(X1,Y1,X2,Y2:byte);
+         procedure ResetWindow;
+         procedure WindowActive:boolean;
+         procedure WindowOff:boolean;
+         procedure WindowOn;
+         procedure WindowCoords(varCoords:tByteCoords);
+         procedure SetWinIgnore(On:boolean);
+
+
+
+
+FC-16                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         Virtual Screens:
+         procedure Create(Width,Depth,Attr:byte);
+         procedure ScreenPtr:pointer;
+         procedure Width:byte;
+         procedure Depth:byte;
+         procedure Exists:boolean;
+         procedure Display;
+         procedure SlideDisplay(Way:tDirection);
+         procedure PartDisplay(X1,Y1,X2,Y2,X,Y:byte);
+         procedure PartSlideDisplay(X1,Y1,X2,Y2:byte;Way:tDirection);
+
+
+--------------------------------------------------------------------------------
+KeyBoard and Mouse Input - totINPUT
+
+
+KeyOBJ
+
+         To access the keyboard use the global instance Key.
+         Mouse Settings:
+         procedure SetMouseMethod(Method:byte);
+         procedure SetHoriz(Sensitivity:byte);
+         procedure SetVert(Sensitivity:byte);
+
+         Determining Input:
+         procedure GetInput;
+         procedure GetKey:word;
+         procedure LastKey:word;
+         procedure LastChar:char;
+         procedure LastX:byte;
+         procedure LastY:byte;
+         procedure DelayKey(Mills:longint);
+         procedure Extended:boolean;
+         Alt, Ctrl & Shift:
+         procedure AltPressed:boolean;
+         procedure CtrlPressed:boolean;
+         procedure LeftShiftPressed:boolean;
+         procedure RightShiftPressed:boolean;
+         procedure ShiftPressed:boolean;
+
+         Caps, Num & Scroll Lock:
+         procedure SetCaps(On:boolean);
+         procedure SetNum(On:boolean);
+         procedure SetScroll(On:boolean);
+
+
+
+
+Flash Cards                                                                FC-17
+--------------------------------------------------------------------------------
+
+         procedure GetCaps:boolean;
+         procedure GetNum:boolean;
+         procedure GetScroll:boolean;
+
+         Buffer Control:
+         procedure StuffBuffer(W:word);
+         procedure StuffBufferStr(Str:string);
+         procedure StuffbufferStr(Str:string);
+         procedure FlushBuffer;
+         procedure KeyPressed:boolean;
+         Hooks:
+         procedure AssignIdleHook(PassedProc:InputIdleProc);
+         procedure AssignPressedHook(PassedProc:InputPressedProc);
+
+MouseOBJ
+
+         procedure Installed:boolean;
+         procedure Visible:boolean;
+         procedure Hide;
+         procedure Show;
+         procedure Move(X,Y;integer);
+         procedure Confine(X1,Y1,X2,Y2:byte);
+         procedure Location(varX,Y:byte);
+         procedure Status(varL,C,R:boolean;varX,Y);
+         function  Pressed(Button:integer;varX,Y:byte):byte;
+         function  Released(Button:integer;varX,Y:byte):byte;
+         procedure GetButtons:byte;
+         procedure SetMouseCursorStyle(OrdChar,Attr:byte);
+         procedure SetLeft(On:boolean);
+         procedure Reset;
+
+Hook Syntax
+         Idle Hook       procedure MyIdleHook;
+
+         Pressed Hook    procedure MyPressedHook(var W:word);
+
+
+
+
+FC-18                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Windows - totWIN
+
+
+WinOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   SetSize(X1,Y1,X2,Y2,Style:byte);
+         procedure   SetTitle(Title:string);
+         procedure   SetColors(Border,Body,Title,Icons:byte);
+         procedure   SetRemove(On:boolean);
+         procedure   SetClose(On:boolean);
+         procedure   GetSize(var X1,Y1,X2,Y2,Style:byte);
+         function    GetX:byte;
+         function    GetY:byte;
+         function    GetStyle:byte;
+         function    GetBorderAttr:byte;
+         function    GetBodyAttr:byte;
+         function    GetIconsAttr:byte;
+         function    GetTitleAttr:byte;
+         function    GetRemoveStatus:boolean;
+         procedure   Draw;
+         procedure   GrowDraw;
+         procedure   Remove;
+         procedure   WinKey(var K:word;var X,Y:byte);
+         procedure   WinGetKey(var K:word;var X,Y:byte);
+
+MoveWinOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   SetBoundary(X1,Y1,X2,Y2:byte);
+         procedure   SetSize(X1,Y1,X2,Y2,Style:byte);
+         procedure   SetTitle(Title:string);
+         procedure   SetColors(Border,Body,Title,Icons:byte);
+         procedure   SetRemove(On:boolean);
+         procedure   SetClose(On:boolean);
+         procedure   SetAllowMove(On:boolean);
+         procedure   GetSize(varX1,Y1,X2,Y2,Style:byte);
+         function    GetX:byte;
+         function    GetY:byte;
+         function    GetStyle:byte;
+         function    GetBorderAttr:byte;
+         function    GetBodyAttr:byte;
+         function    GetIconsAttr:byte;
+         function    GetTitleAttr:byte;
+         function    GetRemoveStatus:boolean;
+         procedure   Draw;
+
+
+
+
+Flash Cards                                                                FC-19
+--------------------------------------------------------------------------------
+
+         procedure   GrowDraw;
+         procedure   Remove;
+         procedure   WinKey(var K:word;var X,Y:byte);
+         procedure   WinGetKey(varK:word;varX,Y:byte);
+
+ScrollWinOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   SetScrollable(Vert,Horiz:boolean);
+         procedure   SetBoundary(X1,Y1,X2,Y2:byte);
+         procedure   SetSize(X1,Y1,X2,Y2,Style:byte);
+         procedure   SetTitle(Title:string);
+         procedure   SetColors(Border,Body,Title,Icons:byte);
+         procedure   SetRemove(On:boolean);
+         procedure   SetClose(On:boolean);
+         procedure   SetAllowMove(On:boolean);
+         procedure   GetSize(varX1,Y1,X2,Y2,Style:byte);
+         function    GetX:byte;
+         function    GetY:byte;
+         function    GetStyle:byte;
+         function    GetBorderAttr:byte;
+         function    GetBodyAttr:byte;
+         function    GetIconsAttr:byte;
+         function    GetTitleAttr:byte;
+         function    GetRemoveStatus:boolean;
+         procedure   Draw;
+         procedure   GrowDraw;
+         procedure   Remove;
+         procedure   WinKey(var K:word;var X,Y:byte);
+         procedure   WinGetKey(varK:word;varX,Y:byte);
+         procedure   DrawHorizBar(Current,Max:longint);
+         procedure   DrawVertBar(Current,Max:longint);
+
+StretchWinOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   SetMinSize(Width,Depth:byte);
+         procedure   SetScrollable(Vert,Horiz:boolean);
+         procedure   SetBoundary(X1,Y1,X2,Y2:byte);
+         procedure   SetSize(X1,Y1,X2,Y2,Style:byte);
+         procedure   SetTitle(Title:string);
+         procedure   SetColors(Border,Body,Title,Icons:byte);
+         procedure   SetRemove(On:boolean);
+         procedure   SetClose(On:boolean);
+         procedure   SetAllowMove(On:boolean);
+         procedure   SetAllowStretch(On:boolean);
+         procedure   GetSize(var X1,Y1,X2,Y2,Style:byte);
+
+
+
+
+FC-20                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         function    GetX:byte;
+         function    GetY:byte;
+         function    GetStyle:byte;
+         function    GetBorderAttr:byte;
+         function    GetBodyAttr:byte;
+         function    GetIconsAttr:byte;
+         function    GetTitleAttr:byte;
+         function    GetRemoveStatus:boolean;
+         procedure   Draw;
+         procedure   GrowDraw;
+         procedure   Remove;
+         procedure   WinKey(var K:word;var X,Y:byte);
+         procedure   WinGetKey(var K:word;varX,Y:byte);
+         procedure   DrawHorizBar(Current,Max:longint);
+         procedure   DrawVertBar(Current,Max:longint);
+
+
+
+
+Flash Cards                                                                FC-21
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Messages and Prompts - totMSG
+
+
+MessageOBJ
+
+         constructor Init(Style:byte;Tit:string);
+         destructor  Done;
+         procedure   AddLine(Str:string);
+         procedure   Show;
+         procedure   SetOption(Str:string;Hotkey:word);
+         function    WinForm: WinFormPtr;
+
+ButtonMessageOBJ
+         constructor Init(Style:byte;Tit:string);
+         destructor  Done;
+         procedure   AddLine(Str:string);
+         procedure   Show;
+         procedure   SetOption(Str:string;Hotkey:word);
+         function    WinForm: WinFormPtr;
+
+PromptOBJ
+
+         constructor Init(Style:byte;Tit:string);
+         destructor  Done;
+         procedure   AddLine(Str:string);
+         procedure   Show:tAction;
+         procedure   SetOption(ID:byte;Str:StringBut;Hotkey:word;Act:tAction);
+         function    WinForm: WinFormPtr;
+
+ButtonPromptOBJ
+         constructor Init(Style:byte;Tit:string);
+         destructor  Done;
+         procedure   AddLine(Str:string);
+         procedure   Show:tAction;
+         procedure   SetOption(ID:byte;Str:StringBut;Hotkey:word;Act:tAction);
+         function    WinForm: WinFormPtr;
+
+Color Control
+
+         To control the display color of the message dialog box, you must set
+         the window colors and the button colors using the following two meth-
+         ods:
+         MyInstance.WinForm^.Win^.SetColors(Border,Body,Title,Icons:byte);
+         IOTOT^.SetColButton(Off,OffHot,On,OnHot:byte);
+
+
+
+
+FC-22                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Managing Lists - totLINK, totLIST
+
+
+StrDLLOBJ
+
+         constructor Init;
+         destructor  Done;
+         List Addition:
+         function    Add(str:string):integer;
+
+         Node Pointer control
+         function    TotalNodes:longint
+         function    ActiveNodeNumber:longint;
+         procedure   Jump(NodeNumber:longint);
+         procedure   Advance(Amount:longint);
+         procedure   Retreat(Amount:longint);
+         List Management:
+         function    NodePtr(NodeNumber:longint):DLLNodePtr;
+         procedure   ActiveNodePtr:DLLNodePtr;
+         procedure   EndNodePtr:DLLNodePTr;
+         function    Change(Node:DLLNodePtr;Str:string):integer;
+         procedure   DelNode(Node:DLLNodePtr);
+         procedure   SwapNodes(Node1,Node2:DLLNodePtr);
+         procedure   InsertBefore(Node:DLLNodePtr;Str:string);
+         function    GetStr(Node:DLLNodePtr;Start,Finish:longint):string;
+         procedure   Sort(SortID:shortint;Ascending:boolean);
+
+         List Clearing:
+         procedure   EmptyList;
+
+BrowseArrayOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   SetTopPick(TopPick:longint);
+         procedure   SetStartCol(Column:longint);
+         procedure   Show;
+         procedure   Go;
+         procedure   LastKey:word;
+         procedure   AssignList(var StrArray;Total:longint;StrLength:byte);
+         function    Win:StretchWinPtr;
+
+BrowseLinkOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   SetTopPick(TopPick:longint);
+         procedure   SetStartCol(Column:longint);
+         procedure   Show;
+
+
+
+Flash Cards                                                                FC-23
+--------------------------------------------------------------------------------
+
+         procedure   Go;
+         procedure   LastKey:word;
+         function    AssignList(var LinkList:DLLOBJ);
+         function    ListPtr:DLLPtr;
+         function    Win:StretchWinPtr;
+
+BrowseFileOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   SetTopPick(TopPick:longint);
+         procedure   SetStartCol(Column:longint);
+         procedure   Show;
+         procedure   Go;
+         procedure   LastKey:word;
+         function    AssignFile(Filename:string):integer;
+         function    ListPtr: StrDLLPtr;
+         function    Win:StretchWinPtr;
+
+Browse Color Control
+         The display colors of the list window are totally controlled by the
+         window display colors, and can be set with the following procedure:
+
+         MyInstance.Win^.SetColors(Border,Body,Title,Icons:byte);
+
+ListArrayOBJ
+         List Management:
+         constructor Init;
+         destructor  Done;
+         procedure   SetTopPick(TopPick:longint);
+         procedure   SetActivePick(ThePick:longint);
+         procedure   SetTagging(On:boolean);
+         procedure   SetColWidth(Wid:byte);
+         procedure   Show;
+         procedure   Go;
+         procedure   GetHiString:string;
+         procedure   LastKey:word;
+         procedure   AssignList(var StrArray;Total:longint;
+                                StrLength:byte;Taggable:boolean);
+
+         Status Control:
+         procedure   SetStatus(Pick:longint;BitPos:byte;On:boolean);
+         function    GetStatus(Pick:longint;BitPos:byte):boolean;
+         procedure   DelAllStatus(BitPos:byte;On:boolean);
+         Window Control:
+         function    Win:StretchWinPtr;
+
+
+
+
+FC-24                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         Dual Color:
+         procedure   SetColors(HAttr,NAttr,SAttr:byte);
+         procedure   SetDualColors(On:boolean);
+
+         Message display:
+         procedure   SetMsgState(On:boolean);
+         procedure   SetMsgHook(Func:ListMsgFunc);
+         Hooks:
+         procedure   SetCharHook(Func:ListCharFunc);
+
+ListLinkOBJ
+
+         List Management:
+         constructor Init;
+         destructor  Done;
+         procedure   SetTopPick(TopPick:longint);
+         procedure   SetActivePick(ThePick:longint);
+         procedure   SetTagging(On:boolean);
+         procedure   SetColWidth(Wid:byte);
+         procedure   Show;
+         procedure   Go;
+         procedure   GetHiString:string;
+         procedure   LastKey:word;
+         procedure   AssignList(var LinkList:DLLOBJ);
+         function    ListPtr: DLLPtr;
+         Status Control:
+         procedure   SetStatus(Pick:longint;BitPos:byte;On:boolean);
+         function    GetStatus(Pick:longint;BitPos:byte):boolean;
+         procedure   DelAllStatus(BitPos:byte;On:boolean);
+
+         Dual Color:
+         procedure   SetColors(HAttr,NAttr,SAttr:byte);
+         procedure   SetDualColors(On:boolean);
+         Window Control:
+         function    Win:StretchWinPtr;
+
+         Message Display:
+         procedure   SetMsgState(On:boolean);
+         procedure   SetMsgHook(Func:ListMsgFunc);
+         Hooks:
+         procedure   SetCharHook(Func:ListCharFunc);
+
+Hook Syntax
+
+         Character Hook - function MyCharHook(var K:word; var X,Y:byte;
+                                              HiPick:longint): tListAction
+         Message Hook - function MyMsgHook(HiPick:longint):string;
+
+
+
+
+Flash Cards                                                                FC-25
+--------------------------------------------------------------------------------
+
+List Color Control
+
+         The attributes of the list window and the listed items are controlled
+         with the following three methods:
+         Win^.SetColors(Border,Body,Title,Icons: byte);
+         SetColors(HAttr,NAttr,SAttr:byte);
+         SetDualColors(On:boolean);
+
+
+--------------------------------------------------------------------------------
+Displaying Directories - totLIST, totDIR
+
+
+ListDirOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   ReadFiles(Filemasks:string;FileAttrib:word);
+         procedure   FileList^.Sort(SortID:shortint;Ascending:boolean);
+         procedure   FileList^.GetFileRecord(var Info:tFileInfo;
+                                             NodeNumber:longint);
+         function    FileList^.GetLongStr(Node:DLLNodePtr):string;
+         procedure   FileList^.GetFileMask:string;
+         procedure   FileList^.SetFileDetails(FileMasks:string;
+                                              FileAttrib:word);
+         procedure   FileList^.FillList;
+         procedure   FileList^.FillNewMask(Filemasks:string);
+         function    Win:StretchWinPtr;
+
+ListDirSortOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   ReadFiles(Filemasks:string;FileAttrib:word);
+         procedure   FileList^.Sort(SortID:shortint;Ascending:boolean);
+         procedure   FileList^.GetFileRecord(var Info:tFileInfo;
+                                             NodeNumber:longint);
+         function    FileList^.GetLongStr(Node:DLLNodePtr):string;
+         procedure   FileList^.GetFileMask:string;
+         procedure   FileList^.SetFileDetails(FileMasks:string;
+                                              FileAttrib:word);
+         procedure   FileList^.FillList;
+         procedure   FileList^.FillNewMask(Filemasks:string);
+         function    Win:StretchWinPtr;
+
+
+
+FC-26                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+List Directory Color Control
+
+         The attributes of the list window and the files listed are controlled
+         with the following three methods:
+         Win^.SetColors(Border,Body,Title,Icons: byte);
+         SetColors(HAttr,NAttr,SAttr:byte);
+         SetDualColors(On:boolean);
+
+DirWinOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   Go:tAction;
+         procedure   GetChosenFile:string;
+         procedure   SetFileDetails(StartDir:string;FileMasks:string;
+                                    FileAttrib:word);
+         procedure   SetSortDetails(SortID:byte;SortOrder:boolean);
+         function    Win^:MoveWinPtr;
+         procedure   Action^.SetHelpHook(PassedProc:HelpProc);
+         function    FileList^: FielsFieldPtr;
+
+Directory Window Color Control
+         The following methods control the directory display colors:
+
+         MyInst.Win^.SetColors (changes bgrnd, title, box border and file
+         details)
+         IOTOT^.SetColLabel    (changes the box labels, e.g. Name:)
+         IOTOT^.SetColList     (changes the file and dir lists)
+         IOTOT^.SetColField    (changes the filename input field
+         IOTOT^.SetColButtons  (changes the buttons)
+
+
+
+
+Flash Cards                                                                FC-27
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Form Input - totIO1, totIO2, totIO3
+
+         This category details all the routines related to prompting the user
+         for input, i.e. the units totIO1, totIO2 and totIO3.
+         The colors for all display fields are controlled with IOTOT^ (see page
+         FC-9).
+
+StringIOOBJ
+         constructor  Init(X,Y,FieldLen: byte);
+         destructor   Done;
+         procedure    Activate;
+         function     GetID: word;
+         function     GetValue: string;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCase(Cas:tCase);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetForceCase(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetValue(Str:string);
+
+LateralIOOBJ
+
+         constructor  Init(X,Y,FieldLen,MaxLen: byte);
+         destructor   Done;
+         procedure    Activate;
+         function     GetID: word;
+         function     GetValue: string;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCase(Cas:tCase);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetForceCase(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+
+
+
+
+FC-28                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetValue(Str:string);
+
+PictureIOOBJ
+
+         constructor  Init(X,Y: byte;Pic:string);
+         destructor   Done;
+         procedure    Activate;
+         function     GetID: word;
+         function     GetValue: string;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetAllowChar(Str:string);
+         procedure    SetCase(Cas:tCase);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetDisallowChar(Str:string);
+         procedure    SetForceCase(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetValue(Str:string);
+         The picture is comprised of non-editable characters and the following
+         four, pre-defined, format characters:
+
+            #     Allows the input of the characters (0-9 . -) and indicates
+                  that only numbers may be input.
+            @     Allows only letters of the English alphabet and punctuation
+                  characters.
+
+            *     Allows any character the user can find.
+            !     Converts all alphabetical characters to upper case.
+
+         Any other characters embedded in the picture are treated as fixed and
+         for display only.
+
+IntIOOBJ
+         constructor  Init(X,Y,Len:byte);
+         destructor   Done;
+         procedure    Activate;
+         function     FormatPtr: FmtNumberPtr;
+         function     GetID: word;
+         function     GetValue: longint;
+
+
+
+
+Flash Cards                                                                FC-29
+--------------------------------------------------------------------------------
+
+         procedure    InitFormat;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetMinMax(Min,Max:longint);
+         procedure    SetValue(Val:longint);
+
+RealIOOBJ
+
+         constructor  Init(X,Y,Len:byte);
+         destructor   Done;
+         procedure    Activate;
+         function     FormatPtr: FmtNumberPtr;
+         function     GetID: word;
+         function     GetValue: extended;
+         procedure    InitFormat;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetENotation(On:Boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetMinMax(Min,Max:Extended);
+         procedure    SetValue(Val:extended);
+
+FixedRealIOOBJ
+         constructor  Init(X,Y,Whole,DP:byte);
+         destructor   Done;
+         procedure    Activate;
+         function     FormatPtr: FmtNumberPtr;
+         function     GetID: word;
+         function     GetValue: extended;
+         procedure    InitFormat;
+         procedure    SetIns(InsOn:boolean);
+
+
+
+
+FC-30                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetMinMax(Min,Max:Extended);
+         procedure    SetValue(Val:extended);
+
+HexIOOBJ
+
+         constructor  Init(X,Y,Len:byte);
+         destructor   Done;
+         procedure    Activate;
+         function     GetID: word;
+         function     GetValue: longint;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetMinMax(Min,Max:longint);
+         procedure    SetValue(Val:longint);
+
+DateIOOBJ
+         constructor  Init(X,Y:byte;DateFmt:tDate);
+         destructor   Done;
+         procedure    Activate;
+         function     GetID: word;
+         function     GetValue: longint;
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetRules(Rules:byte);
+         procedure    SetDispChar(Ch:char);
+         procedure    SetPadChar(Pad:char);
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetCursor(Curs: tCursPos);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetJust(Just:tJust);
+         procedure    SetLabel(Lbl:string);
+
+
+
+
+Flash Cards                                                                FC-31
+--------------------------------------------------------------------------------
+
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetMinMax(Min,Max:longint);
+         procedure    SetValue(Val:longint);
+
+CheckIOOBJ
+
+         constructor  Init(X1,Y1,width,depth:byte;Title:string);
+         destructor   Done;
+         procedure    AddItem(Str:string;HK:word;Selected:boolean);
+         function     GetID: word;
+         function     GetValue(Item:byte):boolean;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetValue(Item:byte;Selected:boolean);
+
+RadioIOOBJ
+         constructor  Init(X1,Y1,width,depth:byte;Title:string);
+         destructor   Done;
+         procedure    AddItem(Str:string;HK:word;Selected:boolean);
+         function     GetID: word;
+         function     GetValue: byte;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    SetValue(Item:byte);
+
+ArrayIOOBJ
+
+         constructor  Init(X1,Y1,width,depth:byte;Title:string);
+         destructor   Done;
+         procedure    AssignList(var StrArray; Total:Longint; StrLength:byte);
+         function     GetID: word;
+         function     GetSelectedItem: integer;
+         function     GetString(Pick:integer): string;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+
+
+
+
+FC-32                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+LinkIOOBJ
+
+         constructor  Init(X1,Y1,width,depth:byte;Title:string);
+         destructor   Done;
+         procedure    AssignList(var LinkList: DLLOBJ);
+         function     GetID: word;
+         function     GetSelectedItem: integer;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+
+WWArrayIOOBJ
+         constructor  Init(X1,Y1,width,lines:byte;Title:string);
+         destructor   Done;
+         procedure    AssignList(var StrArray; Total:Longint; StrLength:byte);
+         function     GetID: word;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    WrapFull;
+
+WWLinkIOOBJ
+
+         constructor  Init(X1,Y1,width,lines:byte;Title:string);
+         destructor   Done;
+         procedure    AssignList(var LinkList: StrDLLOBJ; Max:integer);
+         function     GetID: word;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetBoxOn(On:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetIns(InsOn:boolean);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+         procedure    WrapFull;
+
+
+StripIOOBJ
+
+         constructor  Init(X1,Y1:byte;Tit:string;Act:tAction);
+         destructor   Done;
+         function     GetID: word;
+
+
+
+Flash Cards                                                                FC-33
+--------------------------------------------------------------------------------
+
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+
+Strip3DIOOBJ
+
+         constructor  Init(X1,Y1:byte;Tit:string;Act:tAction);
+         destructor   Done;
+         function     GetID: word;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+
+ButtonIOOBJ
+         constructor  Init(X1,Y1,width,depth:byte;Tit:string; Act:tAction);
+         destructor   Done;
+         function     GetID: word;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+         procedure    SetLabel(Lbl:string);
+         procedure    SetMessage(X,Y:byte; Msg:string);
+
+HotKeyIOOBJ
+
+         constructor  Init(HK:Word;Act:tAction);
+         destructor   Done;
+         function     GetID: word;
+         procedure    SetActiveStatus(Selectable:boolean);
+         procedure    SetHotkey(HK:word);
+         procedure    SetID(ID:word);
+
+ControlKeyIOOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   SetKeys(Next,Prev,Fin,Esc:word);
+
+FormOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   AddItem(var NewItem: ItemIOOBJ);
+         procedure   SetActiveItem(ID:word);
+         procedure   DisplayItems;
+         procedure   SetCharHook(Func:CharFunc);
+
+
+
+FC-34                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         procedure   SetLeaveHook(Func:LeaveFieldFunc);
+         procedure   SetEnterHook(Func:EnterFieldHook);
+         procedure   SetHelpHook(Proc:HelpProc);
+         function    Go:tAction;
+
+WinFormOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   Draw;
+         procedure   AddItem(var NewItem: ItemIOOBJ);
+         procedure   SetActiveItem(ID:word);
+         procedure   DisplayItems;
+         procedure   SetCharHook(Func:CharFunc);
+         procedure   SetLeaveHook(Func:LeaveFieldFunc);
+         procedure   SetEnterHook(Func:EnterFieldHook);
+         procedure   SetHelpHook(Proc:HelpProc);
+         function    Go:tAction;
+         function    Win:MoveWinPtr;
+
+Hook Syntax
+         Char  Hook - function MyCharHook(var K:word;var X,Y:byte;
+                                          var FieldID:word):tAction;
+         Leave Hook - function MyLeaveHook(vae FieldID:word):tAction;
+         Enter Hook - function MyEnterHook(var NewID:word; OldID:word):tAction;
+         Help  Hook - procedure MyHelpHook(ID:word);
+
+
+--------------------------------------------------------------------------------
+Menus - totMENU
+
+         Note the following special menu items for MenuOBJ and MoveMenuOBJ
+         objects:
+                  ''      a gap in the menu
+                  '-'     a single line
+                  '='     a double line
+
+MenuOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   AddFullItem(Txt:StrVisible;ID,HK:word;
+                                 Msg:StrVisible;SubM:BaseMenuPtr);
+         procedure   AddItem(Txt:StrVisible);
+         procedure   SetTopic(Item:byte;Txt:StrVisible);
+         procedure   SetHK(Item:byte;HK:word);
+         procedure   SetMessage(Item:byte;Msg:StrVisible);
+
+
+
+
+Flash Cards                                                                FC-35
+--------------------------------------------------------------------------------
+
+         procedure   SetID(Item:byte;ID:word);
+         procedure   SetStatus(Item:byte;On:boolean);
+         procedure   SetSubMenu(Item:byte;SubMenu:BaseMenuPtr);
+         procedure   SetGap(G:byte);
+         procedure   SetActiveItem(Item:byte);
+         procedure   SetMessageXY(X,Y:byte);
+         procedure   SetMenuXY(X,Y:byte);
+         procedure   SetHelpKey(K:word);
+         procedure   SetHelpHook(Proc:HelpProc);
+         procedure   SetAllowEsc(On:boolean);
+         procedure   SetColors(HiHot,HiNorm,LoHot,LoNorm,Off:byte);
+         procedure   SetStyleTitle(St:byte;Tit:StrVisible);
+         procedure   SetForPull;
+         procedure   Draw;
+         procedure   Remove;
+         function    Activate: word;
+         function    Win: WinPtr;
+
+MoveMenuOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   AddFullItem(Txt:StrVisible;ID,HK:word;
+                                 Msg:StrVisible;SubM:BaseMenuPtr);
+         procedure   AddItem(Txt:StrVisible);
+         procedure   SetTopic(Item:byte;Txt:StrVisible);
+         procedure   SetHK(Item:byte;HK:word);
+         procedure   SetMessage(Item:byte;Msg:StrVisible);
+         procedure   SetID(Item:byte;ID:word);
+         procedure   SetStatus(Item:byte;On:boolean);
+         procedure   SetSubMenu(Item:byte;SubMenu:BaseMenuPtr);
+         procedure   SetGap(G:byte);
+         procedure   SetActiveItem(Item:byte);
+         procedure   SetMessageXY(X,Y:byte);
+         procedure   SetMenuXY(X,Y:byte);
+         procedure   SetHelpKey(K:word);
+         procedure   SetHelpHook(Proc:HelpProc);
+         procedure   SetAllowEsc(On:boolean);
+         procedure   SetColors(HiHot,HiNorm,LoHot,LoNorm,Off:byte);
+         procedure   SetStyleTitle(St:byte;Tit:StrVisible);
+         procedure   SetForPull;
+         procedure   Draw;
+         procedure   Remove;
+         function    Activate: word;
+         function    Win: MoveWinPtr;
+
+
+
+
+FC-36                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+LotusMenuOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   SetSpecialKey(Hk:word;ID:word);
+         procedure   AddFullItem(Txt:StrVisible;ID,HK:word;
+                                 Msg:StrVisible;SubM:BaseMenuPtr);
+         procedure   AddItem(Txt:StrVisible);
+         procedure   SetTopic(Item:byte;Txt:StrVisible);
+         procedure   SetHK(Item:byte;HK:word);
+         procedure   SetMessage(Item:byte;Msg:StrVisible);
+         procedure   SetID(Item:byte;ID:word);
+         procedure   SetStatus(Item:byte;On:boolean);
+         procedure   SetSubMenu(Item:byte;SubMenu:BaseMenuPtr);
+         procedure   SetGap(G:byte);
+         procedure   SetActiveItem(Item:byte);
+         procedure   SetMessageXY(X,Y:byte);
+         procedure   SetMenuXY(X,Y:byte);
+         procedure   SetHelpKey(K:word);
+         procedure   SetHelpHook(Proc:HelpProc);
+         procedure   SetAllowEsc(On:boolean);
+         procedure   SetColors(HiHot,HiNorm,LoHot,LoNorm,Off:byte);
+         procedure   Draw;
+         procedure   Remove;
+         function    MenuKey(K:word; X,Y:byte):boolean;
+         function    Activate: word;
+         function    Push(K:word;X,Y:byte);
+
+PullMenuOBJ
+         constructor Init;
+         destructor  Done;
+         procedure   SetSpecialKey(Hk:word;ID:word);
+         procedure   AddFullItem(Txt:StrVisible;ID,HK:word;
+                                 Msg:StrVisible;SubM:BaseMenuPtr);
+         procedure   AddItem(Txt:StrVisible);
+         procedure   SetTopic(Item:byte;Txt:StrVisible);
+         procedure   SetHK(Item:byte;HK:word);
+         procedure   SetMessage(Item:byte;Msg:StrVisible);
+         procedure   SetID(Item:byte;ID:word);
+         procedure   SetStatus(Item:byte;On:boolean);
+         procedure   SetSubMenu(Item:byte;SubMenu:BaseMenuPtr);
+         procedure   SetGap(G:byte);
+         procedure   SetActiveItem(Item:byte);
+         procedure   SetMessageXY(X,Y:byte);
+         procedure   SetMenuXY(X,Y:byte);
+         procedure   SetHelpKey(K:word);
+         procedure   SetHelpHook(Proc:HelpProc);
+         procedure   SetAllowEsc(On:boolean);
+
+
+
+
+Flash Cards                                                                FC-37
+--------------------------------------------------------------------------------
+
+         procedure   SetColors(HiHot,HiNorm,LoHot,LoNorm,Off:byte);
+         procedure   Draw;
+         procedure   Remove;
+         function    MenuKey(K:word; X,Y:byte):boolean;
+         function    Activate: word;
+         function    Push(K:word;X,Y:byte);
+
+EZPullArrayOBJ
+
+         Note the following string syntax for EZPullArrayOBJ and EZPullLinkOBJ
+         objects:
+                  '"'     element separator
+                  '_'     inactive item
+                  '\'     new main menu item
+
+                  'menu text"description"ID"SpecialHK'
+         constructor Init;
+         destructor  Done;
+         procedure   AssignList(var StrArray;Total:longint;StrLength:byte);
+         function    MainMenu: PullMenuPtr;
+         function    SubMenu(MenuNumber:byte):SubMenuPtr;
+         function    Activate: word;
+         function    Push(K:word;X,Y:byte);
+
+EZPullLinkOBJ
+
+         constructor Init;
+         destructor  Done;
+         procedure   AssignList(var LinkList:DLLOBJ);
+         function    MainMenu: PullMenuPtr;
+         function    SubMenu(MenuNumber:byte):SubMenuPtr;
+         function    Activate: word;
+         function    Push(K:word;X,Y:byte);
+
+
+
+
+FC-38                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Managing Dates - totDATE
+
+
+DateOBJ
+
+         The global instance DateTOT controls the date defaults.
+         function  GetLastYearNextCentury: byte;
+         procedure SetLastYearNextCentury(Yr:byte);
+         function  GetSeparator: char;
+         procedure SetSeparator(Sep:char);
+         procedure SetMonths(Mth1,Mth2,Mth3,Mth4,Mth5,Mth6,
+                             Mth7,Mth8,Mth9,Mth10,Mth11,Mth12:strshort);
+         procedure SetDays(Day0,Day1,Day2,Day3,Day4,Day5,Day6:strshort);
+         function  GetLastYearNextCentury:byte;
+         function  GetSeparator:char;
+         function  GetMonth(Mth:byte):string;
+         function  GetDay(Day:byte):string;
+
+Date Functions
+
+         function GregToJul(M,D,Y:longint):longint;
+         function JulToGreg(Jul:longint;var M,D,Y:longint);
+         function GregToStr(M,D,Y:longint;Format:tDate):string;
+         function JulToSTr(Jul:longint;Format:tDate):string;
+         function DOWJul(Jul:longint):byte;
+         function DOWStr(DStr:string;Format:tDate):byte;
+         function Day(DStr:string;Format:tDate):word;
+         function Month(DStr:string;Format:tDate):word;
+         function Year(DStr:string;Format:tDate):word;
+         function ValidDateStr(DStr:string;Format:tDate):boolean;
+         function TodayInJul:longint;
+         function StartOfYear(Jul:longint):longint;
+         function EndOfYear(Jul:longint):longint;
+         function RelativeDate(DStr:string;Format:tDate;Delta:longint):string;
+         function StripDateStr(DStr:string;Fomrat:tDate):string;
+         function FancyDateStr(Jul:longint;Long,day:boolean):string;
+         function DateFormat(Format:tDate):string;
+
+
+
+
+Flash Cards                                                                FC-39
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+String Handling - totSTR
+
+
+FmtNumberOBJ
+
+         The global instance FmtNumberTOT (declared in totIO2) controls the
+         default format of number input fields.
+         constructor Init;
+         destructor  Done;
+         procedure   SetPrefixSuffix(P,S:char);
+         procedure   SetSign(S:tSign);
+         procedure   SetSeparators(P,T,D:char);
+         procedure   SetJustification(J:tJust);
+         function    FormattedLong(Val:longint; Width:byte):string;
+         function    FormattedReal(Val:extended;DP:byte;Width:byte):string;
+
+String Functions
+
+         String Adjustment:
+         function Squeeze(L:char;Str:string;Width:byte);
+         function PadLeft(Str:string;Size:byte;ChPad:char):string;
+         function PadRight(Str:string;Size:byte;ChPad:char):string;
+         function PadCenter(Str:string;Size:byte;ChPad:char):string;
+         function Pad(PadJust:tJust;Str:string;Size:byte;ChPad:char):string;
+         function SetUpper(Str:string):string;
+         function SetLower(Str:string):string;
+         function SetProper(Str:string):string;
+         function AdjCase(NewCase:tCase;Str:string):string;
+         function Last(N:byte;Str:string):string;
+         function First(N:byte;Str:string):string;
+         function Strip(L,C:char;Str:string):string;
+         function OverType(N:byte;StrS,StrT:string):string;
+         function PicFormat(Input,Picture:string;Pad:char):string;
+         function TruncFormat(Input:string;Start,Len:byte;Pad:char):string;
+         String Searching:
+         function FirstCapital(Str:string):char;
+         function FirstCapitalPost(Str:string):byte;
+         function LastPos(C:char;Str:string):byte;
+         function LastPosBefore(C:char;Str:string;Last:byte):byte;
+         function LastSubPos(C:char;Str:string;Len:byte):byte;
+         function PosAfter(C:char;Str:string;Start:byte):byte;
+
+         Word Management:
+         function WordCnt(Str:string):byte;
+         function PosWord(WordNo:byte;Str:string):byte;
+         function ExtractWords(StartWord,NoWords:byte;Str:string):string;
+
+
+
+
+FC-40                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+         Number Conversions:
+         function ValidInt(Str:string):boolean;
+         function ValidHEXInt(Str:string):boolean;
+         function ValidReal(Str:string):boolean;
+         function StrToInt(Str:string):integer;
+         function StrToLong(Str:string):longint;
+         function StrToReal(Str:string):extended;
+         function HEXStrToLong(Str:strig):longint;
+         function IntToStr(Number:longint):string;
+         function RealToStr(Number:extended;Decimals:byte):string;
+         function IntToHEXStr(Number:longint):string;
+         function RealToSciStr(Number:extended;D:byte):string;
+         function NthNumber(Str:string;Nth:byte):char;
+
+
+--------------------------------------------------------------------------------
+Miscellaneous - totMISC
+         procedure Beep;
+         procedure CurrentTime:string;
+         procedure Swap(var A,B:longint);
+         function  WithinRange(Min,Max,Test:longint): boolean;
+         function  Exist(Filename:string):boolean;
+         function  CopyFile(SourceFile,TargetFile:string): byte;
+         function  FSize(Filename:string): longint;
+         function  FileDrive(Full:string): string;
+         function  FileDirectory(Full:string): string;
+         function  FileName(Full:string): string;
+         function  FileExt(Full:string): string;
+         function  SlashedDirectory(Dir:string):string;
+         function  PrinterStatus: byte;
+         function  AlternatePrinterStatus:byte;
+         function  PrinterReady: boolean;
+         procedure ResetPrinter;
+         procedure PrintScreen:boolean;
+
+
+
+
+Flash Cards                                                                FC-41
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Key Codes
+
+
+           Key  Norm   Shift  Alt    Ctrl     Key   Norm   Shift  Alt    Ctrl
+           a    97     65     286    1        F1    315    340    360    350
+           b    98     66     304    2        F2    316    341    361    351
+           c    99     67     302    3        F3    317    342    362    352
+           d    100    68     288    4        F4    318    343    363    353
+           e    101    69     274    5        F5    319    344    364    354
+           f    102    70     289    6        F6    320    345    365    355
+           g    103    71     290    7        F7    321    346    366    356
+           h    104    72     291    8        F8    322    347    367    357
+           i    105    73     279    9        F9    323    348    368    358
+           j    106    74     292    10       F10   324    349    369    359
+           k    107    75     293    11       F11   389    391    395    393
+           l    108    76     294    12       F12   390    392    396    394
+           m    109    77     306    13
+           n    110    78     305    14       BkSp  8      8      270    127
+           o    111    79     280    15       Up    328    428    408    397
+           p    112    80     281    16       Down  336    436    416    401
+           q    113    81     272    17       Left  331    431    411    371
+           r    114    82     275    18       Right 333    433    413    372
+           s    115    83     287    19       End   335    435    415    373
+           t    116    84     276    20       Home  327    427    407    375
+           u    117    85     278    21       PgUp  329    429    409    388
+           v    118    86     303    22       PgDn  337    437    417    374
+           w    119    87     273    23       Ins   338    261    418    260
+           x    120    88     301    24       Del   339    263    419    262
+           y    121    89     277    25       Tab   9      271    421    404
+           z    122    90     300    26       Esc   27     27     257    27
+                                              Enter 13     13     284    10
+           1 !  49     33     376    -
+           2 @  50     64     377    259      , <   44     60     307    -
+           3 #  51     35     378    -        . >   46     62     308    -
+           4 $  52     36     379    -        / ?   47     63     309    -
+           5 %  53     37     380    -        ; :   59     58     295    -
+           6 ^  54     94     381    30       ' "   39     34     296    -
+           7 &  55     38     382    -        [ {   91     123    282    27
+           8 *  56     42     383    -        ] }   93     125    283    29
+           9 (  57     40     384    -        \ |   92     124    299    28
+           0 )  48     41     385    -
+           - _  45     95     386    31
+           = +  61     43     387    -
+
+
+
+
+FC-42                                                                Flash Cards
+--------------------------------------------------------------------------------
+
+           Mouse Action     Code           Window Action           Code
+           Left Click       513            Close Icon Selected     600
+           Right Click      514            Window Moved            601
+           Middle Click     515            Window Resized          602
+           Left + Right     516            Scroll Bar Up           610
+           Left + Middle    517            Scroll Bar Down         611
+           Middle + Right   518            Scroll Bar Left         612
+           All three        519            Scroll Bar Right        613
+           Left Double      523            Vertical Elevator       614
+           Right Double     524            Horizontal Elevator     615
+           Middle Double    525
+
+           Mouse Up         584
+           Mouse Down       592
+           Mouse Left       589
+           Mouse Right      587
+
+
+
+
+
+--------------------------------------------------------------------------------
+Color Tables
+
+
+         The totFAST unit includes the following functions for managing display
+         attributes:
+
+                       function CAttr(F,B:byte):byte;
+                       function FAttr(A:byte):byte;
+                       function BAttr(A:byte):byte;
+
+
+
+                             CRT Color Constants
+
+                  Black           0     DarkGray        8
+                  Blue            1     LightBlue       9
+                  Green           2     LightGreen      10
+                  Cyan            3     LightCyan       11
+                  Red             4     LightRed        12
+                  Magenta         5     LightMagenta    13
+                  Brown           6     Yellow          14
+                  LightGray       7     White           15
+
+
+

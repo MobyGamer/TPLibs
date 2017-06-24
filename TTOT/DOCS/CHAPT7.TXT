@@ -1,0 +1,704 @@
+                                                                           Using
+                                                                         Windows
+
+
+         "A gentleman is a man who can play the accordian, but doesn't."
+
+                                                                       Anonymous
+
+
+The Object Hierarchy
+
+         All the objects discussed thus far are independent, i.e. no object has
+         any relationship with the others. However, the totWIN unit takes advan-
+         tage of an OOP facility known as inheritance.
+         Sometimes, a program just needs a quick pop-up window to display a
+         message. Other times you may want to display a window which can be
+         moved or dragged around the screen. Furthermore, in sophisticated pro-
+         grams, you may want windows which can be moved and stretched by drag-
+         ging the lower-right window corner.
+
+         Using traditional Pascal you might create multiple window types, one to
+         handle each window style. Or, you might create a single powerful window
+         which is capable of providing the most sophisticated window needs, but
+         with features that can be disabled when simple windows are required.
+         Both of these solutions are clumsy and usually result in wasted code.
+         Using OOP, we can create a basic window object, and then create a
+         sibling window object which inherits all the properties of the basic
+         window, but which has some additional features. This new window object
+         can also have a sibling object which inherits the properties of the
+         window objects from which it is derived. By linking these window
+         objects together, an object hierarchy is formed. Figure 7.1 illustrates
+         the totWIN object hierarchy.
+         The four window objects have the following properties:
+
+         WinOBJ         This basic window object paints a pop-up window on the
+                        display, with an optional shadow. Once the window has
+                        been displayed, all screen writing is restricted to
+                        within the window boundaries. Once the window is
+                        removed, the original (underlying) screen contents are
+                        restored, and the cursor is restored to its previous
+                        location and shape.
+         MoveWinOBJ     This object has all the properties of the basic window,
+                        but the window can also be moved around the screen. This
+                        is useful for pop-up messages and the like, because the
+                        user can move the message to another location to see the
+                        obscured part of the display.
+
+         ScrollWinOBJ   This object has all the properties of the moveable
+                        window, but the window can also have optional scroll
+                        bars displayed on the right and lower window edges.
+
+
+7-2                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         StretchWinOBJ  This is the most sophisticated window object. It has all
+                        the properties of the other windows, but it can also be
+                        stretched and zoomed.
+
+Figure 7.1                                                             [PICTURE]
+Window
+Object Hierarchy
+
+
+         When you want to display a window, just create an instance of the
+         appropriate window type and call the relevant window methods. For exam-
+         ple, the following code fragment creates a basic pop-up window and
+         displays the message "Hello Mum". (The individual methods will be
+         discussed in detail in later sections.) When the program is executed, a
+         simple window is displayed, and the user can exit by pressing [KEYCAP]
+         or by clicking the mouse on the close [*] icon.
+         program DemoWindowOne;
+         {DEMWI1}
+
+         Uses DOS,CRT,
+              totFAST, totINPUT, totWIN;
+         var
+           MyWindow: WinOBJ;
+           K: word;
+           X,Y: byte;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MyWindow do
+            begin
+               Init;
+               Draw;
+               Screen.WriteLn('Hello Mum');
+               Repeat
+                  WinGetKey(K,X,Y);
+               until (K = 600) or (K= 27);
+               Done;
+            end;
+         end.
+
+
+         The following demo program, DEMWI2.PAS, is the same as the previous
+         demo, except that the window instance is of type MoveWinOBJ. This pro-
+         gram creates a moveable window. The user can move the window by holding
+         down the mouse button on the top row of the window and dragging the
+         window. The same effect can be achieved by pressing [KEYCAP]and using
+         the arrow keys. Pressing [KEYCAP] ends the keyboard move operation.
+         program DemoWindowTwo;
+         {DEMWI2 - a moveable window}
+
+
+
+Using Windows                                                                7-3
+--------------------------------------------------------------------------------
+
+         Uses DOS,CRT,
+              totFAST, totINPUT, totWIN;
+
+         var
+           MyWindow: MoveWinOBJ;
+           K: word;
+           X,Y: byte;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MyWindow do
+            begin
+               Init;
+               Draw;
+               Screen.WriteLn('Hello Mum');
+               Repeat
+                  WinGetKey(K,X,Y);
+               until (K = 600) or (K= 27);
+               Done;
+            end;
+         end.
+
+
+
+Window Attributes
+
+         The color scheme used by all windows defaults to the colors defined in
+         the LookTOT^ instance. LookTOT^ also defines the special keys which are
+         used to move, stretch and zoom windows using the keyboard. By modifying
+         the LookTOT^ settings, you can quickly and easily change the default
+         window colors and special keys.
+         The two LookTOT^ methods which control the windows defaults are:
+
+
+         LookTOT^.SetWindow(Border,Body,Icons,Title: byte);
+         This method is used to specify the four window display attributes. All
+         windows have four basic color zones: the window border (where the box
+         is usually drawn), the main window body, the special mouse icons on the
+         top border, and the attributes for the title.
+
+
+         LookTOT^.SetWinKeys(Move,Stretch,Zoom: word);
+         This method is used to define the keys which can be used to move,
+         stretch and zoom a window. By default these keys are [KEYCAP], [KEYCAP]
+         and [KEYCAP]. A user without a mouse must use these keys to manipulate
+         a window.
+
+         Refer to the LookTOT section on page 3-12 of chapter 3: Toolkit Basics
+         for further information.
+
+
+
+7-4                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         You can, of course, change the default window display attributes for
+         any window instance. In other words, every window can have its own
+         unique color combinations. LookTOT^ is simply used to define the
+         default colors which will be used if no other colors are specified.
+
+         Note: the special keys for window manipulation are not configurable for
+         each individual window. It would be confusing for the user if different
+         keys were used on different windows!
+
+
+         All windows optionally support shadows. The shadow characteristics are
+         controlled by the global instance ShadowTOT^. Refer to page 3-13 for
+         further information.
+
+
+
+
+Getting User Input
+         In the last chapter you learned that the KEY instance is used to deter-
+         mine user input. If you were observant, you may also have noticed that
+         some of the key codes in table 6.1 represented special window actions.
+         For example, code 600 indicates that the user selected the close window
+         icon.
+
+         If there is a window on display, and you are waiting for user input,
+         call the window method WinGetKey, rather than the Key.GetInput method.
+         Behind the scenes, WinGetKey calls Key.GetInput. The user action is
+         then checked to see if the user is trying to perform a window specific
+         task, like clicking on the close icon, or moving the window. The window
+         object will automatically process the key if it is a window-related
+         task, and adjust the key to indicate the task performed. The following
+         key codes indicate some window activity took place:
+              600   Window closed
+              601   Window moved
+              602   Window re-sized
+              610   Scroll Up
+              611   Scroll Down
+              612   Scroll Left
+              613   Scroll Right
+              614   Vertical Elevator
+              615   Horizontal Elevator
+
+
+
+          Note: if the key code indicates that the window has been re-sized or
+          scrolled, your application will need to refresh the window contents
+          as appropriate. Many of the other Toolkit units provide automatic
+
+
+
+Using Windows                                                                7-5
+--------------------------------------------------------------------------------
+
+          support for displaying items like lists, files and directories in a
+          window. All this screen refreshing and display management is handled
+          for you.
+
+
+
+         The syntax of the WinGetKey method is as follows:
+
+
+         WinGetKey(var K:word; var X,Y: byte);
+         This method is passed 3 variable parameters. The first parameter will
+         be updated with the key the user pressed, and the second two parameters
+         will be updated with the (X,Y) coordinates of the mouse when the action
+         took place. If the key code is 614 or 615 (indicating the user clicked
+         the mouse in the scroll bar) the  (X,Y) coordinates represent the frac-
+         tion (X/Y) showing how far down to scroll.
+
+         Refer back to the example on page 7.3, and you will notice that WinGet-
+         Key is called until the user selects the close icon (code 600) or
+         presses [KEYCAP] (code 27).
+
+
+Basic Windows
+
+         The basic window object type is WinOBJ. Any WinOBJ instance is a static
+         pop-up window. Don't forget that every instance must be initialized
+         with the INIT method and disposed of with the DONE method. The DRAW
+         method is used to save the screen contents and display the window
+         frame. Any subsequent screen writes will be within the window. The
+         window can be removed with the method REMOVE, and the original screen
+         contents are then restored. Ordinarily, the window is automatically
+         removed when the DONE method is called.
+         There are a variety of WinOBJ methods for setting the window character-
+         istics, as follows:
+
+
+         SetSize(X1,Y1,X2,Y2,Style:byte);
+         When the window instance is initialized, the window is set with dimen-
+         sions (10,5) to (70,20) in a style of 1. The style parameter is the
+         same as the box style parameter discussed in chapter 5: Writing to the
+         Screen page 5-7. Call the method SetSize to customize the size and
+         style of the window.
+
+
+         SetTitle(Title:string);
+         Sets the window title. The window objects support the use of the title
+         prefix characters, as discussed on page 5-8. If the Title is too long,
+         it will be truncated to fit within the window boundaries.
+
+
+
+7-6                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         SetColors(Border,Body,Title,Icons: byte);
+
+         Use this method to customize the display attributes of the window. The
+         four parameters represent the combined foreground/background attributes
+         for the window border, window body, window title, and the close/zoom
+         icons respectively. If your program will be run on monochrome and color
+         systems, call the method Monitor^.ColorOn to decide whether to use
+         color or monochrome color combinations.
+
+         SetRemove(On:boolean);
+
+         By default, the window is removed when the method Done is called. Use
+         this method to control whether the window is removed or not. Pass TRUE
+         to activate the window removal, or FALSE to leave the window image on
+         the screen when Done is called.
+
+         SetClose(On:boolean);
+
+         This method controls whether the close icon [*] is drawn at the top
+         left of the window. Pass TRUE to enable it, or FALSE to disable it. By
+         default, the close icon is enabled.
+
+         The following example, DEMWI3.PAS, shows how to use these basic window
+         methods, and figure 7.2 shows the generated screen image:
+
+         program DemoWindowThree;
+         {DEMWI3 - WinOBJ settings}
+         Uses DOS,CRT,
+              totFAST, totINPUT, totWIN;
+
+         var
+           MyWindow: WinOBJ;
+           K: word;
+           X,Y: byte;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MyWindow do
+            begin
+               Init;
+               SetSize(5,5,25,10,3);
+               SetTitle(' Greetings ');
+               SetClose(false);
+               SetRemove(false);
+               SetColors(94,95,89,80);
+               Draw;
+               Screen.WritePlain(1,1,'Hello Mum');
+               Repeat
+                  WinGetKey(K,X,Y);
+               until (K=27);
+
+
+Using Windows                                                                7-7
+--------------------------------------------------------------------------------
+
+               Done;
+            end;
+         end.
+
+Figure 7.2                                                              [SCREEN]
+A WinOBJ
+Example
+
+         The following WinOBJ function methods return information about the cur-
+         rent window settings:
+
+
+         GetSize(var X1,Y1,X2,Y2,Style: byte);
+         This method is passed five variable parameters which are updated with
+         the current window coordinates and style.
+
+
+         GetX: byte;
+         Returns the X coordinate of the upperleft window corner.
+
+
+         GetY: byte;
+         Returns the Y coordinate of the upperleft window corner.
+
+
+         GetStyle: byte;
+         Returns the window style.
+
+
+         GetBorderAttr: byte;
+         Returns the display attribute of the window border.
+
+
+         GetBodyAttr: byte;
+         Returns the display attribute of the main window area.
+
+
+         GetIconsAttr: byte;
+         Returns the display attribute of the window close and zoom icons.
+
+
+         GetTitleAttr: byte;
+         Returns the display attribute of the window title.
+
+
+         GetRemoveStatus: boolean;
+
+7-8                                                                 User's Guide
+--------------------------------------------------------------------------------
+
+         Returns true if the window will be removed when the Done method is
+         called.
+
+
+         Once you have initialized the window and assigned the appropriate set-
+         tings, the window is ready to be displayed. To display the window, use
+         one of the following two methods:
+
+
+         Draw;
+         The window is displayed, and the cursor is moved to the top left corner
+         of the window.
+
+
+         GrowDraw;
+         This is the same as draw, except that the window g.r..o..w...s onto the
+         screen for a special effect.
+
+
+         Once the window has been drawn, use the standard Screen methods to
+         write to the window. Note that the upperleft coordinate of the inner
+         part of the window is (1,1). Refer to page 5-16 for a discussion of
+         window coordinates.
+         The following method, Remove, can be used to remove the window:
+
+
+         Remove;
+         Restores the original screen contents as well as the cursor location
+         and shape. If window coordinates were active when the window was drawn,
+         the previous window coordinates are restored.
+
+
+         The Remove method is automatically called if the DONE method is called,
+         if the remove setting is true and if the window is still on display.
+         The Done method also disposes of any memory used by the window.
+
+
+
+Moveable Windows
+         A moveable window is like the static windows just described, except
+         that the user can move the window to any location on the screen. Remem-
+         ber that a user can move the window by holding down the left mouse
+         button on the top window border (making sure not to hit a window icon),
+         and dragging the window around the display. The same result can be
+         achieved by pressing the move hotkey (defined in LOOKtot^), which
+         defaults to [KEYCAP]. The window can then be moved by pressing the
+         cursor keys, and the move is completed by pressing [KEYCAP].
+
+
+
+Using Windows                                                                7-9
+--------------------------------------------------------------------------------
+
+         A moveable window is created by declaring an instance of type MoveWi-
+         nOBJ. Moveable windows share all the properties of static windows, and
+         all the previously described methods are available. Moveable windows
+         have the following two methods which restrict window movement:
+
+
+         SetBoundary(X1,Y1,X2,Y2:byte);
+         This method controls the area of the screen in which the window can be
+         moved. By default, this boundary is the entire screen. Use this method
+         to stop the user from placing the window on top of some information you
+         want to be displayed. For example, the following statement will keep
+         the window away from the top and bottom display lines:
+         SetBoundary(1,2,80,24);.
+
+
+         SetAllowMove(On:boolean);
+         Not too surprisingly, by default, the Toolkit allows the user to move
+         moveable windows. This method allows you to restrict, and later, enable
+         window movement. Pass a False parameter to stop window movement, and a
+         True to enable movement. Circumstances under which you might use this
+         routine; you are using other Toolkit units, which themselves use move-
+         able windows, but you want to disable movement. For example, message,
+         list and browse objects.
+
+
+         Refer back to DEMWI2.PAS on page 7.3 for an example of a moveable
+         window.
+
+
+Windows with Scroll Bars
+
+         If you have run some of the larger Toolkit demo programs, you may have
+         noticed the scroll bars on some of the window boundaries. The scroll
+         bars provide a way for the user to scroll a window's contents using the
+         mouse. Various units in the Toolkit (discussed in later chapters) pro-
+         vide comprehensive support for displaying files, directories and lists
+         in windows with scroll bars. However, if these objects don't meet your
+         needs, you can build your own scrollable window using the ScrollWinOBJ
+         object.
+         ScrollWinOBJ is a descendant of MoveWINOBJ, and so shares all the prop-
+         erties and methods of the moveable windows just discussed. In essence,
+         a scrollable window is simply a moveable window with scroll bars (see
+         figure 7.3).
+
+
+Figure 7.3                                                              [SCREEN]
+A Scrollable
+Window
+
+
+
+
+7-10                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         Scrollable windows support both horizontal and/or vertical scroll bars,
+         which can be activated by calling the following method:
+
+
+         SetScrollable(Vert,Horiz:boolean);
+         This method controls which scroll bars are drawn; the first parameter
+         controls the vertical scroll bar, and the second the horizontal one.
+         Pass a TRUE to instruct the window to display the scroll bars. By
+         default, both scroll bars are disabled, i.e. set to false.
+
+
+         The sliding elevator in the body of the scroll bar gives the user a
+         visual indication of which part of the data is currently being dis-
+         played in the window. For example, if the window is displaying a file
+         and the elevator is at the top of the scroll bar, the user must be
+         looking at the first part of the file. As the user scrolls down, the
+         elevator will jump down in increments. When the end of the file is
+         being viewed, the elevator will be at the bottom of the scroll bar.
+         Similary, the horizontal elevator will show the relative lateral posi-
+         tion of the window, e.g. how far along the line is being viewed.
+         Whenever you change the contents of a scrollable window, you should
+         re-draw the scroll bar(s) to show the relative location of the dis-
+         played data. The methods DrawHorizBar and DrawVertBar are used for this
+         purpose. When a scroll bar is re-drawn, the Toolkit must be instructed
+         where to position the elevator. This is achieved by passing two parame-
+         ters to the drawing methods. The first parameter represents the current
+         value (or location), and the second is the maximum value. For example,
+         if you are browsing a 1000 line file, and the first line visible in the
+         window is 265, the passed parameters would be (265,1000).
+
+         The syntax of the scroll bar drawing methods is as follows:
+
+         DrawHorizBar(Current,Max:longint);
+
+         Draws a horizontal scroll bar at the bottom of the window and positions
+         the elevator based on the fraction (Current/Max).
+
+         DrawVertBar(Current,Max: longint);
+
+         Draws a vertical scroll bar at the right of the window and positions
+         the elevator based on the fraction (Current/Max).
+
+
+         Once you have initially displayed the window, call the method WinGet-
+         Key(K,X,Y); (discussed on page 7-4) to determine the user action. The
+         following key codes indicate some scrolling activity:
+
+
+Using Windows                                                               7-11
+--------------------------------------------------------------------------------
+
+              610   Scroll Up
+              611   Scroll Down
+              612   Scroll Left
+              613   Scroll Right
+              614   Vertical Elevator
+              615   Horizontal Elevator
+
+
+         You should re-draw the window contents based on the action requested by
+         the user. The codes 614 and 615 indicate the user clicked the left
+         mouse button on the body of the scroll bar. This means the user wants
+         to jump to a different part of the data. The X and Y parameters
+         returned from WinGetKey indicate which data to display. The X coordi-
+         nate represents the number of characters along from the top (or left)
+         of the scroll bar where the user clicked the mouse. The Y coordinate
+         indicates the total length of the scroll bar.
+         For example, if the X and Y parameters are returned as 5 and 15,
+         respectively, you need to display the data which is 5/15ths of the way
+         from the top of the data. In our example of a 1000 line text file, you
+         would need to display the lines commencing with line 333, i.e.
+         (5/15)*1000.
+
+         Having re-drawn the window contents, don't forget to re-draw the scroll
+         bars.
+
+           Note: only window styles 1 through 5 support scrollable windows.
+           If the style is set to any other value, the window will use style
+           1.
+
+
+
+
+
+Stretchable Windows
+
+         The most flexible form of window supported by the Toolkit is called a
+         stretchable window. A stretchable window is a moveable window, the
+         dimensions of which can also be changed. A user can change the size of
+         a stretchable window by pressing down the left mouse button on the
+         lower right corner of the window and dragging the corner to the desired
+         location. The same result can be achieved by pressing the stretch
+         hotkey (defined in LOOKtot^), which defaults to [KEYCAP]. The window
+         can then be moved by pressing the cursor keys, and the move is com-
+         pleted by pressing [KEYCAP].
+         A user can also zoom the window to its full size by clicking on the
+         zoom icon, located at the top right of the window. When the window is
+
+
+
+7-12                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         fully zoomed, it can be restored to its pre-zoom dimensions by clicking
+         on the zoom icon a second time. The default zoom and un-zoom key is
+         [KEYCAP].
+
+         To create a stretchable window, create an object instance of type
+         StretchWinOBJ. This object is descendant from ScrollWinOBJ and so
+         shares all its characteristics and methods.
+         The coordinates of a full zoomed window are defined with the SetBounda-
+         ries method described in the previous section. The following method is
+         used to control the minimum window size:
+
+
+         SetMinSize(Width,Depth: byte);
+         The two parameters set the minimum width and depth of the window in
+         characters. By default, the minimum is 10 characters wide by 5 charac-
+         ters deep.
+
+
+         The following method can be used to control whether the user is allowed
+         to stretch and zoom the window:
+
+         SetAllowStretch(On:boolean);
+
+         Pass a False parameter to disable window stretching, or a True parame-
+         ter to enable window stretching. When stretching is disabled, the size
+         of the window cannot be changed with either the mouse or the keyboard.
+
+         Whenever a user stretches or zooms a window, the window is re-drawn
+         with the new dimensions, and the body of the window is cleared. You
+         must then rewrite the window contents, and re-draw the scroll bars.
+         WinGetKey will return a code of 602 if the user has re-sized the win-
+         dow.
+
+         Listed below is the demo program DEMWI4.PAS which provides a framework
+         for building your own scrollable window routines.
+         program DemoWindowFour;
+         {DEMWI4 - a StretchWinOBJ template}
+
+         Uses DOS,CRT,
+              totFAST, totINPUT, totWIN;
+         var
+           MyWindow: StretchWinOBJ;
+           K: word;
+           X,Y: byte;
+
+
+
+Using Windows                                                               7-13
+--------------------------------------------------------------------------------
+
+         procedure ScreenRefreshProc;
+         {This procedure would refresh the screen contents}
+         begin
+            Screen.WritePlain(1,1,'Fresh Screen');
+            {...}
+            MyWindow.DrawHorizBar(1,100); {the parameters should reflect}
+            MyWindow.DrawVertBar(1,100);  {the data position of the window}
+         end;
+
+         procedure ScrollUpProc;
+         begin
+         end;
+         procedure ScrollDownProc;
+         begin
+         end;
+
+         procedure ScrollLeftProc;
+         begin
+         end;
+         procedure ScrollRightProc;
+         begin
+         end;
+
+         procedure ScrollJumpVertProc(X,Y:byte);
+         begin
+         end;
+         procedure ScrollJumpHorizProc(X,Y:byte);
+         begin
+         end;
+
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with MyWindow do
+            begin
+               Init;
+               SetTitle(' Template ');
+               SetBoundary(1,1,80,24);
+               SetScrollable(true,true);
+               Draw;
+               ScreenRefreshProc;
+               Repeat
+                  WinGetKey(K,X,Y);
+                  case K of
+                  602: ScreenRefreshProc;
+                  610: ScrollUpProc;
+                  611: ScrollDownProc;
+                  612: ScrollLeftProc;
+                  613: ScrollRightProc;
+                  614: ScrollJumpVertProc(X,Y);
+
+
+7-14                                                                User's Guide
+--------------------------------------------------------------------------------
+
+                  615: ScrollJumpHorizProc(X,Y);
+                  end;
+               until (K=27) or (K=600);
+               Done;
+            end;
+         end.
+
+
+         In Part 2: Extending the Toolkit, techniques for creating objects
+         descendant from ScrollWinOBJ are discussed. Specifically, the text
+         describes how to create an object for scrolling a virtual screen within
+         a window.
+
+
+

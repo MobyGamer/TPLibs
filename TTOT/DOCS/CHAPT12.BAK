@@ -1,0 +1,1430 @@
+                                                                           Menus
+                                                                           Menus
+                                                                           Menus
+
+
+
+         "Ninety-eight percent of the adults in this country are decent, hard-
+         working Americans. It's the other lousy two percent that get all the
+         publicity. But then we elected them."
+
+                                                                     Lily Tomlin
+
+
+
+
+
+Introduction
+         You want menus, we got menus!
+
+         The Toolkit includes three main menu types: pop-up menus, Lotus-style
+         menu bars and pull-down menus. All the menus can be nested many levels
+         deep, i.e. when the user selects an item from a menu, another menu can
+         be automatically displayed. You may optionally specify a description
+         for any menu item, and when the user highlights the item, the descrip-
+         tive text is automatically displayed. All the menus provide full mouse
+         support, and if the mouse cursor drifts across a specific item, it is
+         automatically highlighted. Menu items can also be selected with the
+         cursor keys or by pressing a menu item hotkey.
+         The object hierarchy includes a number of abstract objects, as illus-
+         trated in figure 12.1. You should never declare an instance of type
+         BaseMenuOBJ, WinMenuOBJ, BarMenuOBJ or KwikPullOBJ, as these are
+         abstract. Use one of the following objects to display a menu:
+
+         MenuOBJ            This object displays a simple menu in a window. This
+                            object is commonly used for a program's main menu
+                            which is displayed when the program starts.
+         MoveMenuOBJ        This object is similar to MenuOBJ, except that the
+                            user can drag the menu around the screen to view the
+                            contents of the screen below.
+
+         LotusMenuOBJ       The LotusMenuOBJ provides a 1-2-3 (or Paradox!)
+                            style menu bar. The user scrolls left and right
+                            along the menu bar.
+         PullMenuOBJ        This is an "IDE-like" pull-down menu which supports
+                            multiple levels of sub-menus.
+
+         EZPullArrayOBJ     This objects provides a quick and easy way of
+                            creating a sophisticated pull-down menu. All you
+                            have to do is update a string array with the
+                            individual item details, and instruct the Toolkit to
+                            display the menu.
+
+12-2                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         EZPullLinkOBJ      This object is similar to the EZPullArrayOBJ, except
+                            that the menu item details are added to a linked
+                            list (of type DLLOBJ or descendant).
+
+
+Figure 12.1                                                            [PICTURE]
+Menu
+Object Hierarchy
+
+
+
+Common Methods
+         All menus contain items, hotkeys, descriptions, and the like. The Tool-
+         kit's varied menu objects share a variety of common methods which are
+         used to construct the menu details and characteristics.
+
+
+Adding Menu Item Details
+
+         The following methods are used to set the individual menu details:
+
+         Init;
+
+         The Init method is passed no parameters, and should be called before
+         any other menu method.
+
+         AddItem(Txt:StrVisible);
+
+         This method is used to add an item to the menu. The method is passed
+         one parameter identifying the menu text to be displayed. The item
+         string may include embedded highlight characters to indicate that a
+         specific character is designated as a hot key -- refer to the WriteHi
+         method on page 5-3 for further information. Special strings can be
+         passed to force blanks or lines in the menu item list - see the note at
+         the end of this section.
+
+         The following methods may be called to further define the settings for
+         each item. Note, however, that the item must have been added with AddI-
+         tem (or AddFullItem) before these additional settings can be specified.
+
+
+         SetHK(Item:byte; HK:word);
+         Any item can be assigned a hotkey, which provides a way for the user to
+         select the item without scrolling to the item. All the user does is
+         press the hotkey. The de facto standard is to use normal alphabet char-
+         acters as the hotkeys. (Lotus and pull-down menus support additional
+         hotkeys which can be pressed even when the appropriate menu is not on
+         display -- this subject is discussed in detail later).
+
+
+Menus Menus Menus                                                           12-3
+--------------------------------------------------------------------------------
+
+         SetMessage(Item:byte; Msg:StrVisible);
+
+         The SetMessage method is used to define a message for an item. When the
+         item is highlighted, the message will be automatically displayed, and
+         when the user moves to a different item, the message is removed. The
+         Toolkit does not save the contents of the screen where the message is
+         displayed.
+
+         SetID(Item:byte; ID:word);
+
+         In a menu system, which includes sub-menus, this method can be used to
+         assign each topic in the menu a unique ID. The method is passed two
+         parameters; the item number and the item ID. This ID is of type word,
+         and will be returned by the menu method Activate if the item is
+         selected by the user. Note that you should not use IDs greater than
+         65000, because some of these IDs are used internally by the Toolkit.
+
+         SetStatus(Item:byte, On:boolean);
+
+         Sometimes, certain menu items will not be selectable. For example, a
+         File Save option may not be operative until a file has been loaded or
+         created. The SetStatus method is used to control whether an option is
+         selectable. The method is passed two parameters; the item number and a
+         boolean parameter. Set the boolean to TRUE to enable the item and FALSE
+         to disable it.
+
+         SetSubMenu(Item:byte; SubMenu:BaseMenuPtr);
+
+         This method is used to indicate that another menu should be displayed,
+         if the item is selected by the user. The Toolkit will automatically
+         display the new menu below and to the right of the active menu. The
+         method is passed two parameters; the item number and the address of the
+         sub-menu object. Normally, you will call another menu instance of the
+         same type as the parent, e.g. if the parent menu is of type MenuOBJ,
+         then the sub-menu is usually of type MenuOBJ. This, however, is not
+         mandatory, and any menu item can display a sub-menu of any type in the
+         menu object hierarchy. Note that the second parameter is the address of
+         the sub-menu, and is normally specified by preceding the menu object
+         with the Turbo Pascal "@" address symbol. For example:
+
+                     SetSubMenu(5,@FileMenu);
+
+         When you want to specify all the menu item details, e.g. message, HK,
+         sub-menu, etc., you can use the following all-in-one method:
+
+
+         AddFullItem(Txt:StrVisible;ID,Hk:word; Msg:StrVisible; SubM:Baseme-
+         nuPtr);
+
+
+
+12-4                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         As you may have guessed, this method is used to add a new item and
+         specify its settings in one heavy statement! This method is a single
+         replacement for five of the previous six methods. The only method that
+         is not accommodated by AddFullItem is SetStatus, and the Status is set
+         to true by default. Use one of the following values to suppress the
+         setting of one or more of the item elements:
+
+              No ID                  0
+              No hotkey              0
+              No message             ''
+              No sub-menu            nil
+
+         Listed below are two code fragments, both of which define the same
+         three-item menu. The first code block uses the individual methods, and
+         the second block takes advantage of AddFullItem. It doesn't matter
+         which technique you use, so use the one which seems easiest to you.
+         with MainMenu do
+         begin
+            Init;
+            AddItem(' ~L~oad file ')
+            SetID(1,1);
+            SetHK(1,76);
+            SetMessage(1,'Load a database file from disk');
+            AddItem(' ~S~ave file ');
+            SetID(2,2);
+            SetHK(83);
+            SetMessage(2,'Save the current database to disk');
+            AddItem(' ~Q~uit ');
+            SetID(3,99);
+            SetHK(3,81);
+            Setmessage(3,'Let''s party!');
+            ...
+         end;
+
+
+         with MainMenu do
+         begin
+            Init;
+            AddFullItem(' ~L~oad file ',1,76,'Load a database file from disk',-
+         nil);
+            AddFullItem(' ~S~ave file ',2,83,'Save the current database to
+         disk',nil);
+            AddFullItem(' ~Q~uit ',99,81,'Let''s party!',nil);
+            ...
+         end;
+
+         Having created a menu, the following methods can be used to display,
+         start, remove and dispose of the menu.
+
+
+
+Menus Menus Menus                                                           12-5
+--------------------------------------------------------------------------------
+
+         Draw;
+
+         This method instructs the object to draw itself. As soon as the menu is
+         drawn, the method returns control back to your program, i.e. the object
+         does not process any user input.
+
+         Activate: word;
+
+         This is the main "DO-IT!" method. If the menu is not already visible,
+         the menu is drawn, and then the Toolkit processes user input until the
+         user selects a menu item or ESCapes (if ESC is enabled). The function
+         method returns the ID of the selected item. If the ID was never speci-
+         fied, i.e. it is set to zero, the Toolkit will return the actual item
+         number. Note, however, that this number is the item number in the
+         currently displayed menu. In a system with sub-menus you will not know
+         which sub-menu was on display. In a system with sub-menus, you should
+         therefore always assign a unique ID to each selectable item. A zero is
+         returned if the user escaped.
+
+         Remove;
+
+         This methods removes the menu. If the menu is of type MenuOBJ or Move-
+         MenuOBJ, the underlying screen contents are restored. All other menu
+         objects do not restore any underlying screen contents -- they simply
+         erase the menu text.
+
+         Done;
+
+         When the menu is no longer required, call this method to dispose of the
+         memory used internally by the menu.
+
+
+
+Changing Menu Characteristics
+
+         The following methods are used to control the general display charac-
+         teristics of the menu:
+
+         SetGap(G:byte);
+
+         This method is used to create a space (or gap) to the left and right of
+         each menu item. In a pop-up menu, this can be used to create a space
+         between the menu border and the menu text. With Lotus and pull-down
+         menus, this method creates a space between each item along the top menu
+         bar. The method is passed one parameter; a byte representing the number
+         of characters space to allow on either side of each menu item.
+
+         SetMenuXY(X,Y: byte);
+
+
+
+12-6                                                                User's Guide
+--------------------------------------------------------------------------------
+
+         This method is used to set the specific location of the menu on the
+         screen. The method is passed two byte parameters representing the (X,Y)
+         coordinate of the top left corner of the menu. With pop-up menus, the
+         menu will be centered laterally and vertically if the X or Y parameter
+         is set to zero.
+
+
+         SetMesssageXY(X,Y:byte);
+         This method is used to specify the location of the optional message
+         which is displayed when a topic is highlighted. The method is passed
+         two parameters representing the (X,Y) coordinate of the first character
+         in the message.
+
+
+         SetAllowEsc(On:boolean);
+         This method is used to control whether the user may escape from the
+         menu. It is passed a single boolean parameter, which should be set to
+         TRUE to enable escape (the default), or FALSE to disable it.
+
+
+         SetActiveItem(Item:byte);
+         Normally, the first item in a menu is highlighted when the menu is
+         first displayed. If this item is non-selectable, or if you want to
+         highlight a different item, use the method SetActiveItem. The method is
+         passed one byte parameter identifying the topic number of the item to
+         be highlighted.
+
+
+         The display colors are controlled by the menu item colors, and (in the
+         case of pop-up and pull-down menus) the window display colors. All the
+         colors default to values established by LookTOT. To change the look and
+         feel of your menus, you should assign new default values to LookTOT.
+         Refer to page 3-12 for a description of how to control the LookTOT
+         defaults. The following two methods can be used to control the display
+         colors of any individual menu:
+
+         SetColors(HiHot,HoNorm,LoHot,LoNorm,Off:byte);
+
+         This method changes the display colors of the individual menu items.
+         The procedure is passed five byte parameters: the first two parameters
+         control the display color of the menu highlight bar -- the first param-
+         eter is the attribute of any highlighted text, e.g. the 'Q' in
+         '~Q~uit', and the second parameter is the standard display color, e.g.
+         the 'uit' part. The third and fourth parameters are the display attrib-
+         utes for the un-selected (or normal) menu items, and the fifth parame-
+         ter is the display attribute of inactive items. Note that this method
+         automatically sets the window body display color to the parameter
+         LoNorm.
+
+
+
+Menus Menus Menus                                                           12-7
+--------------------------------------------------------------------------------
+
+         Win^.SetColors(Border,Body,Title,Icons: byte);
+
+         In the case of pop-up and pull-down menus, this method sets the colors
+         of the underlying window. Refer to page 7-6 for a general description
+         of this window method.
+
+
+Adding Lines and Gaps
+         Sometimes, you may want to display a menu with some items separated
+         from others. By specifying special item text, you instruct the Toolkit
+         to draw special lines, or leave a gap. The following item text should
+         be used:
+
+         ''    A null string creates a gap in the menu.
+         '-'   A string comprising entirely of the minus sign will result in a
+               single horizontal line being drawn from the left to the right of
+               the menu.
+
+         '='   A string comprising entirely of the equals sign will result in a
+               double horizontal line being drawn from the left to the right of
+               the menu.
+         For example, the following code fragment will force a blank line
+         between the third and fourth selectable items, and draws a single line
+         between the last two picks:
+
+                  AddItem('Whips');
+                  AddItem('Chains');
+                  Additem('Rubber');
+                  AddItem('');
+                  AddItem('Hard Disks');
+                  AddItem('Floppies');
+                  AddItem('-');
+                  AddItem('Quit');
+
+
+
+           Note: even non-selectable menu items are recognized as items in
+           the menu list. When you use one of the Set methods (described
+           earlier), be sure to include the non-selectable items in the list.
+           For example, in the above code fragment, the "Quit" item is item
+           number 8 (not 6), and its hotkey could be set to "Q" with the
+           following method call:
+
+                              SetHK(8,ord('Q'));
+
+
+
+12-8                                                                User's Guide
+--------------------------------------------------------------------------------
+
+Examples
+
+         Listed below is the demo file DEMMN1.PAS, which illustrates how to
+         create a simple menu using some of the methods already described. Fig-
+         ure 12.2 illustrates the resultant display.
+         program DemoMenuOne;
+         {DEMMN1 - a basic menu}
+
+         USES  DOS, CRT,
+               totMENU, totFAST;
+         var
+           Main: MenuOBJ;
+           Choice: byte;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with Main do
+            begin
+               Init;
+               AddItem('');
+               AddItem(' Load a file          ');
+               AddItem(' Edit Date            ');
+               AddItem(' Save the file        ');
+               AddItem(' Change configuration ');
+               AddItem('-');
+               AddItem(' Quit                 ');
+               SetStyleTitle(1,' Main Menu ');
+               SetActiveItem(2);
+               Choice := Activate;
+               Done;
+            end;
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+Figure 12.2                                                             [SCREEN]
+A Simple Menu
+
+
+Creating Pop-Up Menus
+
+         totMENU provides two objects for creating pop-up menus: MenuOBJ and
+         MoveMenuOBJ. Both these objects create menus which are displayed in a
+         window, the only difference being that MoveMenuOBJ creates moveable
+         menus, i.e. menus that the user can drag around the screen.
+
+
+
+Menus Menus Menus                                                           12-9
+--------------------------------------------------------------------------------
+
+         Both objects are descendant from BaseMenuOBJ and inherit the following,
+         previously described, methods:
+
+         Init;
+         AddItem(Txt:StrVisible);
+         SetHK(Item:byte; HK:word);
+         SetMessage(Item:byte; Msg:StrVisible);
+         SetID(Item:byte; ID:word);
+         SetStatus(Item:byte, On:boolean);
+         SetSubMenu(Item:byte; SubMenu:BaseMenuPtr);
+         AddFullItem(Txt:StrVisible;ID,Hk:word; Msg:StrVisible; SubM:Baseme-
+         nuPtr);
+         Draw;
+         Activate: word;
+         Remove;
+         SetGap(G:byte);
+         SetMenuXY(X,Y: byte);
+         SetMessageXY(X,Y:byte);
+         SetAllowEsc(On:boolean);
+         SetActiveItem(Item:byte);
+         SetColors(HiHot,HoNorm,LoHot,LoNorm,Off:byte);
+         Done;
+
+         The menu is drawn on a window, and the following function methods can
+         be used to called any of the window methods:
+
+
+         Win: WinPtr;
+         Win: MoveWinPtr;
+         This function returns a pointer to the menu on which the menu is drawn.
+         For MenuOBJ instances the method returns a pointer to WinOBJ, and for
+         MoveWinOBJ it returns a pointer to MoveWinOBJ. Using the syntax
+         Win^.method you may call any of the window methods.
+
+
+         The menu window dimensions are automatically calculated from the width
+         and number of menu items. You should therefore avoid calling the window
+         method SetSize. As a convenience, the following method provides an easy
+         way to change the menu style and title.
+
+         SetStyleTitle(Style:byte; Tit:StrVisible);
+
+         This method sets the style and title of the menu window. The style
+         parameter is the same as the box style parameter discussed on page 5-7,
+         and the title supports the special title characters discussed on page
+         5-8.
+
+
+
+12-10                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         The first example shown at the end of the previous section illustrated
+         how to create a MenuOBJ menu. The on-disk demo file DEMMN2.PAS shows
+         how to create a moveable menu and control the display colors. Listed
+         below is the demo file DEMMN3.PAS, which illustrates how to create a
+         nested menu system. Figure 12.3 shows the generated menu.
+
+         program DemoMenuThree;
+         {DEMMN3 - nested pop-up menus}
+         USES  DOS, CRT,
+               totMENU, totFAST, totLOOK, totSYS;
+
+         var
+           Main,
+           Load: MenuOBJ;
+           Choice: byte;
+         begin
+            Screen.PartClear(1,1,80,24,white,'°'); {paint the screen}
+            Screen.PartClear(1,24,80,25,30,' ');
+            with Load do
+            begin
+               Init;
+               AddItem('');
+               AddFullItem(' ~1~  Accounts Payable    ',11,49,
+                           'Load database ACTP1',nil);
+               AddFullItem(' ~2~  Accounts Receivable ',12,50,
+                           'Load database ACTR7',nil);
+               AddFullItem(' ~3~  Net Assets Employed ',13,51,
+                           'Load the ledger file',nil);
+               AddFullItem(' ~4~  Net Cash Flow       ',14,52,
+                           'Load the cash file',nil);
+               SetStyleTitle(6,'Load Menu');
+               SetActiveItem(2);
+               SetMessageXY(25,25);
+               SetGap(1);
+               Win^.SetClose(False);
+            end;
+            with Main do
+            begin
+               Init;
+               AddItem('');
+               AddFullItem(' ~1~   Load a file         ',1,49,
+                           'Loads a new database file',@Load);
+               AddFullItem(' ~2~   Edit Date            ',2,50,
+                           'Full screen editing of data base entries',nil);
+               AddFullItem(' ~3~   Save the file        ',3,51,
+                           'Save database file to disk',nil);
+               AddFullItem(' ~4~   Change configuration ',4,52,
+                           'Modify colors and defaults',nil);
+
+
+
+Menus Menus Menus                                                          12-11
+--------------------------------------------------------------------------------
+
+               AddItem('');
+               AddFullItem(' ~Q~   Quit                 ',99,81,
+                           'Exit system and return to DOS',nil);
+               SetStyleTitle(6,'Main Menu');
+               SetActiveItem(2);
+               SetMenuXY(0,4);
+               SetMessageXY(25,25);
+               SetGap(1);
+               Win^.SetClose(False);
+               Choice := Activate;
+               Done;
+               Load.Done;
+            end;
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+Figure 12.3                                                             [SCREEN]
+Nested Pop-Up
+Menus
+
+
+Creating Lotus-style Menus
+
+         Lotus-style menus are menu bars which occupy a single line, and the
+         user scrolls left and right through the items. An optional description
+         of the highlighted item is usually displayed on the line immediately
+         below the menu bar.
+         The LotusMenuOBJ object makes building Lotus-style menus easy. LotusMe-
+         nuOBJ is descendant from BaseMenuOBJ, and inherits the following, pre-
+         viously described, methods:
+
+         Init;
+         AddItem(Txt:StrVisible);
+         SetHK(Item:byte; HK:word);
+         SetMessage(Item:byte; Msg:StrVisible);
+         SetID(Item:byte; ID:word);
+         SetStatus(Item:byte, On:boolean);
+         SetSubMenu(Item:byte; SubMenu:BaseMenuPtr);
+         AddFullItem(Txt:StrVisible;ID,Hk:word; Msg:StrVisible; SubM:Baseme-
+         nuPtr);
+         Draw;
+         Activate: word;
+         Remove;
+         SetGap(G:byte);
+         SetMenuXY(X,Y: byte);
+
+
+12-12                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         SetMessageXY(X,Y:byte);
+         SetAllowEsc(On:boolean);
+         SetActiveItem(Item:byte);
+         SetColors(HiHot,HoNorm,LoHot,LoNorm,Off:byte);
+         Done;
+
+
+         Listed below are the contents of the file DEMMN4.PAS, which uses these
+         basic methods to build a simple single-level Lotus menu. Figure 12.4
+         shows the resultant menu display.
+         program DemoMenuFour;
+         {DEMMN1 - a simple lotus menu}
+
+         USES  DOS, CRT,
+               totMENU, totFAST;
+         var
+           P: LotusMenuOBJ;
+           Choice: byte;
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            with P do
+            begin
+               Init;
+               AddItem('Worksheet');
+               AddItem('Range');
+               AddItem('Copy');
+               AddItem('Move');
+               AddItem('File');
+               AddItem('Print');
+               AddItem('Graph');
+               AddItem('Data');
+               AddItem('System');
+               AddItem('Quit');
+               SetActiveItem(1);
+               SetGap(1);
+               Choice := Activate;
+               Done;
+            end;
+            GotoXY(1,5);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+Figure 12.4                                                             [SCREEN]
+A Simple Lotus
+Menu
+
+
+Menus Menus Menus                                                          12-13
+--------------------------------------------------------------------------------
+
+         If the user is using a mouse to select an item, the item is selected
+         when the user lets go of the mouse button. If the user holds down the
+         mouse button, and drifts away from the menu surface, none of the items
+         will be highlighted. If the user then releases the mouse button (while
+         the mouse cursor is not over the menu surface), a special ID DriftID is
+         returned by Activate. DriftID is declared as a constant in the totMENU
+         unit. To recap, if the ID 0 is returned, the user escaped, and if
+         DriftID is returned, the user drifted off the menu and selected no
+         item. All other values indicate that the user chose a specific item
+         from the menu.
+
+         In addition to the inherited methods, LotusMenuOBJ objects support the
+         following methods:
+
+         SetSpecialKey(HK:word; ID:word);
+
+         The hotkeys which are defined for each menu item allow the user to
+         select the item by pressing the appropriate hotkey. However, only the
+         hotkeys for the currently displayed menu are recognized. In a nested
+         menu system, the SetSpecialKey method can be used to define hotkeys
+         which will be recognized regardless of which menu level is being dis-
+         played. The method is passed two parameters; the keycode of the hotkey
+         and the ID which will be returned when the user presses this special
+         key. Special hotkeys can be added in any order, and they do not have to
+         correspond to any of the actual menu items. For example, you could add
+         an [KEYCAP] key to return the value of 1000 with the following state-
+         ment:
+
+                  SetSpecialKey(301,1000);
+
+         If the menu is active, and the user presses [KEYCAP], the menu will
+         immediately end and return a value of 1000.
+
+         Menukey(K:word; X,Y: byte): boolean;
+
+         This method is passed three parameters defining the details of a key-
+         press, i.e. the keycode, and the (X,Y) coordinate of the mouse when the
+         key was pressed. The function method returns TRUE if the key's details
+         are recognized by the menu, i.e. if the details represent a menu
+         hotkey, or a mouse click on the menu surface.
+
+         Push(K:word; X,Y: byte);
+
+         The Activate method is used to start the menu and wait for user input.
+         The Push method is similar to activate, except that the procedure is
+         passed the key details for the first input to be processed. This method
+         can be used in conjunction with MenuKey to test for a menu key and then
+
+
+
+12-14                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         process it. For example, the following code fragment prompts the user
+         for input. If it is related to the menu, the menu is invoked, otherwise
+         SomeOtherTask is called:
+
+         var
+           Lmenu: LotusMenuOBJ;
+           K: word;
+           X,Y: byte;
+           Choice: word;
+           procedure SetUpLMenu;
+           {}
+           begin
+            with Lmenu do
+            begin
+               Init;
+               {...}
+               end;
+           end;
+
+           procedure SomeOtherTask(K:word;X,Y:byte);
+           {}
+           begin
+              {...}
+           end; {SomeOtherTask)}
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            SetUpLmenu;
+            Choice := 0;
+            Lmenu.Draw;
+            Mouse.Show;
+            Repeat
+               K := Key.Getkey;
+               X := Key.LastX;
+               Y := Key.LastY;
+               if Lmenu.Menukey(K,X,Y) then
+                  Choice := Lmenu.Push(K,X,Y)
+               else
+                  SomeOtherTask(K,X,Y);
+            Until (Choice <> 0) and (Choice <> DriftID);
+            Mouse.Hide;
+            writeln(Choice);
+         end.
+
+
+         Lotus menus can be nested many levels deep. Listed below is the demo
+         file DEMMN5.PAS, which shows how to create nested menus. Figure 12.5
+         shows the resultant display.
+
+
+
+Menus Menus Menus                                                          12-15
+--------------------------------------------------------------------------------
+
+         program DemoMenuFive;
+         {DEMMN5 - a nested Lotus menu}
+
+         USES  DOS, CRT,
+               totMENU, totFAST;
+         var
+           Main,
+           Worksheet,
+           Range: LotusMenuOBJ;
+           Choice: word;
+
+         procedure Pretend;
+         begin
+            Screen.Clear(31,' '); {paint the screen}
+            Screen.WriteAt(1,4,48,replicate(80,' '));
+            Screen.WriteCenter(4,48,'Not 1-2-3!');
+            Screen.PartClear(1,5,4,25,48,' ');
+         end; {Pretend}
+         begin
+            Pretend;
+            with Worksheet do
+            begin
+               Init;
+               AddFullItem('~G~lobal',100,71,'Global stuff',nil);
+               AddFullItem('~I~nsert',101,73,'Insert stuff',nil);
+               AddFullItem('~D~elete',102,68,'Delete stuff',nil);
+               AddFullItem('~C~olumn',103,67,'Column stuff',nil);
+               AddFullItem('~E~rase',104,69,'Erase stuff',nil);
+               AddFullItem('~T~itles',105,84,'Titles stuff',nil);
+               AddFullItem('~W~indow',106,87,'Window stuff',nil);
+               AddFullItem('~S~tatus',107,83,'Status stuff',nil);
+               AddFullItem('~P~age',108,80,'Page stuff',nil);
+               AddFullItem('~H~ide',109,72,'Hide things',nil);
+               SetActiveItem(1);
+               SetGap(1);
+            end;
+            with Range do
+            begin
+               Init;
+               AddFullItem('~F~ormat',200,70,'Format stuff',nil);
+               AddFullItem('~L~abel',201,76,'Label stuff',nil);
+               AddFullItem('~E~rase',202,69,'Erase stuff',nil);
+               AddFullItem('~N~ame',203,78,'Name stuff',nil);
+               AddFullItem('~J~ustify',204,74,'Justify stuff',nil);
+               AddFullItem('~P~rot',205,80,'Protect stuff',nil);
+               AddFullItem('~U~nprot',206,85,'Unprotect stuff',nil);
+               AddFullItem('~I~nput',207,73,'Input stuff',nil);
+               AddFullItem('~V~alue',208,86,'Value stuff',nil);
+
+
+
+12-16                                                               User's Guide
+--------------------------------------------------------------------------------
+
+               AddFullItem('~T~rans',209,84,'Transpose stuff',nil);
+               AddFullItem('~S~earch',209,83,'Search for things',nil);
+               SetActiveItem(1);
+               SetGap(1);
+            end;
+            with Main do
+            begin
+               Init;
+               AddFullItem('~W~orksheet',1,87,
+                           'Worksheet and global operations',@Worksheet);
+               AddFullItem('~R~ange',2,82,
+                           'Commands for manipulating data ranges',@Range);
+               AddFullItem('~C~opy',3,67,
+                           'Cell and range copying commands',nil);
+               AddFullItem('~M~ove',4,77,'Cell and range moving commands',nil);
+               AddFullItem('~F~ile',5,70,'File loading and saving operation-
+         s',nil);
+               AddFullItem('~P~rint',6,80,'Graph and spreadsheet printing',nil);
+               AddFullItem('~G~raph',7,71,'Spreadsheet charting',nil);
+               AddFullItem('~D~ata',8,68,'Database operations',nil);
+               AddFullItem('~S~ystem',9,83,'Drop to the Operating System',nil);
+               AddFullItem('~Q~uit',99,81,'Miller Time!',nil);
+               SetActiveItem(1);
+               SetGap(1);
+               Choice := Activate;
+               Done;
+               Worksheet.Done;
+               Range.Done;
+            end;
+            gotoxy(1,5);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+
+Figure 12.5                                                             [SCREEN]
+Nested Lotus
+Menus
+
+
+
+Pull Down Menus
+         The totMENU unit provides a number of objects to help you create pull-
+         down menus like the one used in the Turbo Pascal integrated environ-
+         ment. The main pull-down menu object is PullMenuOBJ, and it is a
+
+
+
+Menus Menus Menus                                                          12-17
+--------------------------------------------------------------------------------
+
+         descendant of LotusMenuOBJ -- a pull-down menu is really a Lotus menu
+         which calls pop-up menus when an item is selected from the main menu
+         bar. The other pull-down menus are EZPullArrayOBJ and EZPullLinkOBJ,
+         which allow you to quickly create a pull-down menu based on the con-
+         tents of a string array or linked list, respectively. Hence the prefix,
+         EZ!
+
+
+PullMenuOBJ
+
+         99% of Toolkit users will use the EZ objects, but before moving on to
+         explain such shortcuts, the PullMenuOBJ object needs to be described in
+         detail.
+         PullMenuOBJ supports the following, previously described, methods:
+
+         Init;
+         AddItem(Txt:StrVisible);
+         SetHK(Item:byte; HK:word);
+         SetMessage(Item:byte; Msg:StrVisible);
+         SetID(Item:byte; ID:word);
+         SetStatus(Item:byte, On:boolean);
+         SetSubMenu(Item:byte; SubMenu:BaseMenuPtr);
+         AddFullItem(Txt:StrVisible;ID,Hk:word; Msg:StrVisible; SubM:Baseme-
+         nuPtr);
+         Draw;
+         Activate: word;
+         Remove;
+         SetGap(G:byte);
+         SetMenuXY(X,Y: byte);
+         SetMessageXY(X,Y:byte);
+         SetAllowEsc(On:boolean);
+         SetActiveItem(Item:byte);
+         SetColors(HiHot,HoNorm,LoHot,LoNorm,Off:byte);
+         SetSpecialKey(HK:word; ID:word);
+         Menukey(K:word; X,Y: byte): boolean;
+         Push(K:word; X,Y: byte);
+         Done;
+
+         To build a pull-down menu using PullMenuOBJ, you create an object of
+         type PullMenuOBJ, and one MenuOBJ object for each pull-down menu panel.
+         When you add the items to PullMenuOBJ, the sub-menu parameter should be
+         a pointer to the appropriate MenuOBJ instance. Listed below is the demo
+         program DEMMN6.PAS, followed by figure 12.6 showing the display.
+
+         program DemoMenuSix;
+         {DEMMN6 - a simple pullmenu}
+         USES  DOS, CRT,
+               totMENU, totFAST;
+
+
+
+12-18                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         var
+           Fmenu,
+           Emenu: MenuOBJ;
+           Pmenu: PullMenuOBJ;
+           Choice: word;
+
+         procedure InitSubmenus;
+         {}
+         begin
+            with Fmenu do
+            begin
+               Init;
+               AddFullItem(' ~O~pen...       ',101,79,'',nil);
+               AddFullItem(' ~N~ew           ',102,78,'',nil);
+               AddFullItem(' ~S~ave...       ',103,83,'',nil);
+               AddFullItem(' S~a~ve as       ',104,65,'',nil);
+               AddFullItem(' Save a~l~l      ',105,79,'',nil);
+               AddItem('-');
+               AddFullItem(' ~C~hange dir ...',106,67,'',nil);
+               AddFullItem(' ~P~rint         ',107,80,'',nil);
+               AddFullItem(' ~G~et info...   ',108,71,'',nil);
+               AddFullItem(' ~D~OS shell     ',109,68,'',nil);
+               AddFullItem(' E~x~it          ',110,88,'',nil);
+               SetForPull;
+            end;
+            with Emenu do
+            begin
+               Init;
+               AddFullItem(' ~R~estore line   ',201,82,'',nil);
+               AddItem('-');
+               AddFullItem(' Cu~t~            ',202,84,'',nil);
+               AddFullItem(' ~C~opy           ',203,67,'',nil);
+               AddFullItem(' ~P~aste          ',204,80,'',nil);
+               AddFullItem(' Copy ~E~xample   ',205,69,'',nil);
+               SetStatus(6,false);
+               AddFullItem(' ~S~how clipboard ',206,83,'',nil);
+               AddItem('-');
+               AddFullItem(' C~l~ear          ',207,76,'',nil);
+               SetForPull;
+            end;
+         end; {InitSubMenus}
+         begin
+            Screen.Clear(white,'°'); {paint the screen}
+            Screen.PartClear(1,1,80,1,31,' ');
+            InitSubMenus;
+            with Pmenu do
+            begin
+               Init;
+
+
+
+Menus Menus Menus                                                          12-19
+--------------------------------------------------------------------------------
+
+               AddFullItem('   ~F~ile   ',1,70,'',@Fmenu);
+               AddFullItem('   ~E~dit   ',2,69,'',@Emenu);
+               AddFullItem('   ~R~un    ',3,82,'',nil);
+               SetID(3,3);
+               Choice := Activate;
+               Done;
+            end;
+            GotoXY(25,15);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+
+Figure 12.6                                                             [SCREEN]
+A Simple Pull-down
+Menu
+
+
+         The demo program creates a pull-down menu with three elements on the
+         menu bar: File, Edit and Run. A sub-menu is displayed when either of
+         the first two items is selected. The program therefore requires three
+         menu objects: a PullMenuOBJ to define the main menu bar, and two
+         MenuOBJ objects to define the pull-down elements. Notice the method
+         call SetForPull in both the MenuOBJ set-up routines. This method sets
+         the characteristics of the MenuOBJ objects to fit in a pull-down menu
+         environment, e.g. the border is set to 1, any titles are removed, etc.
+
+         Also, notice that each selectable item is assigned a unique ID. When
+         the user chooses an Item (which doesn't call a sub-menu), the item ID
+         is returned by the method Activate or Push.
+         If you want to add more sub-sub-menus, simply create additional MenuOBJ
+         objects, and set a menu item to point to the sub-menu instance. For
+         example, the following code fragment will result in a sub-menu being
+         displayed when the Print option is selected from the file menu (it is
+         assumed that PrintMenu is an instance of MenuOBJ):
+
+               AddFullItem(' ~P~rint         ',106,80,'',@PrintMenu);
+         As demonstrated by the third item "Run", items on the main menu bar do
+         not have to call sub-menus. If the user selects Run from the main menu,
+         an ID of three is returned.
+
+
+
+12-20                                                               User's Guide
+--------------------------------------------------------------------------------
+
+EZ Pull-Down Menus
+
+         The objects EZPullArrayOBJ and EZPullLinkOBJ provide a quick and easy
+         way of building powerful pull-down menus. The basic principle of the EZ
+         objects is that you define all the components of each menu item in a
+         string, and then instruct the Toolkit to build a pull-down menu from
+         the strings. The strings can either be stored in an array or in a
+         linked list.
+         Each string can have between one and four elements, with each element
+         being separated by a double-quote ("). The first element is the menu
+         item text, the second element is the message or menu description, the
+         third element is the item ID, and the fourth element is an optional
+         special hotkey which can be pressed anywhere in the menu hierarchy to
+         select the item. The syntax of the string is as follows:
+
+                     'menu text"description"ID"SpecialHK'
+         For example, the following string declares the menu item "Open..." :
+
+         ' ~O~pen...       "Locate and open a file in an edit window"201"316'
+         You do not need to specify all four elements. For example, if the item
+         does not have a special hotkey, omit the fourth part. If the item text
+         includes a highlighted character, e.g. ~O~, the Toolkit will automati-
+         cally assign that letter as the standard item hotkey.
+
+         The strings in the array or list must be specified in the order that
+         the picks will appear in the menu, and strings representing a main menu
+         item must begin with the backslash character. If you want a topic to be
+         non-selectable, start the string with an underscore, '_'. For example,
+         the following strings could be used to create a menu similar to the
+         DEMMN6.PAS program described earlier:
+          '\ ~F~ile   ';
+          ' ~O~pen...       "101'
+          ' ~N~ew           "102'
+          ' ~S~ave...       "103'
+          ' S~a~ve as       "104'
+          ' Save a~l~l      "105'
+          '-'
+          ' ~C~hange dir ..."106'
+          ' ~P~rint         "107'
+          ' ~G~et info...   "108'
+          ' ~D~OS shell     "109'
+          ' E~x~it          "110'
+          '\  ~E~dit   '
+          ' ~R~estore line  "201'
+          '-'
+          ' Cu~t~           "202'
+          ' ~C~opy          "203'
+          ' ~P~aste         "204'
+
+
+
+Menus Menus Menus                                                          12-21
+--------------------------------------------------------------------------------
+
+          '_Copy ~E~xample   "205'
+          ' ~S~how clipboard "206'
+          '-'
+          ' C~l~ear          "207'
+          '\  ~R~un    "3'
+
+
+
+           Note: the EZ objects can only be used to create a single-level
+           pull-down menu. Refer to the section Adding Sub-Menus to see how
+           to customize an EZ pull-down menu with sub-menus.
+
+         The EZ pull object dynamically creates an instance of PullMenuOBJ, and
+         as many MenuOBJ instances as needed to create the menu. The EZ pull
+         objects include the following two function methods which allow you to
+         directly access the internal PullMenuOBJ and MenuOBJ instances:
+
+
+         MainMenu: PullMenuPtr;
+         This function returns a pointer to the PullMenuOBJ instance used by the
+         EZ object. You may change the characteristics settings of the instance
+         by using the syntax Mainmenu^.method. For example, the following method
+         will draw the main menu bar: Mainmenu^.Draw.
+
+
+         SubMenu(MenuNumber: byte): SubMenuPtr;
+         This function returns a pointer to one of the MenuOBJ instances, i.e.
+         one of the first-level menu panels. You may change the characteristics
+         of the instance by using the syntax Submenu(num)^.method.
+
+
+EZPullArrayOBJ
+
+         The EZPullArrayOBJ builds and displays a pull-down menu based on the
+         contents of a string array. After calling Init, the following method
+         should be called to pass the menu details to the object:
+
+         AssignList(var StrArray; Total:longint; StrLength:byte);
+
+         AssignList identifies the string array which contains the menu struc-
+         ture. The method is passed three parameters; the string array, the
+         total number of elements in the array, and the defined string length of
+         each array element.
+
+         Unlike other Toolkit objects such as List and Browse, the EZPullArray-
+         OBJ copies the data from the string array. This means that, after
+         assignment, you can dispose of the string array. The partial listing of
+
+
+
+
+12-22                                                               User's Guide
+--------------------------------------------------------------------------------
+
+         the demo file DEMMN7.PAS (listed below), illustrates this technique.
+         The string array is created locally in the procedure CreateMenu, and is
+         automatically disposed of when the CreateMenu procedure finishes.
+
+         The demo program is a mock-up of Turbo Pascal's own IDE menu (see
+         Figure 12.7)
+         program DemoMenuSeven;
+         {DEMMN7 - using EZPull objects}
+         USES  DOS, CRT,
+               totMENU, totFAST;
+
+         var
+           Menu: EZPullArrayOBJ;
+           Choice: word;
+         procedure CreateMenu;
+         {}
+         var
+           Mtxt: Array[1..84] of string[90];
+         begin
+            MTxt[1] := '\ p "System Commands';
+            MTxt[2] := ' ~A~bout...  "Show version and copyright information-
+         "100';
+            MTxt[3] := ' ~R~efresh display "Redraw the screen"101';
+            MTxt[4] := ' ~C~lear desktop   "Close all windows on the desktop,
+         clear history lists"102';
+            MTxt[5] := '\ ~F~ile "File management commands (Open, New, Save,
+         etc.)';
+            MTxt[6] := ' ~O~pen...       "Locate and open a file in an edit
+         window"201';
+            {...}
+            MTxt[84] := ' ~H~elp on Help   "How to use online Help"1005';
+            with Menu do
+            begin
+               Init;
+               AssignList(MTxt,84,90);
+            end;
+         end; {CreateMenu}
+
+         begin
+            Screen.PartClear(1,2,80,24,white,'°'); {paint the screen}
+            Screen.PartClear(1,1,80,1,31,' ');
+            Screen.PartClear(1,25,80,25,31,' ');
+            Screen.WritePlain(9,25,'³');
+            CreateMenu;
+            with Menu do
+            begin
+               Choice := Push(13,0,0);   {Pass Enter to make menu pull down}
+               Done;
+            end;
+
+
+Menus Menus Menus                                                          12-23
+--------------------------------------------------------------------------------
+
+            GotoXY(25,15);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+Figure 12.7                                                             [SCREEN]
+An EZ Pull-down
+Menu
+
+
+
+EZPullLinkOBJ
+         The EZPullLinkOBJ reads the menu definition from a linked list, i.e.
+         from an instance of DLLOBJ or one of its descendants. After calling
+         Init, the following method should be called to pass the menu details to
+         the object:
+
+
+         AssignList(var LinkList DLLOBJ);
+         AssignList identifies the linked list which contains the menu defini-
+         tion. The method is passed one parameter; an instance of DLLOBJ or a
+         descendant, e.g. StrDLLOBJ.
+
+
+         As with EZPullArrayOBJ, the data is copied from the linked list to the
+         internal menu objects. Listed below is the demo program DEMMN8.PAS,
+         which shows how EZPullLinkOBJ can be used to read a menu from disk.
+         program DemoMenuEight;
+         {DEMMN8 - reading a menu from disk}
+         USES  DOS, CRT,
+               totMENU, totFAST, totLINK;
+
+         var
+           Menu: EZPullLinkOBJ;
+           Choice: word;
+         procedure CreateMenu;
+         {}
+         var
+           FileList: StrDLLOBJ;
+           Retcode: integer;
+           F: text;
+           Line:string;
+         begin
+            assign(F,'DEMMN8.TXT');
+            {$I-}
+
+
+
+
+12-24                                                               User's Guide
+--------------------------------------------------------------------------------
+
+            reset(F);
+            {$I+}
+            if ioresult <> 0 then
+            begin
+               Writeln('Error: the file DEMMN8.TXT must be in the default
+         directory!');
+               halt(1);
+            end;
+            with FileList do
+            begin
+               Init;
+               Retcode := 0;
+               ReadLn(F,Line);
+               while not eof(F) and (Retcode = 0) do
+               begin
+                  Readln(F,Line);
+                  Retcode := Add(Line);
+               end;
+               close(F);
+            end;
+            with Menu do
+            begin
+               Init;
+               AssignList(FileList);
+               FileList.Done;
+            end;
+         end; {CreateMenu}
+
+         begin
+            Screen.PartClear(1,2,80,24,white,'°'); {paint the screen}
+            Screen.PartClear(1,1,80,1,31,' ');
+            Screen.PartClear(1,25,80,25,31,' ');
+            Screen.WritePlain(9,25,'³');
+            CreateMenu;
+            with Menu do
+            begin
+               Choice := Push(13,0,0);   {Pass Enter to make menu pull down}
+               Done;
+            end;
+            GotoXY(25,15);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+
+Menus Menus Menus                                                          12-25
+--------------------------------------------------------------------------------
+
+Adding Sub-Menus
+
+         The EZ objects provide a quick way of building a single level pull-down
+         menu. If you want to have some sub-menus, you can still use the EZ
+         objects. First call the AssignList method to create the main pull-down
+         menu objects, and then create as many MenuOBJ instances as needed.
+         Finally, use the SubMenu function method to access individual menu ele-
+         ments and assign your own MenuOBJ instances to the appropriate menu
+         item.
+         Listed below is an extract of the demo file DEMMN9.PAS, which illus-
+         trates this technique:
+
+         program DemoMenuNine;
+         {DEMMN9 - using a EZPull object with sub menus and hotkeys}
+         USES  DOS, CRT,
+               totMENU, totFAST;
+         var
+           Env,Watch: MenuOBJ;
+           Menu: EZPullArrayOBJ;
+           Choice: word;
+
+         procedure CreateSubMenus;
+         {}
+         begin
+            with Env do
+            begin
+               Init;
+               SetForPull;
+               AddFullItem(' ~P~references... ',8061,80,
+                           'Specify desktop settings',nil);
+               AddFullItem(' ~E~ditor...      ',8062,69,
+                           'Specify editor settings',nil);
+               AddFullItem(' ~M~ouse...       ',8063,77,
+                           'Specify mouse settings',nil);
+               AddFullItem(' ~S~tartup...     ',8064,83,
+                           'Permanently change default startup options',nil);
+               AddFullItem(' ~C~olors...      ',8065,67,
+                           'Customize IDE colors for windows, menus, etc.',nil);
+            end;
+            with Watch do
+            begin
+               Init;
+               SetForPull;
+               AddFullItem(' ~A~dd watch...       ',7021,65,
+                   'Insert a watch expression into the Watch window',nil);
+               AddFullItem(' ~D~elete watch       ',7022,68,
+                   'Remove the current watch expression from the Watch window',-
+         nil);
+               AddFullItem(' ~E~dit watch...      ',7023,69,
+
+
+12-26                                                               User's Guide
+--------------------------------------------------------------------------------
+
+                   'Edit the current watch expression in the Watch window',nil);
+               AddFullItem(' ~R~emove all watches ',7024,82,
+                   'Delete all watch expressions from the Watch window',nil);
+            end;
+         end; {CreateSubMenus}
+
+         procedure CreateMenu;
+         {}
+         var
+           Mtxt: Array[1..84] of string[100];
+         begin
+            MTxt[1] := '\ p "System Commands';
+            {...}
+            MTxt[84] := ' ~H~elp on Help       "How to use online Help"1005';
+            with Menu do
+            begin
+               Init;
+               AssignList(MTxt,84,100);
+            end;
+         end; {CreateMenu}
+         begin
+            Screen.PartClear(1,2,80,24,white,'°'); {paint the screen}
+            Screen.PartClear(1,1,80,1,31,' ');
+            Screen.PartClear(1,25,80,25,31,' ');
+            Screen.WritePlain(9,25,'³');
+            CreateMenu;
+            CreateSubMenus;
+            with Menu do
+            begin
+               SubMenu(7)^.SetSubMenu(2,@Watch);
+               SubMenu(8)^.SetSubMenu(7,@Env);
+               Choice := Activate
+               Done;
+               Env.Done;
+               Watch.Done;
+            end;
+            GotoXY(25,15);
+            if Choice = 0 then
+               Writeln('You escaped')
+            else
+               Writeln('You selected menu item ',Choice);
+         end.
+
+
+Figure 12.8                                                             [SCREEN]
+Nested Pull-down
+Menus
+
+
+
+Menus Menus Menus                                                          12-27
+--------------------------------------------------------------------------------
+
+Adding Help
+
+         Adding help to menu objects is very similar to the ways described for
+         other objects like DirWinOBJ. To add a help facility to any menu
+         object, all you have to do is create a procedure following some spe-
+         cific rules, and then call the menu method SetHelpHook to instruct the
+         Toolkit to use your procedure.
+         For a procedure to be eligible as a help hook, it must adhere to the
+         following rules:
+
+         Rule 1     The procedure must be declared as a FAR procedure. This can
+                    be achieved by preceding the procedure with a {$F+} compiler
+                    directive, and following the procedure with a {$F-} direc-
+                    tive. Alternatively, Turbo 6 users can use the new keyword
+                    FAR following the procedure statement.
+         Rule 2     The procedure must be declared with one passed parameter of
+                    type word. This parameter indicates the ID of the high-
+                    lighted item at the time the user requested help.
+
+         Rule 3     The procedure must be at the root level, i.e. the procedure
+                    cannot be nested within another procedure.
+         The following procedure declaration follows these rules:
+
+                  {$F+}
+                  procedure MyHelpHook(ID:word);
+                  .....{procedure statements}
+                  end;
+                  {$F-}
+
+         The following method SetHelpHook is then called to instruct the Toolkit
+         to call your procedure when the user asks for help:
+
+
+         SetHelpHook(PassedProc:HelpProc);
+         This method is passed the procedure name of a procedure declared using
+         the rules outlined above.
+
+
+         Remember that if you are using an EZ object, you must access the Pull-
+         MenuOBJ using the following statement:
+                  Mainmenu^.SetHelpHook(YourProc);
+
+

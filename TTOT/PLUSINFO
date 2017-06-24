@@ -1,0 +1,80 @@
+
+                    Stony Brook Pascal+ Programming Notes
+                    =====================================
+
+                            1    INSTALLATION
+                            2    COMPILING DEMOS
+                            3    OVERLAYING UNITS
+
+1 Installation
+--------------
+The Install program can install the Object Toolkit for Turbo Pascal and 
+Pascal+. If you select the Pascal+ installation, in addition to copying 
+the source, demonstration, and documentation files, the Install program 
+can automatically create an Object Library Module TOT.LIB and TOT.SBL. 
+Once created, these files significantly speed up the compile and link 
+process.
+
+If you have already installed the Object Toolkit but did not create the
+LIB module, you should do so before proceeding. A log file has been
+installed in the directory \TJOCK\TOT. This logfile can be used to
+automatically generate a LIB file. (For more information on log files, 
+refer to page 40 of the Pascal+ Utilities Reference).
+
+To run the log file change directories to \TJOCK\TOT and execute the
+SBE.EXE file, passing two parameters "TOT TOT", e.g.
+                \path\SBE TOT TOT
+The SBE will be invoked, and the LIB files will be automatically created.
+Be  patient, and do not interrupt the process. The whole process may take
+between 10 and 20 minutes. Once completed, the \TJOCK\TOT will contain the
+files TOT.SBL and TOT.LIB.
+
+
+2 Compiling Demo Programs
+-------------------------
+
+This text is no substitute for reading the manual, however, if you
+want to get a quick feel for the Object Toolkit's (and Pascal+'s!)
+capabilities, try the following steps.
+
+STEP 1 - Change directories to the Toolkit demo, e.g. CD\TJOCK\TOTDEMO
+
+STEP 2 - Load SBE creating a TOTDEMO SBL, e.g. \SBPASCAL\SBE TOTDEMO
+
+STEP 3 - Enter Y at the prompt.
+
+STEP 4 - Select Options Environment from the menu, and change the compiler
+         to "Protected Mode Yes".
+
+STEP 5 - Select Options Directories and change the include file path to
+         "SOURCE;\TJOCK\TOT\SOURCE"
+
+STEP 6 - Select New Library and enter "\TJOCK\TOT\TOT"
+
+STEP 7 - Select New Program and enter "TOTDEMO"
+
+STEP 8 - Select the Run menu option (by pressing Alt-R).
+
+The TOTDEMO.EXE file will then be compiled and linked. If you have sufficient
+memory, the program will then be executed, otherwise, exit SBE and execute
+TOTDEMO from DOS.
+
+You are up and running with Pascal+ and the Object Toolkit!
+
+
+3  Overlaying Units
+-------------------
+
+Pascal+ handles overlays differently to Turbo Pascal. Briefly, to create a 
+program with overlays, the units to be overlayed must be compiled in the 
+{$O+} state (no differences so far!). In the main program, however, you
+do not use an OVERLAY unit, and the units to be overlayed should *not*
+be specified with the {$0 unitname} directive. Pascal+ requires an EDF file
+to identify which units are to be overlayed.
+
+The demonstration files DEMOV1.PAS and DEMOV1.EDF files illustrate how to
+overlay with Pascal+. 
+
+For further information, refer to Utilities Reference p 121
+
+

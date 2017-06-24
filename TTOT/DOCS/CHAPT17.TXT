@@ -1,0 +1,301 @@
+                                                                       Replacing
+                                                                             the
+                                                                          Screen
+                                                                          Writer
+
+         "I don't want to achieve immortality through my work, I want to achieve
+         immortality by not dying."
+
+                                                                     Woody Allen
+
+
+         The Toolkit uses some assembly language routines for writing to the
+         screen, as well as for moving blocks of data to and from the screen.
+         The routines are optimized for maximum speed, and by-pass BIOS, i.e.
+         they write directly to the video area of memory. If you are using a
+         non-standard display device, such as a palmtop computer, or you don't
+         like the (1..80,1..25) coordinate scheme, or for whatever other reason,
+         you can develop your own screen writing code to meet your custom needs.
+         In this chapter you will learn how to create an object to replace the
+         Toolkit's screen writing routines.
+
+
+Understanding ScreenOBJ and WriteOBJ
+
+         Before discussing how to replace the Toolkit's methods, you need to
+         understand how those methods work. Bear in mind that your replacement
+         algorithms may need to write to virtual screens as well as to the
+         physical screen.
+         The ScreenOBJ object is the primary Toolkit object for managing screen
+         and video related activity. The global instance Screen is automatically
+         initialized when you use the totFAST unit, and you should use the
+         Screen instance for all writing to the visible display. Additional
+         ScreenOBJ instances can be used to manage virtual (or non-visible)
+         screens. The method SAVE is used to save a copy of the visible screen,
+         and the method CREATE is used to create an empty virtual screen with
+         maximum dimensions of 255 rows by 255 columns. All or part of a virtual
+         screen can subsequently be displayed on the visible screen.
+
+         Each ScreenOBJ instance includes a pointer to a WriteOBJ object. Wri-
+         teOBJ actually performs the core screen writing functions. For example,
+         when you call ScreenOBJ's method WriteAT, behind the scenes the Toolkit
+         calls the WriteOBJ method WriteAT. By instructing ScreenOBJ to point to
+         a different WriteOBJ object you can change how screen tasks are per-
+         formed. In other words, by creating a new WriteOBJ object, you change
+         how the Toolkit accesses the video functions.
+         The two step process is to create a descendant of WriteOBJ, and then
+         instruct all ScreenOBJ instances to use this new object.
+
+
+
+17-2                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+Replacing WriteOBJ
+
+         The primary functions of WriteOBJ are to write to the screen, to move
+         blocks of data to and from the screen, to position the cursor, to
+         manage window settings, and to change the display attribute of a rect-
+         angular area of the screen.
+         The declaration of WriteOBJ is as follows:
+
+         WritePtr = ^WriteOBJ;
+         WriteOBJ = object
+            vWidth: byte;           {how wide is screen}
+            vScreenPtr: pointer;    {memory location of screen data}
+            vWindow: tByteCoords;   {active screen area}
+            vWindowOn: boolean;     {is window area active}
+            vWindowIgnore: boolean; {ignore window settings}
+            {methods...}
+            Constructor Init;
+            procedure   SetScreen(var P:Pointer; W:byte);
+            function    WindowOff: boolean;
+            procedure   SetWinIgnore(On:Boolean);
+            procedure   WindowOn;
+            procedure   WindowCoords(var Coords: tByteCoords);
+            function    WindowActive: boolean;
+            function    WinX: byte;
+            function    WinY: byte;
+            procedure   GetWinCoords(var X1,Y1,X2,Y2:byte);
+            procedure   WriteAT(X,Y,attr:byte;Str:string);             VIRTUAL;
+            procedure   WritePlain(X,Y:byte;Str:string);               VIRTUAL;
+            procedure   Write(Str:string);                             VIRTUAL;
+            procedure   WriteLn(Str:string);                           VIRTUAL;
+            procedure   GotoXY(X,Y: word);                             VIRTUAL;
+            function    WhereX: word;                                  VIRTUAL;
+            function    WhereY: word;                                  VIRTUAL;
+            procedure   SetWindow(X1,Y1,X2,Y2: byte);                  VIRTUAL;
+            procedure   ResetWindow;                                   VIRTUAL;
+            procedure   ChangeAttr(Col,Row,Att:byte;Len:word);         VIRTUAL;
+            procedure   MoveFromScreen(var Source,Dest;Length:Word);   VIRTUAL;
+            procedure   MoveToScreen(var Source,Dest; Length:Word);    VIRTUAL;
+            procedure   Clear(Att:byte;Ch:char);                       VIRTUAL;
+            destructor  Done;                                          VIRTUAL;
+         end; {WriteOBJ}
+
+         WriteOBJ's data describes the size and memory location of the screen,
+         and the status of the window settings.
+
+
+
+Replacing the Screen Writer                                                 17-3
+--------------------------------------------------------------------------------
+
+         vWidth is a byte variable which identifies the width of the screen.
+         vScreenPtr is a pointer to the start of the screen display memory area.
+         The memory is organized into byte pairs, like actual video display
+         memory - the first byte is the attribute of a character and the second
+         byte is the ASCII code of the character. The associated ScreenOBJ
+         instance allocates the necessary memory and calls the WriteOBJ method
+         SetScreen to update the vWidth and vScreenPtr variables.
+
+         The other variables provide information about the screen's active win-
+         dow. vWindow is a record describing the (X1,Y1) and (X2,Y2) active
+         window coordinates. vWindowOn and vWindowIgnore are two boolean
+         variables which indicate whether the window settings are active. If
+         vWindowOn is false or vWindowIgnore is true, the WriteOBJ screen writ-
+         ing methods should ignore the current window settings.
+         The virtual methods shown in the WriteOBJ declaration represent the
+         heart of the screen writing routines. The table below describes their
+         specific purpose.
+
+
+                        Method                           Description
+
+          WriteAT(X,Y,attr:byte;Str:string);  Writes to the screen at (X,Y)
+                                              using the specified attribute.
+          WritePlain(X,Y:byte;Str:string);    Writes to the screen at (X,Y)
+                                              using that region's attribute.
+          Write(Str:string);                  Writes at the current cursor
+                                              position like Turbo's Write.
+          WriteLn(Str:string);                Write at the current cursor posi-
+                                              tion like Turbo's WriteLn.
+          GotoXY(X,Y: word);                  Positions the cursor at (X,Y).
+
+          WhereX: word;                       Returns the cursor's X coordi-
+                                              nate.
+          WhereY: word;
+                                              Returns the cursor's Y coordi-
+          SetWindow(X1,Y1,X2,Y2: byte);       nate.
+
+          ResetWindow;                        Sets the window coordinates to
+                                              specified coordinates.
+          ChangeAttr(Col,Row,Att:byte;        Sets the window coordinates to
+                     Len:word);               entire screen.
+          MoveFromScreen(var Source,Dest;     Changes the display attribute to
+                             Len:Word);       Att starting at (X,Y) for Len
+                                              bytes.
+                                              Moves a block of memory from
+          MoveToScreen(var Source,Dest;       Source to Dest, assuming Source
+                           Len:Word);         is the visible screen. Len repre-
+          Clear(Att:byte;Ch:char);            sents the number of words (not
+
+
+
+17-4                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+                                              bytes) to move.
+                                              As above, but assumes Dest is the
+          Done;                               visible screen.
+                                              Clears a rectangular area of the
+                                              display to the specified attrib-
+                                              ute and replaces all characters
+                                              with Ch.
+                                              Disposes of the object.
+
+
+         To develop your own WriteOBJ object, you should create a descendant of
+         WriteOBJ, and thanks to inheritance, you can replace as little as one
+         procedure or as many as all of them.
+         The file EXTSCR1.PAS is a demonstration unit which creates a new
+         object. The new object is called MonoWriteOBJ, and the objective is to
+         force the Toolkit to use the attribute white-on-black, regardless of
+         the attribute specified. The declaration of MonoWriteOBJ is as follows:
+
+         Unit ExtFast;
+         {$I TOTFLAGS.INC}
+         INTERFACE
+         uses DOS, CRT, totFAST;
+
+         TYPE
+         MonoWriteOBJ = object (WriteOBJ)
+            constructor Init;
+            procedure   WriteAT(X,Y,attr:byte;Str:string);       VIRTUAL;
+            procedure   ChangeAttr(X,Y,Att:byte;Len:word);       VIRTUAL;
+            procedure   Clear(Att:byte;Ch:char);                 VIRTUAL;
+            destructor  Done;                                    VIRTUAL;
+         end; {MonoWriteOBJ}
+
+         IMPLEMENTATION
+         constructor MonoWriteOBJ.Init;
+         {}
+         begin
+            WriteOBJ.Init;
+            TextColor(white);
+            Textbackground(black);
+         end; {MonoWriteOBJ.Init}
+
+         procedure MonoWriteOBJ.WriteAT(X,Y,attr:byte;Str:string);
+         {}
+         begin
+            WriteOBJ.WriteAT(X,Y,white,Str);
+         end; {MonoWriteOBJ.WriteAT}
+
+
+
+
+Replacing the Screen Writer                                                 17-5
+--------------------------------------------------------------------------------
+
+         procedure MonoWriteOBJ.ChangeAttr(X,Y,Att:byte;Len:word);
+         {}
+         begin
+            WriteOBJ.ChangeAttr(X,Y,white,Len);
+         end; {MonoWriteOBJ.ChangeAttr}
+
+         procedure MonoWriteOBJ.Clear(Att:byte;Ch:char);
+         {}
+         begin
+            WriteOBJ.Clear(white,Ch);
+         end; {MonoWriteOBJ.Clear}
+         destructor MonoWriteOBJ.Done;
+         {}
+         begin
+            WriteOBJ.Done;
+         end; {MonoWriteOBJ.Done}
+
+         end.
+
+         MonoWriteOBJ redefines the three primary methods which control display
+         attributes. It intercepts the requested attribute and always substi-
+         tutes the attribute white.
+
+         If you want to modify the way the Toolkit writes to the physical
+         screen, but are satisfied with the virtual screen routines, then your
+         unit should use the totSYS unit, and the revised methods should use the
+         following statement to determine whether the instance is pointing to
+         the visible screen:
+         if vScreenPtr = Monitor^.BaseOfScreen then
+            {new visible screen routines}
+         else {virtual screen}
+            {call equivalent WriteOBJ method};
+
+
+
+Using the Method AssignWriteOBJ
+         Having created your new object, you must instruct the Toolkit to use
+         it. This is achieved by initializing your object, and then calling the
+         ScreenOBJ method AssignWriteOBJ method. For example:
+
+                  Screen.AssignWriteOBJ(WhiteWrite);
+         Any virtual screens you create must be assigned the new WriteOBJ object
+         individually in the same manner. For example:
+
+                  Save3.AssignWriteOBJ(WhiteWrite);
+
+
+
+
+17-6                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         The demo program, EXTDEM3.PAS, listed below, shows the new ExtFast unit
+         in use. This program is actually an adaptation of DEMBR1, which uses
+         MonoWriteOBJ in preference to WriteOBJ. If you run it, you will see
+         that the entire display uses white on black, even though other attrib-
+         utes are specified.
+
+
+         Program ExtendedDemoThree;
+         {EXTDEM3 - this program shows how to use the MonoWriteOBJ object
+          developed in the ExtFast unit. The demo is actually a simple
+          adaptation of the browse demo file DEMBR1}
+
+         Uses DOS,CRT,
+              totINPUT, totFAST,totLIST, totSTR, ExtFast;
+         var
+            WhiteWrite: MonoWriteOBJ;
+            BWin: BrowseArrayOBJ;
+            StringList: array[1..26] of string[100];
+            I : integer;
+
+         begin
+            WhiteWrite.Init;
+            Screen.AssignWriteOBJ(WhiteWrite);
+            for I := 1 to 26 do  {first assign something to the string array}
+               StringList[I] := 'Line '+IntToStr(I)+': '+replica-
+         te(80,char(I+64));
+            ShadowTot^.SetShadowStyle(downright,red,chr(219));
+            Screen.Clear(green,' '); {paint the screen}
+            Key.SetFast;
+            Key.SetClick(true);
+            with BWin do
+            begin
+               Init;
+               AssignList(StringList,26,100);
+               Go;
+               Done;
+            end;
+         end.
+

@@ -1,0 +1,799 @@
+                                                                       Extending
+                                                                           Input
+                                                                           Field
+                                                                           Types
+
+
+
+         "Stay humble. Always answer the phone - no matter who else is in the
+         car."
+
+                                                                     Jack Lemmon
+
+
+         One of the most used elements of the Toolkit is the full screen input
+         facility. If the Toolkit field types do not meet your exact needs, you
+         can create your own custom field types. This chapter explains how.
+
+
+The Input Object Hierarchy
+         The objects FormOBJ and WinFormOBJ are used to manage and control full
+         screen input. You may recall that the method AddItem is used to add
+         individual input fields to the form. AddItem accepts any of the input
+         fields shown in the TOTIO Object Hierarchy on page 11.5. As the diagram
+         illustrates, all IO objects are descended from the root object Base-
+         IOOBJ. If you want to create new input field objects which can be
+         managed by the form objects, the new objects must be descended from
+         BaseIOOBJ, or any object descended from BaseIOOBJ.
+
+         The BaseIOOBJ object includes the following data and methods, which are
+         inherited by all descendant objects:
+         ItemIOOBJ = object
+            vBoundary: tCoords;
+            vHotKey: word;
+            vID: word;
+            vActive: boolean;
+            {methods ...}
+            constructor Init;
+            procedure   SetActiveStatus(Selectable:boolean);
+            function    Active:boolean;
+            function    GetHotKey: word;
+            procedure   SetHotkey(HK:word);
+            function    GetID: word;
+            procedure   SetID(ID:word);
+            function    Visible: boolean;                        VIRTUAL;
+            procedure   Display(Status:tStatus);                 VIRTUAL;
+            function    Select(K:word; X,Y:byte):tAction;        VIRTUAL;
+            function    ProcessKey(InKey:word;X,Y:byte):tAction; VIRTUAL;
+            function    Suspend:boolean;                         VIRTUAL;
+            destructor  Done;                                    VIRTUAL;
+         end; {ItemIOOBJ}
+
+         Note: the BaseIOOBJ also includes signal-related methods. These are
+         discussed in a later section.
+
+20-2                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         The vBoundary variable identifies the (X1,Y1) and (X2,Y2) coordinates
+         of the field. When the user clicks the left mouse button during full-
+         form input, the form object scans the list of active input objects and
+         moves the user to the input object with coordinates corresponding to
+         the mouse cursor position. Any descendant field should therefore update
+         the vBoundary variable to indicate the physical location of the field.
+         The other three BaseIOOBJ variables identify the field's hotkey, ID and
+         whether the field is active or selectable. These variables are managed
+         by the BaseIOOBJ methods SetActiveStatus, Active, GetHotkey, SetHotkey,
+         SetID and GetID. All these methods are suitable for any field type, and
+         should not need modification in descendant objects. Just inherit them
+         and use them!
+
+         The virtual methods, highlighted in bold, are specific to each descen-
+         dant object. As a minimum, any descendant objects should redefine these
+         bold methods -- they are the main methods called by the form object
+         during full-screen input.
+         Apart from special hotkeys and navigation control keys, all the user
+         input fields are visible. That is, the user can see them. As the TOTIO
+         Hierarchy Diagram illustrates, all visible fields are descended from
+         VisibleIOOBJ, which is, in turn, descended from BaseIOOBJ. In addition
+         to the BaseIOOBJ objects just discussed, the VisibleIOOBJ objects
+         inherit the following methods:
+
+           procedure   SetLabel(Lbl:string);
+           procedure   SetMessage(X,Y:byte; Msg:string);
+           procedure   WriteMessage;
+           procedure   WriteLabel(Status:tStatus);               VIRTUAL;
+         As their names suggest, these methods are used to set and display
+         labels and messages. Labels are displayed to the immediate left of a
+         field and act as a field title. A message is the field's descriptive
+         text which is displayed when the user moves to the field. Under normal
+         circumstances you will not need to modify these methods. They are
+         appropriate to any field type.
+
+
+
+Creating New Field Types
+         When you want to create a new field object, you must decide which
+         existing field object has the properties most closely resembling the
+         new field type you want to create. For example, if the field includes
+         data input, then you would probably create a descendant of CharIOOBJ.
+         However, if the field has multiple lines (like a radio button or list),
+         then the new object would best be a descendant of MultiLineIOOBJ. If
+         none of the existing fields come anywhere close, create a descendant
+         from VisibleIOOBJ.
+
+
+
+Extending Input Field Types                                                 20-3
+--------------------------------------------------------------------------------
+
+         To illustrate the principles, a new boolean object will be created.
+         This object will display two different options, e.g. Yes or No, True or
+         False, Live or Die, etc. The field will display one of the options, and
+         when the user presses the space bar or clicks the mouse, the field will
+         flip to the other option.
+
+         Since the boolean object does not process individual character input,
+         and does not occupy multiple lines, the best object to descend from is
+         VisibleIOOBJ. The following methods are inherited from VisibleIOOBJ and
+         do not need to be modified:
+            procedure   SetActiveStatus(Selectable:boolean);
+            function    Active:boolean;
+            function    GetHotKey: word;
+            procedure   SetHotkey(HK:word);
+            function    GetID: word;
+            procedure   SetID(ID:word);
+            procedure   SetLabel(Lbl:string);
+            procedure   SetMessage(X,Y:byte; Msg:string);
+            procedure   WriteMessage;
+            procedure   WriteLabel(Status:tStatus);              VIRTUAL;
+            function    Visible: boolean;                        VIRTUAL;
+
+         As well as replacing Init and Done, the primary inherited methods which
+         need to be over-written are Display, Select, Processkey and Suspend.
+         These four methods are called by the form object during full screen
+         input. Additionally, if you want the new boolean object to function
+         stand-alone, i.e. without being part of a form, an Activate method
+         should be added. Activate will display the field and process user input
+         until [KEYCAP] or [KEYCAP] is pressed.
+         In keeping with the Toolkit style, SetValue and GetValue methods should
+         also be added. These methods are used to set the object's default
+         value, i.e. which option to display when the field is activated, and to
+         get the user-selected value after input is complete.
+
+         The new boolean object will need to include three data variables: the
+         two strings that represent the true and false settings, and a boolean
+         to record the object's actual value.
+         After all the methods and data have been included, the definition of
+         the new BooleanIOOBJ is as follows:
+
+         BooleanIOOBJ = object (VisibleIOOBJ)
+            OnString: StringBut;
+            OffString: StringBut;
+            vInput: boolean;
+            {methods...}
+            Constructor Init(X,Y:byte; Yes,No:stringbut);
+            function    GetValue: boolean;
+            procedure   SetValue(On:boolean);
+            procedure   Activate;
+
+
+
+20-4                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+            procedure   Display(Status:tStatus);                  VIRTUAL;
+            function    Select(K:word; X,Y:byte):tAction;         VIRTUAL;
+            function    ProcessKey(InKey:word;X,Y:byte):tAction;  VIRTUAL;
+            function    Suspend:boolean;                          VIRTUAL;
+            destructor  Done;                                     VIRTUAL;
+         end; {BooleanIOOBJ}
+
+
+         In the following sections, each method is individually discussed:
+
+
+
+Extending Input Field Types                                                 20-5
+--------------------------------------------------------------------------------
+
+Init
+
+         The primary responsibilities of the Init method are to set the values
+         of the true and false strings, and to update the vBoundary variable
+         with the location of the field. In keeping with the other input fields,
+         the Init method is passed the (X,Y) coordinate of the leftmost charac-
+         ter. By finding the length of the longest string, the method can com-
+         pute the rightmost (X,Y) coordinate. The method detail is, therefore,
+         as follows:
+         constructor BooleanIOOBJ.Init(X,Y:byte; Yes,No:stringbut);
+         {}
+         var L:byte;
+         begin
+            VisibleIOOBJ.Init;
+            OnString := Yes;
+            OffString := No;
+            L := length(OnString);
+            if L < length(OffString) then
+               L := length(OffString);
+            with vBoundary do
+            begin
+               X1 := X;
+               X2 := X + pred(L);
+               Y1 := Y;
+               Y2 := Y;
+            end;
+            vInput := true;
+         end; {BooleanIOOBJ.Init}
+
+
+
+SetValue and GetValue
+         These methods are short and to the point. All they do is set or return
+         the value of the field, and are defined as follows:
+
+         function BooleanIOOBJ.GetValue: boolean;
+         {}
+         begin
+            GetValue := vInput;
+         end; {BooleanIOOBJ.GetValue;
+
+         procedure BooleanIOOBJ.SetValue(On:boolean);
+         {}
+         begin
+            vInput := On;
+         end; {BooleanIOOBJ.SetValue}
+
+
+
+
+20-6                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+Display
+
+         Display is a virtual method which must be declared with a single passed
+         parameter of type tStatus. tStatus is an enumerated type with the mem-
+         bers HiStatus, Norm and Off, and the value is used to indicate whether
+         the field is highlighted (the field the user is currently editing),
+         normal (one of the other fields in a form), or inactive (cannot be
+         selected).
+         The primary responsibility of Display is to display the field contents
+         in the appropriate color. The first task is to decide the display
+         attribute. To be consistent with the other input objects, the field
+         should ascertain the attribute by calling a TOTIO^ function method.
+         TOTIO controls the colors for field labels and messages, button fields,
+         group fields, list fields, and single line fields. In this case, the
+         single line field colors are appropriate. Refer to page 11-40 for a
+         full discussion of IOTOT.
+
+         The BooleanIOOBJ method Display is implemented as follows:
+         procedure BooleanIOOBJ.Display(Status:tStatus);
+         {}
+         var Att: byte;
+         begin
+            case Status of
+               HiStatus: Att := IOTOT^.FieldCol(2);
+               Norm:     Att := IOTOT^.FieldCol(1);
+               Off:      Att := IOTOT^.FieldCol(4);
+            end; {case}
+            with vBoundary do
+               if vInput then
+                  Screen.WriteAT(X1,Y1,Att,padleft(OnString,succ(X2-X1),' '))
+               else
+                  Screen.WriteAT(X1,Y1,Att,padleft(OffString,succ(X2-X1),' '));
+         end; {BooleanIOOBJ.Display}
+
+
+
+Select
+         The Select method is called by the form object whenever the user tries
+         to enter the field. The method is responsible for displaying the field
+         contents as well as the field's label and message. Select is also
+         responsible for moving the cursor to the field.
+
+         Select is actually a function method which returns a member of the
+         enumerated type tAction. tAction is used to instruct the form object on
+         how to proceed, and includes the members None, NextField, PrevField,
+         Finished, Escaped, Refresh, Signal, Enter, Help, Stop1..Stop9. Under
+         normal circumstances, Select should return a value of None. This
+
+
+
+
+Extending Input Field Types                                                 20-7
+--------------------------------------------------------------------------------
+
+         instructs the Toolkit to proceed as normal. The majority of the other
+         members are used by "buttons", which the user selects to finish the
+         input session or to ask for help.
+
+         The BooleanIOOBJ method Select is implemented as follows:
+         function BooleanIOOBJ.Select(K:word; X,Y:byte):tAction;
+         {}
+         begin
+            Display(HiStatus);
+            WriteLabel(HiStatus);
+            WriteMessage;
+            Screen.GotoXY(vBoundary.X1,vBoundary.Y1);
+            Select := none;
+         end; {BooleanIOOBJ.Select}
+
+
+
+ProcessKey
+         When a field is active, the form object repeatedly passes the user
+         input to the highlighted object. This continues until the user moves to
+         another field, or presses a key which indicates the user wants to fin-
+         ish the input session.
+
+         The form object calls the field's method ProcessKey and passes the user
+         input to it. The ProcessKey method then updates the value of the field
+         based on the user's input. In the case of the BooleanIOOBJ field, the
+         field will flip to the other string whenever the keys [KEYCAP] [KEYCAP]
+         or [KEYCAP] are pressed. The field will also flip if the mouse is
+         clicked on the field. The Toolkit responds extremely quickly to a mouse
+         press, and it is a good idea to delay for a tenth of a second when the
+         mouse has been clicked. This overcomes the problem of the field flip-
+         ping a dozen or more times each time the user clicks the mouse.
+         ProcessKey is a function method which returns a member of the enumer-
+         ated type tAction. Under normal circumstances, the function should
+         return a value of None, which indicates that the form object should
+         continue passing keys to the field.
+
+
+
+           Note: if you were creating a different input field type, you might
+           want to return a value of NextField when the current field became
+           full. This instructs the form object to suspend the current field
+           and select the next field.
+
+
+
+         The BooleanIOOBJ method ProcessKey is implemented as follows:
+
+
+
+
+20-8                                                       Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         function BooleanIOOBJ.ProcessKey(InKey:word;X,Y:byte):tAction;
+         {}
+         begin
+            if (InKey = 513)
+            or (InKey = 32)
+            or (inKey = 328)
+            or (InKey = 336) then
+            begin
+               vInput := not vInput;
+               Display(HiStatus);
+            end;
+            if InKey = 513 then {absorb mouse}
+               delay(100);
+            ProcessKey := None;
+         end; {BooleanIOOBJ.ProcessKey}
+
+
+
+Suspend
+         The Suspend method is called by the form object when the user wants to
+         terminate input or move to another field. Suspend is responsible for
+         displaying the field and label in the normal attribute, and for remov-
+         ing the field message. All these tasks are performed by the inherited
+         VisibleIOOBJ method Suspend.
+
+         Suspend is actually a function method which returns a boolean value.
+         This provides a mechanism for not allowing the user to leave the field.
+         If Suspend returns False, the form object stays in the field. This
+         facility should only be used when the user has entered some invalid
+         input, and it is good practice to display a message stating how the
+         user can correct the problem.
+         A user cannot enter an invalid value in a BooleanIOOBJ, and so Suspend
+         will always return True. The method Suspend is implemented as follows:
+
+         function BooleanIOOBJ.Suspend:boolean;
+         {}
+         begin
+            Suspend := VisibleIOOBJ.Suspend;
+         end; {BooleanIOOBJ.Suspend}
+
+
+Activate
+
+         The Activate method provides a way to use the object as a stand-alone
+         field, i.e. not as part of a form. Activate is responsible for select-
+         ing the field, getting input, and passing the input to ProcessKey.
+         Activate should repeatedly pass input to ProcessKey until the user
+         presses [KEYCAP] or [KEYCAP] to indicate the end of input. The method
+         Suspend should then be called to deselect the field.
+
+
+
+Extending Input Field Types                                                 20-9
+--------------------------------------------------------------------------------
+
+         The BooleanIOOBJ method Activate is implemented as follows:
+
+         procedure BooleanIOOBJ.Activate;
+         {}
+         var
+            Action: tAction;
+         begin
+            Action := Select(0,0,0);
+            with Key do
+            begin
+               repeat
+                  GetInput;
+                  Action := ProcessKey(LastKey,LastX,LastY);
+               until ((LastKey = 324) or (LastKey = 13)) and Suspend;
+            end;
+         end; {BooleanIOOBJ.Activate}
+
+
+
+Done
+
+         Since BooleanIOOBJ has no dynamic data of its own, all Done needs to do
+         is call VisibleIOOBJ's method Done, as follows:
+         destructor BooleanIOOBJ.Done;
+         {}
+         begin
+            VisibleIOOBJ.Done;
+         end; {BooleanIOOBJ.Done}
+
+
+
+
+         That's the new BooleanIOOBJ defined. The full source code is contained
+         in the file EXTIO.PAS.
+
+
+Using BooleanIOOBJ
+
+         Since BooleanIOOBJ is inherited from BaseIOOBJ, it can be used in full
+         form input just like any other input object. Listed below is the demo
+         program EXTDEM7.PAS which shows the new object in action. This demo
+         program is actually an adaptation of DEMIO2.PAS discussed in chapter
+         11. Figure 20.1 illustrates the generated display.
+         Program ExtendedDemoSeven;
+
+         Uses DOS,CRT,
+              totFAST, totIO1, totIO2, extIO;
+
+
+
+
+20-10                                                      Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         Var
+            Name: LateralIOOBJ;
+            Phone: PictureIOOBJ;
+            Price: FixedRealIOOBJ;
+            Status: BooleanIOOBJ;
+            Keys: ControlkeysIOOBJ;
+            Manager: FormOBJ;
+            Result: tAction;
+
+         procedure InitVars;
+         {}
+         begin
+            with Name do
+            begin
+               Init(35,5,20,40);
+               SetLabel('Vendor Name');
+            end;
+            with Phone do
+            begin
+               Init(35,7,'(###) ###-####');
+               SetLabel('Tel');
+               SetRules(JumpIfFull);
+            end;
+            with Price do
+            begin
+               Init(35,9,8,2);
+               SetLabel('Unit Price');
+               SetValue(250.0);
+               SetMinMax(0.1,12250.0);
+               SetRules(EraseDefault);
+            end;
+            with Status do
+            begin
+               Init(35,11,' Nice Guy ',' Jerk ');
+               SetLabel('Category');
+            end;
+            Keys.Init;
+         end; {InitVars}
+         begin
+            ClrScr;
+            Screen.TitledBox(15,3,65,13,76,79,78,2,' Quicky Input Demo ');
+            Screen.WriteCenter(25,white,'Press TAB to switch fields
+                                         and press ESC or F10 to end');
+            InitVars;
+            with Manager do
+            begin
+               Init;
+               AddItem(Keys);
+
+
+
+
+Extending Input Field Types                                                20-11
+--------------------------------------------------------------------------------
+
+               AddItem(Name);
+               AddItem(Phone);
+               AddItem(Price);
+               AddItem(Status);
+               Result := Go;
+               if Result = Finished then
+                  {update the database..}
+               else
+                  {call Esc routine};
+            end;
+         end.
+
+
+
+Figure 20.1                                                             [SCREEN]
+Using
+BooleanIOOBJ
+
+
+
+Understanding Signals
+         In sophisticated input forms, the data input by a user in one field may
+         affect the data of some related fields on the form. Signals provide
+         this capability in the Toolkit.
+
+
+
+Signal Theory
+         The BaseIOOBJ object includes the following three signal-related meth-
+         ods:
+
+         procedure   RaiseSignal(var TheSig:tSignal);                       VIR-
+         TUAL;
+         procedure   ShutdownSignal(var BaseSig:tSignal);
+         VIRTUAL;
+         procedure   HandleSignal(var BaseSig:tSignal; var NewSig:tSignal); VIR-
+         TUAL;
+         The totIO1 unit includes the record tSignal, which is defined as fol-
+         lows:
+
+         tSignal = record
+            ID: word;
+            MsgType: word;
+            case word of           {variant record}
+            0: (MsgPtr: pointer);
+            1: (MsgLong: longint);
+            2: (MsgWord: word);
+            3: (MsgInt: integer);
+
+
+
+
+20-12                                                      Extending the Toolkit
+--------------------------------------------------------------------------------
+
+            4: (MsgByte: byte);
+            5: (MsgChar: char);
+         end;
+
+         tSignal is a variant record which can be used to store any data which
+         needs to be communicated between input fields.
+         An input field's object methods Select, ProcessKey, and ProcessEnter
+         are function methods which return a value of type tAction. If any of
+         these methods return a value of SIGNAL, the form object will immedi-
+         ately call that input object's RaiseSignal method. This method is
+         passed a variable parameter of type tSignal. The variable is updated
+         with the information which needs to be passed to other fields. Each
+         signal has an ID, and the ID should be assigned a non-zero value. In a
+         situation where more than one signal can be raised, this ID will indi-
+         cate to the other fields which signal is being raised. The signal's
+         MsgType field can be used to provide further information about the
+         signal, and usually indicates the format of the data being passed with
+         the signal, e.g. a 1 might indicate a longint, a 2 might indicate a
+         word, etc.
+
+
+
+           Note: Input objects which are descended from CharIOOBJ inherit the
+           virtual function method ProcessEnter. This method is passed no
+           parameters, and returns a value of type tAction. The method is
+           called whenever the user presses [KEYCAP]. It is typically used to
+           raise a signal or move the user to the next field.
+
+
+
+         When a field raises a signal, the form manager passes the signal to the
+         next field in the form. This is achieved by calling the next field's
+         method HandleSignal. This method is passed the tSignal variable raised
+         by the originating field. The HandleSignal method can inspect the sig-
+         nal ID and, if appropriate, respond to the signal. If the field han-
+         dling the signal knows that the signal is not intended for any other
+         field, it can update the signal ID with a value of 0. This tells the
+         form object that the signal has been handled, and the signal is dis-
+         carded. Otherwise, the signal is passed to each input field in turn
+         until one of the fields sets the ID to 0, or until all the fields have
+         been passed the signal.
+
+         When the signal has been handled or passed to every other field, the
+         originating field's ShutdownSignal method is called. This method can be
+         used to dispose of any data that was created specifically for the sig-
+         nal, and for any other housekeeping.
+
+
+
+
+Extending Input Field Types                                                20-13
+--------------------------------------------------------------------------------
+
+         Any object which handles a signal can optionally raise a signal of its
+         own. The HandleSignal method is passed two parameters of type tSignal.
+         The first parameter is the original signal raised by another field. The
+         second parameter is an empty signal which the handling field can update
+         with its own signal. The form object inspects the second signal
+         returned by the field's HandleSignal method, and if the ID is set to a
+         non-zero value, a new signal is raised and passed to the other fields.
+         Only when this new signal has been handled will the form manager con-
+         tinue with the processing of the original signal.
+
+
+
+A Signal Example
+         The way to use signals is best illustrated by example. In this section
+         a demo program will be developed which prompts the user to input some
+         directories, as a precursor to installing some software. The user is to
+         be prompted to input five different directories, one for the programs,
+         one for the doc files, etc. Like Turbo Pascal's own Install program,
+         each of the input fields needs to be updated if the user enters a new
+         default directory into the first field.
+
+         To solve this problem, two new field objects must be created, and both
+         of them will be descended from StringIOOBJ. One object will be used to
+         prompt the user to input the default directory, and will raise a signal
+         when the user changes the field value. The other object will be used
+         for the input of the other directories, and will include a method to
+         handle the signal raised by the first object.
+         In this example, the first object is called MasterStringIOOBJ, and it
+         will raise a signal whenever the user enters a new directory. The new
+         object is declared as follows:
+
+         TYPE
+         MasterStringIOOBJ = object (StringIOOBJ)
+            vLastInput: string;
+            {methods}
+            constructor Init(X,Y,FieldLen: byte);
+            function    ProcessEnter: tAction;                    VIRTUAL;
+            function    Select(K:word; X,Y:byte): tAction;        VIRTUAL;
+            procedure   RaiseSignal(var TheSig:tSignal);          VIRTUAL;
+            procedure   ShutdownSignal(var BaseSig:tSignal);      VIRTUAL;
+            function    Suspend:boolean;                          VIRTUAL;
+            destructor  Done;                                     VIRTUAL;
+         end; {MasterStringIOOBJ}
+
+         The new object should only raise a signal when the user has changed the
+         value of the field. The new string variable vLastInput is used to
+         record the value of the string when the field is selected. The value of
+
+
+
+
+20-14                                                      Extending the Toolkit
+--------------------------------------------------------------------------------
+
+         vLastInput can then be compared to vInputStr (the edited field value)
+         when the user tries to leave the field or presses [KEYCAP]. The method
+         Select is therefore declared as follows:
+
+         function MasterStringIOOBJ.Select(K:word; X,Y:byte): tAction;
+         {}
+         begin
+            vLastInput := vInputStr;
+            Select := StringIOOBJ.Select(K,X,Y);
+         end; {MasterStringIOOBJ.Select}
+
+         The object needs to raise a signal when the user presses [KEYCAP]. The
+         method ProcessEnter is implemented as follows:
+
+         function MasterStringIOOBJ.ProcessEnter: tAction;
+         {}
+         begin
+            if vLastInput <> vInputStr then {need to signal}
+               ProcessEnter := Signal
+            else
+               ProcessEnter := none;
+         end; {MasterStringIOOBJ.ProcessEnter}
+         If the value of the string has changed, SIGNAL is returned, otherwise
+         NONE is returned.
+
+         The object also needs to raise a signal when the method Suspend is
+         called, and the value of the field has changed. Now we are faced with a
+         problem, because Suspend cannot directly raise a signal. Suspend
+         returns a boolean value to indicate whether the field can be suspended,
+         not a tAction value. The trick is to return a boolean value of False,
+         indicating that the user may not leave the field, and then stuff the
+         keyboard with the keystrokes [KEYCAP] [KEYCAP]. The Toolkit will not
+         allow the user to leave the field, the [KEYCAP] key will then be pro-
+         cessed, thereby raising a signal via the ProcessEnter method, and
+         finally, the [KEYCAP] key will be processed to move the user to the
+         next field. The Suspend method is implemented as follows:
+         function MasterStringIOOBJ.Suspend:boolean;
+         {}
+         begin
+            if vLastInput <> vInputStr then {need to signal}
+            begin
+               Suspend := false;
+               Key.StuffBuffer(13); {Enter}
+               Key.StuffBuffer(9);   {Tab}
+            end
+            else
+               Suspend := StringIOOBJ.Suspend;
+         end; {MasterStringIOOBJ.Suspend}
+
+
+
+
+Extending Input Field Types                                                20-15
+--------------------------------------------------------------------------------
+
+         The RaiseSignal method must update the signal variable with the infor-
+         mation required by the other fields, i.e. the string representing the
+         new directory entered by the user. The RaiseSignal method is
+         implemented as follows:
+
+         procedure MasterStringIOOBJ.RaiseSignal(var TheSig:tSignal);
+         {}
+         begin
+            with TheSig do
+            begin
+               ID := SignalNewDirectory;
+               MsgType := length(vInputStr);
+               MsgPtr := @vInputStr;
+            end;
+            vLastInput := vInputStr;
+         end; {MasterStringIOOBJ.RaiseSignal}
+         The signal ID is set to SignalNewDirectory --  a constant assigned the
+         value of 1. The MsgType field is set to indicate the length of the
+         string, and the variant record MsgPtr is updated to point to the user
+         input string. This signal, therefore, provides sufficient data for the
+         dependent fields to ascertain the new directory.
+
+         In this example, no dynamic data is created for the signal, and so the
+         ShutdownSignal method doesn't need to do anything.
+
+         Now let's turn our attention to the object which needs to respond to
+         the signal raised by MasterStringIOOBJ. In this example, we will name
+         the new object SlaveStringIOOBJ, and it will inherit all the properties
+         of StringIOOBJ. The only method (in addition to Init and Done) which
+         needs to be updated is HandleSignal. This method needs to check the
+         value of the Signal and update the value of the field with the new
+         directory string. The signal field MsgType stores the length of the new
+         string, and the field MsgPtr points to the new string.
+
+         The HandleSignal method is implemented as follows:
+         procedure SlaveStringIOOBJ.HandleSignal(var BaseSig:tSignal; var NewS-
+         ig:tSignal);
+         {}
+         var temp:string;
+         begin
+            with BaseSig do
+            begin
+               if (ID = SignalNewDirectory) then
+               begin
+                  move(MsgPtr^,Temp,succ(MsgType));
+                  if Temp <> vInputStr then
+                  begin
+                     vInputStr := Temp;
+
+
+
+
+20-16                                                      Extending the Toolkit
+--------------------------------------------------------------------------------
+
+                     Display(Norm);
+                  end;
+               end;
+            end;
+         end; {SlaveStringIOOBJ.HandleSignal}
+
+
+
+         To recap, two new field objects have been created. A MasterStringIOOBJ
+         field raises a signal when its value is changed, and SlaveStringIOOBJ
+         fields change their value accordingly. The on-disk demo file EXT-
+         DEM8.PAS includes the full solution to the problem. Figure 20.2 illus-
+         trates the output generated by this program.
+
+
+Figure 20.2                                                             [SCREEN]
+Raising
+Signals
+
+
+         Review the source code of the DirWinOBJ object in totDIR for another
+         example of how fields can communicate with signals.
+
