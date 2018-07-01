@@ -212,20 +212,27 @@ begin
    if b<>0 then vSnowProne:=false;
    end;
 
-   vDepth := succ(Hi(WindMax));
    {trixfix} {Let's get the *actual* number of rows.}
    asm
    {
    Number of rows not returned by BIOS.  Have to calc number of rows from:
        40:4A	word	Number of screen columns
        40:4C	word	Size of current video regen buffer in bytes
+                        (some BIOSes and some Hercules screw this up!)
        40:84	byte	Rows on the screen (less 1, EGA+)
 
    Try to get from 40:84 first.  If early BIOS has that empty, then calc
-   it based on the info it does give us.
+   it based on the info it does give us.  Also, deal with Hercules which
+   has been observed in the wild to report 16KB in 40:4C which is wrong.
    }
         mov     ax,40h
         mov     es,ax
+        mov     al,es:[49h]             {check video mode for monochome}
+        cmp     al,7                    {is it mono?}
+        jne     @notmono
+        mov     al,25                   {If mono, 40:4c might be screwed up,}
+        jmp     @storeit                {so we force an 80x25 value}
+@notmono:
         mov     al,es:[84h]
         cmp     al,0                    {our BIOS new enough to populate this?}
         jne     @newbios                {if so, use it}
@@ -236,9 +243,14 @@ begin
         dec     al
 @newbios:
         inc     al
+@storeit:
         les     di,self
         mov     es:[di.vDepth],al
    end;
+
+   {Some early video BIOSes misinterpret what should be at 40:4C}
+   if (vDepth<25) or (vDepth>60)
+     then vDepth := succ(Hi(WindMax));
 
    vForceBW := false;
 end; {DisplayObj.Init}
