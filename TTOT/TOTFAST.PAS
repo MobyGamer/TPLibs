@@ -1956,16 +1956,14 @@ Begin
   BC := ScrollTOT^.vBackgroundChar;
   For I := Succ (Y1) To Pred (Y2) Do
     WriteAT (X, I, Attr, BC);
-  If (Current > 0) And (Max >= Current) Then
-  Begin
+  If (Current > 0) And (Max >= Current) Then Begin
     LineLength := Y2 - Succ (Y1);
-    If LineLength > 0 Then
-    Begin
-      Y := (Current * LineLength) Div Max;
-      If Current >= Max Then
-        Y := Pred (LineLength);
-      If (Y < 0) Or (Current = 1) Then
-        Y := 0;
+    If LineLength > 0 Then Begin
+      Y := ((Current-1) * LineLength) Div (Max-1);
+      If Current >= Max
+        Then Y := Pred (LineLength);
+      If (Y < 0)
+        Then Y := 0;
       WriteAT (X, Succ (Y1) + Y, Attr, ScrollTOT^.vElevatorChar);
     End;
   End;
