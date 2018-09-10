@@ -253,12 +253,13 @@ begin
    end;
 
    {
-   Some early video BIOSes misinterpret what should be at 40:4C.  Also,
-   some CGA clones like Olivetti M24 put a pointer in 40:84, making
-   it useless, so clamp if we are in this situation.
+   Some early video BIOSes misinterpret what should be at 40:4C.
+   Also, some clones (like Olivetti M24) put a pointer in 40:84,
+   making it useless, so clamp if we are in this situation.
    }
-   if ( (vDepth<25) or (vDepth>60) )
-   or ( (vDisplayType=CGA) and (vDepth>50) )
+   if (vDisplayType=CGA) and (vDepth>28)
+     then vDepth := 25;
+   if (vDepth<25) or (vDepth>60)
      then vDepth := succ(Hi(WindMax));
 
    vForceBW := false;

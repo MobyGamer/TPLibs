@@ -1300,6 +1300,8 @@ Begin
   {$IFNDEF FINAL}                  
   Exists;                       
   {$ENDIF}
+  {This special case is unfortunately necessary because without it our
+  message field is printed black.  see SetColMessage/vMessage for more.}
   If Attr = 0 Then
     WritePlain (X, Y, Str)
   Else
@@ -1320,7 +1322,7 @@ End; {ScreenOBJ.WriteAT}
 
 Procedure ScreenOBJ.WriteHi (X, Y, AttrHi, Attr: Byte; Str: String);
 {}
-Var 
+Var
   P: Byte;
   Hi: Boolean;
   
