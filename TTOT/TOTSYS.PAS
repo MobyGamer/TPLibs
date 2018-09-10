@@ -234,8 +234,12 @@ begin
         jmp     @storeit                {so we force an 80x25 value}
 @notmono:
         mov     al,es:[84h]
-        cmp     al,0                    {our BIOS new enough to populate this?}
-        jne     @newbios                {if so, use it}
+        cmp     al,0                    {is our BIOS populating this?}
+        je      @calcit
+        cmp     al,60                   {is the value above normal values?}
+        jg      @calcit
+        jmp     @newbios                {if so, use it}
+@calcit:
         mov     bx,es:[4ah]             {if not, calc ourselves}
         mov     ax,es:[4ch]
         shr     ax,1
@@ -248,8 +252,13 @@ begin
         mov     es:[di.vDepth],al
    end;
 
-   {Some early video BIOSes misinterpret what should be at 40:4C}
-   if (vDepth<25) or (vDepth>60)
+   {
+   Some early video BIOSes misinterpret what should be at 40:4C.  Also,
+   some CGA clones like Olivetti M24 put a pointer in 40:84, making
+   it useless, so clamp if we are in this situation.
+   }
+   if ( (vDepth<25) or (vDepth>60) )
+   or ( (vDisplayType=CGA) and (vDepth>50) )
      then vDepth := succ(Hi(WindMax));
 
    vForceBW := false;

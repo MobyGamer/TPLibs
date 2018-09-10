@@ -1959,6 +1959,8 @@ Begin
   If (Current > 0) And (Max >= Current) Then Begin
     LineLength := Y2 - Succ (Y1);
     If LineLength > 0 Then Begin
+      {prevent division by zero in the special case of one item}
+      if Max=1 then inc(Max);
       Y := ((Current-1) * LineLength) Div (Max-1);
       If Current >= Max
         Then Y := Pred (LineLength);
