@@ -1,8 +1,10 @@
 unit m6845ctl;
 
 {
+Update: 20210206 - added dumb hacky MDA support, should be made elegant later
+
 Low-level routines to control the Motorola 6845.
-Note that the support in this unit is for stock IBM PC CGA ONLY!
+Note that the support in this unit is intended for stock IBM CGA and MDA.
 There are clones that have added additional features, such as the AT&T PC6300,
 but those additional features are not supported here (yet).
 
@@ -42,7 +44,7 @@ const
   mode_table_vector=$1d;
 
   {registers}
-  m6845_index=$3d4; {index register -- this is different on MDA but as this is a CGA-only lib I don't care :-)}
+  m6845_index:word=$3d4; {index register -- this is different on MDA but as this is a CGA-only lib I don't care :-)}
     m6845_horizontal_total=$00;
     m6845_horizontal_displayed=$01;
     m6845_horizontal_sync_position=$02;
@@ -61,8 +63,8 @@ const
     m6845_cursor_location_low=$0f;
     m6845_lightpen_high=$10;
     m6845_lightpen_low=$11;
-  m6845_data=$3d5; {data register}
-  m6845_mode_ctl=$3d8; {mode control register}
+  m6845_data:word=$3d5; {data register}
+  m6845_mode_ctl:word=$3d8; {mode control register}
     {relevant bits}
     c_fast_char_clock=1; {use 160 bytes per line instead of 80; REQUIRED for 80x25 mode, otherwise 40x25 mode}
     c_graphics_enable=2; {otherwise, text mode}
@@ -79,7 +81,7 @@ const
     c_bright=8;
     c_alternate_intensity=16; {alt. intens. colors in graphics mode.  specs say "backgr. color" in text mode?  huh?}
     c_paletteCMW=32; {otherwise, red/green/yellow palette}
-  m6845_status=$3da;
+  m6845_status:word=$3da;
     {relevant bits}
     c_display_enable=1; {if set, horizontal or vertical retrace is active and vidram can be accessed}
     c_lightpen_trigger=2; {if set, lightpen trigger has occurred}
@@ -489,6 +491,14 @@ begin
 end;
 
 begin
+  {$IFDEF STARTUP_MSGS} Writeln('m6845 unit starting...'); {$ENDIF}
   {find the BIOS-provided video mode table and point our struc to it}
   Int1D_mode_table:=m6845_GetModeTable;
+  {Adjust for MDA if feasible}
+  if Mem[$0000:$0449]=7 then begin
+    dec(m6845_index,$20);
+    dec(m6845_data,$20);
+    dec(m6845_mode_ctl,$20);
+    dec(m6845_status,$20);
+  end;
 end.

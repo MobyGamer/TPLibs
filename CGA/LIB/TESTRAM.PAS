@@ -43,6 +43,6 @@ begin
   until (foo<>0) or keypressed;
   cga_close;
   if foo<>0
-    then fatalerror(1,'Different at offset: '+inttostr(foo))
+    then fatalerror(1,'Different at offset: '+inttostr(foo-1))
     else fatalerror(0,'(no error, buffers are equal)');
 end.

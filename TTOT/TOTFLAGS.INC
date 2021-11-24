@@ -45,7 +45,7 @@ directives, etc. to this file.
 {{ $ DEFINE FLOAT}
 {{ $ DEFINE FLOATEM}
 
-{$DEFINE OVERLAYINIT}
+{{$DEFINE OVERLAYINIT}
 {{$DEFINE OVERLAY}
 
 {+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++}

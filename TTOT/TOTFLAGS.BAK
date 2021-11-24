@@ -38,7 +38,7 @@ directives, etc. to this file.
 
 {+++++++++++++++++++++++++++    DEFINES   AREA   +++++++++++++++++++++++++++}
 
-{{$DEFINE FINAL}
+{$DEFINE FINAL}
 
 {{$DEFINE INITTRACE}
 

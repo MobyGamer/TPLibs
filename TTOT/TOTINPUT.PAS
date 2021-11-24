@@ -343,6 +343,7 @@ end; {AlphabetOBJ.Done}
 constructor MouseOBJ.Init;
 {}
 begin
+  {$IFDEF INITTRACE}writeln('totinput:mouseobj.init');{$ENDIF}
   CheckInstalled;
   vForceNoMouse := false; {1.00a}
   vLeftHanded := true;  {1.00g}
@@ -364,13 +365,23 @@ var
     Function InterruptLoaded:boolean;
     var
       Reg: registers;
+      foop:^longint;
     begin
-       Reg.Ax := 0;
-       Intr($33,Reg);
-       InterruptLoaded :=  Reg.Ax <> 0;
+       {$IFDEF INITTRACE}writeln('totinput:interruptloaded');{$ENDIF}
+       {trixfix: DOS 2.x doesn't pre-populate interrupts to $3f with IRET,
+       so trying to do this on DOS 2.x locks up the system.}
+       foop:=ptr(0,$33*4);
+       if foop^<>0 then begin
+         Reg.Ax := 0;
+         Intr($33,Reg);
+         InterruptLoaded :=  Reg.Ax <> 0;
+       end else begin
+         InterruptLoaded:=false;
+       end;
     end;
 
 begin
+  {$IFDEF INITTRACE}writeln('totinput:checkinstalled');{$ENDIF}
    MouseInterruptPtr := ptr($0000,$00CC);
    vButtons := 0;
    if (MouseInterruptPtr = nil)
@@ -643,6 +654,7 @@ var
    Sel:word;  {DPMI selector}
 {$ENDIF}
 begin
+   {$IFDEF INITTRACE}writeln('totinput:keyobj.init');{$ENDIF}
    ExtStatus := ptr($0000,$0496);
 {$IFDEF DPMI}                     {1.10a}
    vExtended := true;
