@@ -74,22 +74,22 @@ const
   NumValsToSet=10; {we're only interested in the first 10; don't care about cursor location, etc}
 begin
   asm
-    push ds
-    lds si,int1d_mode_table
-    add si,index*modetable_size {jump forward to the data we're looking for}
-    mov dx,m6845_index
-    xor ax,ax {ah is going to be our index/counter}
-@loadandset:
-    mov al,ah {move index to al}
-    out dx,al {tell 6845 we want index AH}
-    lodsb {grab the data value}
-    inc dx {move port up to the data register}
-    out dx,al {send it}
-    dec dx {move back down to the index register}
-    inc ah {increase our index}
-    cmp ah,NumValsToSet {are we done?}
-    jne @loadandset {if not, keep going}
-    pop ds {done with the array}
+        push    ds
+        mov     dx,m6845_index
+        lds     si,int1d_mode_table
+        add     si,index*modetable_size {jump forward to the data we're looking for}
+        xor     ax,ax                   {ah is going to be our index/counter}
+    @loadandset:
+        mov     al,ah                   {move index to al}
+        out     dx,al                   {tell 6845 we want index AH}
+        lodsb                           {grab the data value}
+        inc     dx                      {move port up to the data register}
+        out     dx,al                   {send it}
+        dec     dx                      {move back down to the index register}
+        inc     ah                      {increase our index}
+        cmp     ah,NumValsToSet         {are we done?}
+        jne     @loadandset             {if not, keep going}
+        pop     ds                      {done with the array}
   end;
 end;
 
