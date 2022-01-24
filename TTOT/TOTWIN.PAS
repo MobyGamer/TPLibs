@@ -43,13 +43,13 @@ Unit totWIN;
 
 INTERFACE
 
-uses DOS, CRT, totSYS, totLOOK, totINPUT, totFAST, totMISC;
+uses DOS, CRT, totSYS, totLOOK, totINPUT, totFAST, totMISC, objects;
 
 TYPE
 
 WinPtr = ^WinOBJ;
 pWinOBJ = ^WinOBJ;
-WinOBJ = object
+WinOBJ = object (TObject)
    vBorder: tCoords;
    vOuter: tCoords;
    vClose: boolean;            {is close icon active}
