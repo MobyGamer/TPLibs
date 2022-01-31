@@ -29,7 +29,12 @@ unit Streams;
           1.6 - fixed some bugs when Getmem returns nil
                 fixed bug in ReverseBytes
                 fixed bug in termination of TLZWstream
-                added workaround for TEMSStream bug, FastCopy }
+                added workaround for TEMSStream bug, FastCopy
+          1.7 - (JL) Removed TRAMStream, as BP7's objects.pas comes with
+                TMemoryStream which is more practical (no 64K limit).
+                Changed all instances of TRAMStream to TMemoryStream.
+                Added 64K overhead to tempstream checks when using RAMSTREAM
+                to handle the temp 64K buffer created by FastCopy.
 
 { Load some conditional defines }
 {$i STDefine.inc}
@@ -60,7 +65,6 @@ unit Streams;
          TCRCARCFilter      Calculates ARC-style 16 bit CRC
          TCRC32Filter       Calculates ZIP/ZModem-style 32 bit CRC
      TNulStream             Eats writes, returns constant on reads
-     TRAMStream             Stream in memory
      TEMSStream2            Bug workaround for Borland's TEMSStream
      TXMSStream             Stream in XMS
      TDOSStream             (from Objects)
@@ -560,36 +564,6 @@ type
 
   Pbyte_array = ^Tbyte_array;
   Tbyte_array = array[0..65520] of Byte; { Type used as a buffer. }
-
-  PRAMStream = ^TRAMStream;
-  TRAMStream =
-    object(TStream)
-      Position : Word;            { The current position for the stream. }
-
-      Size : Word;                { The current size of the stream. }
-      Alloc : Word;               { The size of the allocated block of memory. }
-
-      Buffer : Pbyte_array;       { Points to the stream data. }
-      OwnMem : Boolean;           { Whether Done should dispose of data.}
-
-      constructor Init(Asize : Word);
-    { Attempt to initialize the stream to a block size of Asize;
-       initial stream size and position are 0. }
-      constructor UseBuf(ABuffer : Pointer; Asize : Word);
-     { Initialize the stream using the specified buffer.  OwnMem is set
-       to false, so the buffer won't be disposed of. Initial position is 0,
-       size is Asize. }
-
-      destructor Done; virtual;
-        { Dispose of the stream. }
-
-      function GetPos : LongInt; virtual;
-      function GetSize : LongInt; virtual;
-      procedure Read(var Buf; Count : Word); virtual;
-      procedure Seek(Pos : LongInt); virtual;
-      procedure Truncate; virtual;
-      procedure Write(var Buf; Count : Word); virtual;
-    end;
 
   PEMSStream2 = ^TEMSStream2;
   TEMSStream2 = object(TEMSStream)
@@ -2864,113 +2838,6 @@ Function UpdateCRC32(InitCRC : LongInt; Var InBuf; InLen : Word) : LongInt;
     Inc(Position, Count);
   end;
 
-  { ****** RAM stream code ****** }
-
-  constructor TRAMStream.Init(Asize : Word);
-  begin
-    TStream.Init;
-    Position := 0;
-    Size := 0;
-    Alloc := Asize;
-    if MaxAvail < Alloc then
-      Fail;
-    GetMem(Buffer, Alloc);
-    if Buffer = nil then  { !1.6 }
-      Fail;
-    OwnMem := True;
-    FillChar(Buffer^, Alloc, 0);
-  end;
-
-  constructor TRAMStream.UseBuf(ABuffer : Pointer; Asize : Word);
-  begin
-    TRAMStream.Init(0);
-    Alloc := Asize;
-    Size  := Asize;
-    Buffer := ABuffer;
-    OwnMem := False;
-  end;
-
-  destructor TRAMStream.Done;
-  begin
-    if OwnMem then
-      FreeMem(Buffer, Alloc);
-    TStream.Done;
-  end;
-
-  function TRAMStream.GetPos;
-{  begin                         Replaced with assembler for speed.
-    GetPos := Position;
-   end; }
-  assembler;
-  asm
-    les di,self
-    mov ax,es:di[Position];
-    xor dx,dx
-  end;
-
-  function TRAMStream.GetSize;
-{  begin                         Replaced with assembler for speed.
-    GetSize := Size;
-   end; }
-   assembler;
-   asm
-     les di,self
-     mov ax,es:di[size]
-     xor dx,dx
-   end;
-
-  function CheckInc(var pos:word;count,limit:word):boolean; assembler;
-  { Increments pos by count, returns false if limit is exceeded }
-  asm
-    les di,pos
-    mov bx,count
-    mov al,true
-    add bx,es:[di]
-    jc  @1            { Carry means error }
-    mov es:[di],bx
-    sub bx,limit
-    jbe @2
-  @1:
-    dec ax            { Set AX to false }
-  @2:
-  end;
-
-  procedure TRAMStream.Read;
-  begin
-    Move(Buffer^[Position], Buf, Count);
-    if not CheckInc(Position,Count,Size) then
-    begin
-      Error(stReadError,0);
-      Dec(Position,Count);
-      FillChar(Buf,Count,0);
-    end;
-  end;
-
-  procedure TRAMStream.Seek;
-  begin
-    if Pos > Size then
-      Error(stReaderror, 0)
-    else
-      Position := Pos;
-  end;
-
-  procedure TRAMStream.Truncate;
-  begin
-    Size := Position;
-  end;
-
-  procedure TRAMStream.Write;
-  begin
-    if not CheckInc(Position,Count,Alloc) then
-      Error(stWriteError, 0)
-    else
-    begin
-      Move(Buf, Buffer^[Position-Count], Count);
-      if Position > Size then
-        Size := Position;
-    end;
-  end;
-
   { ***** EMS stream code ***** }
 
   destructor TEMSStream2.done;
@@ -3326,8 +3193,8 @@ Function UpdateCRC32(InitCRC : LongInt; Var InBuf; InLen : Word) : LongInt;
       StreamType := Preference[Choice];
       case StreamType of
         RAMStream :
-          if MaxSize < $10000 then
-            Result := New(PRAMStream, Init(MaxSize));
+          if MaxAvail >= MaxSize+$10000 then
+            Result := New(PMemoryStream, Init(InitSize, MaxSize));
         EMSStream :
           if ems_MaxAvail >= MaxSize then
             Result := New(PEMSStream2, Init(InitSize, MaxSize));
@@ -3388,7 +3255,7 @@ Function UpdateCRC32(InitCRC : LongInt; Var InBuf; InLen : Word) : LongInt;
       else if t = typeof(TCRCARCFilter)   then StreamName := 'TCRCARCFilter'
       else if t = typeof(TCRC32Filter)    then StreamName := 'TCRC32Filter'
       else if t = typeof(TNulStream)      then StreamName := 'TNulStream'
-      else if t = typeof(TRAMStream)      then StreamName := 'TRAMStream'
+      else if t = typeof(TMemoryStream)   then StreamName := 'TMemoryStream'
       else if t = typeof(TEMSStream2)     then StreamName := 'TEMSStream2'
       else if t = typeof(TXMSStream)      then StreamName := 'TXMSStream'
       else if t = typeof(TNamedBufStream) then StreamName := 'TNamedBufStream'
