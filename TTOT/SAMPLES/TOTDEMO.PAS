@@ -167,7 +167,7 @@ begin
          halt;
       end;
    end;
-   Banner;
+   {Banner;}
 end; {Introduction}
 {|||||||||||||||||||||||||||||}
 {                             }
