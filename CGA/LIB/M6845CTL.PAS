@@ -123,12 +123,14 @@ const
   );
 
   {Want to see those colors sorted by luminance?  Sure thing:}
-  RecY709sorted:array[0..15] of byte=(0,1,4,8,5,6,9,12,13,2,3,7,10,11,14,15);
-  {sorted by luminance approximatly by composite color output level:}
-  (*RecY709sortedComp:array[0..15] of byte=(0,4,2,8,1,6,$c,$a,5,3,9,$e,7,$d,$b,$f);*)
+  {RecY709sorted:array[0..15] of byte=(0,1,4,8,5,6,9,12,13,2,3,7,10,11,14,15);}
+
+  {New sort order based on using rec709 waveform monitor:}
+  RecY709sorted:array[0..15] of byte=(0,1,4,5,8,2,6,9,3,12,13,7,10,11,14,15);
 
   {4 different composite luminance groups with blank between them}
-  CompLumaGroups:array[0..17] of byte=(1,2,4,8, 0 , 3,5,6,9,10,12, 0 ,7,11,13,14, 0 ,15);
+  {CompLumaGroups:array[0..17] of byte=(1,2,4,8, 0 , 3,5,6,9,10,12, 0 ,7,11,13,14, 0 ,15);}
+  CompLumaGroups:array[0..17] of byte=(1,8,4,2, 0 , 9,10,12,5,3,6, 0 ,11,7,13,14, 0 ,15);
   {10-level subjective eyeball sort:}
   SubjectiveSort1:array[0..9] of byte=(0,1,8,9,2,3,7,10,11,15);
 

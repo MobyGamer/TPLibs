@@ -36,4 +36,4 @@ begin
    RealInit;
 {$ENDIF}
 end.
-end.
+{end.}

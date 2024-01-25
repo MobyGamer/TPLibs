@@ -17,6 +17,7 @@ Unit totFAST;
              Nov 06 91  1.00f   Real correction of WriteCenter
              Feb 05 92  1.00g   Corrected cursor restores after saves
              Feb 26 17  trixfix Extensive fixups and enhancements (req.TP 7.0)
+             Jan 24 24  trixfix Change tCoords to integer to support 132 cols
 
 trixfix notes: In the interest of speed and code size, several functions
 from this unit were removed and the entire library's codebase was rewritten
@@ -35,7 +36,7 @@ Type
   StrVisible = String [80];   {alter as necessary}
   tDirection = (Up, Down, Left, Right, Vert, Horiz);
   tCoords = Record
-              X1, Y1, X2, Y2: ShortInt;
+              X1, Y1, X2, Y2: integer;
             End;
   tByteCoords = Record
                   X1, Y1, X2, Y2: Byte;
